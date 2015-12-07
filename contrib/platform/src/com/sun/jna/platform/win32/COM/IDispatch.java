@@ -83,7 +83,7 @@ public interface IDispatch extends IUnknown {
      *                  the rgszNames array. The first element represents the member name. The subsequent elements represent each of the member's parameters.
      * @return
      */
-    public HRESULT GetIDsOfNames(REFIID.ByValue riid, WString[] rgszNames, int cNames,
+    public HRESULT GetIDsOfNames(REFIID riid, WString[] rgszNames, int cNames,
             LCID lcid, DISPIDByReference rgDispId);
 
     /**
@@ -137,7 +137,7 @@ public interface IDispatch extends IUnknown {
      * DISP_E_PARAMNOTOPTIONAL
      * A required parameter was omitted.
      */
-    public HRESULT Invoke(DISPID dispIdMember, REFIID.ByValue riid, LCID lcid,
+    public HRESULT Invoke(DISPID dispIdMember, REFIID riid, LCID lcid,
             WORD wFlags, DISPPARAMS.ByReference pDispParams,
             VARIANT.ByReference pVarResult, EXCEPINFO.ByReference pExcepInfo,
             IntByReference puArgErr);
