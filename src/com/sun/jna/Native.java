@@ -16,12 +16,7 @@ import java.awt.Component;
 import java.awt.GraphicsEnvironment;
 import java.awt.HeadlessException;
 import java.awt.Window;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FilenameFilter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
@@ -36,16 +31,10 @@ import java.net.URLClassLoader;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.security.AccessController;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedAction;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.StringTokenizer;
-import java.util.WeakHashMap;
+import java.util.*;
 
 import com.sun.jna.Callback.UncaughtExceptionHandler;
 import com.sun.jna.Structure.FFIType;
@@ -956,25 +945,128 @@ public final class Native implements Version {
         }
         else if (!Boolean.getBoolean("jna.nounpack")) {
             InputStream is = loader.getResourceAsStream(resourcePath);
+            FileOutputStream fos = null;
             if (is == null) {
                 throw new IOException("Can't obtain InputStream for " + resourcePath);
             }
 
-            FileOutputStream fos = null;
+            else if (Boolean.getBoolean("jna.permanentextract")) {
+                MessageDigest messageDigest = null;
+                try {
+                    messageDigest = MessageDigest.getInstance("SHA1");
+                    final byte[] buffer = new byte[1024];
+                    for (int read = 0; (read = is.read(buffer)) != -1; ) {
+                        messageDigest.update(buffer, 0, read);
+                    }
+
+                    // Convert the byte to hex format
+                    Formatter formatter = new Formatter();
+                    for (final byte b : messageDigest.digest()) {
+                        formatter.format("%02x", b);
+                    }
+                    String libSHA1 = formatter.toString();
+                    File dir = getTempDir();
+                    String libName=name.substring(name.lastIndexOf('/')+1, name.length());
+                    if(!libName.toLowerCase().endsWith(".dll") && Platform.isWindows() )
+                        libName+=".dll";
+                    String pathname = dir.getCanonicalPath() + "/sha1_" + libSHA1 + "_" + libName;
+                    File libMaybe=new File(pathname);
+                    if(libMaybe.exists())
+                        return libMaybe;
+                    is.close();
+                    is=null;
+                    is = loader.getResourceAsStream(resourcePath); // Doesn't support seeking, let's just make a new one
+                    File temp = File.createTempFile(JNA_TMPLIB_PREFIX, Platform.isWindows() ? ".tmp" : null, dir);
+                    temp.deleteOnExit();
+                    fos = new FileOutputStream(temp);
+                    int count;
+                    byte[] buf = new byte[1024];
+                    while ((count = is.read(buf, 0, buf.length)) > 0) {
+                        fos.write(buf, 0, count);
+                    }
+                    fos.close();
+                    fos=null;
+                    is.close();
+                    is = null;
+                    boolean moveError = !temp.renameTo(libMaybe);
+                    if (moveError) {
+                        if (libMaybe.exists()) {
+                            if (DEBUG_JNA_LOAD) {
+                                System.out.println("Had a race happen with " + libMaybe + ", using existing");
+                            }
+                        } else {
+                            throw new IOException("Unable to move " + temp + " to " + libMaybe);
+                        }
+                    } else {
+                        if (DEBUG_JNA_LOAD) {
+                            System.out.println("DLL created without problems " + libMaybe);
+                        }
+                    }
+
+                    return libMaybe;
+                } catch (NoSuchAlgorithmException e) {
+                    throw new IOException("Failed to create temporary file for " + name + " library: " + e.getMessage());
+                }
+                catch (IOException e)
+                {
+                    throw new IOException("Failed to create temporary file for " + name + " library: " + e.getMessage());
+                }
+                finally {
+                    if(is != null) {
+                        try { is.close(); } catch (IOException e) {  }
+                    }
+                    if (fos != null) {
+                        try { fos.close(); } catch(IOException e) { }
+                    }
+                }
+            }
+
+
+
             try {
                 // Suffix is required on windows, or library fails to load
                 // Let Java pick the suffix, except on windows, to avoid
                 // problems with Web Start.
                 File dir = getTempDir();
-                lib = File.createTempFile(JNA_TMPLIB_PREFIX, Platform.isWindows()?".dll":null, dir);
-                if (!Boolean.getBoolean("jnidispatch.preserve")) {
-                    lib.deleteOnExit();
-                }
-                fos = new FileOutputStream(lib);
+
+                File temp = File.createTempFile(JNA_TMPLIB_PREFIX, ".tmp", dir);
+                temp.deleteOnExit();
+                fos = new FileOutputStream(temp);
                 int count;
                 byte[] buf = new byte[1024];
                 while ((count = is.read(buf, 0, buf.length)) > 0) {
                     fos.write(buf, 0, count);
+                }
+                fos.close();
+                fos = null;
+                Random random = new Random();
+                do {
+                    long n = random.nextLong();
+                    if (n == Long.MIN_VALUE) {
+                        n = 0;      // corner case
+                    } else {
+                        n = Math.abs(n);
+                    }
+                    String tempLibName = dir.getCanonicalPath() + "/" + JNA_TMPLIB_PREFIX + Long.toString(n);
+                    if(Platform.isWindows())
+                        tempLibName+=".dll";
+                    lib = new File(tempLibName);
+                }while(lib.exists());
+                boolean moveError = !temp.renameTo(lib);
+                lib.deleteOnExit();
+                if (moveError) {
+                    if (lib.exists()) {
+                        if (DEBUG_JNA_LOAD) {
+                            System.out.println("Had a race happen with " + lib + ", using existing");
+                        }
+                    } else {
+                        throw new IOException("Unable to move " + temp + " to " + lib);
+                    }
+                }
+                else {
+                    if (DEBUG_JNA_LOAD) {
+                        System.out.println("DLL created without problems " + lib);
+                    }
                 }
             }
             catch(IOException e) {
