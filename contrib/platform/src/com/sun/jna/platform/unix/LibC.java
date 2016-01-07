@@ -1,27 +1,25 @@
-/* Copyright (c) 2011 Timothy Wall, All Rights Reserved
+/* Copyright (c) 2015 Goldstein Lyor, All Rights Reserved
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * <p/>
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  */
-package com.sun.jna.platform.wince;
+package com.sun.jna.platform.unix;
 
 import com.sun.jna.Library;
 import com.sun.jna.Native;
-import com.sun.jna.platform.win32.WinNT;
-import com.sun.jna.win32.W32APIOptions;
 
-/** Definition <code>coredll.dll</code>.
-    Add other win32 interface mappings as needed.
+/**
+ * <I>libc</I> API
+ * @author Lyor Goldstein
  */
-public interface CoreDLL extends WinNT, Library {
-
-    CoreDLL INSTANCE = Native.loadLibrary("coredll", CoreDLL.class, W32APIOptions.UNICODE_OPTIONS);
-
+public interface LibC extends LibCAPI, Library {
+    String NAME = "c";
+    LibC INSTANCE = Native.loadLibrary(NAME, LibC.class);
 }
