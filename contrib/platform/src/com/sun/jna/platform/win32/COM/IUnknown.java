@@ -67,7 +67,7 @@ public interface IUnknown {
      * client without any calls back to the server. Also, because COM caches interface pointers, it does not callQueryInterface on
      * the server every time a client does a query.
      */
-    public HRESULT QueryInterface(REFIID.ByValue riid, PointerByReference ppvObject);
+    public HRESULT QueryInterface(REFIID riid, PointerByReference ppvObject);
 
     /**
      * Increments the reference count for an interface on an object. This method should be called for every new copy of a pointer to an interface on an object.
