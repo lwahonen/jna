@@ -131,12 +131,12 @@ public abstract class Advapi32Util {
 
 		if (!result) {
 			switch (Kernel32.INSTANCE.GetLastError()) {
-			case W32Errors.ERROR_INSUFFICIENT_BUFFER:
-				buffer = new char[len.getValue()];
-				break;
+    			case W32Errors.ERROR_INSUFFICIENT_BUFFER:
+    				buffer = new char[len.getValue()];
+    				break;
 
-			default:
-				throw new Win32Exception(Native.getLastError());
+    			default:
+    				throw new Win32Exception(Native.getLastError());
 			}
 
 			result = Advapi32.INSTANCE.GetUserNameW(buffer, len);
@@ -296,9 +296,13 @@ public abstract class Advapi32Util {
 		if (!Advapi32.INSTANCE.ConvertSidToStringSid(sid, stringSid)) {
 			throw new Win32Exception(Kernel32.INSTANCE.GetLastError());
 		}
-		String result = stringSid.getValue().getWideString(0);
-		Kernel32.INSTANCE.LocalFree(stringSid.getValue());
-		return result;
+
+		Pointer ptr = stringSid.getValue();
+		try {
+			return ptr.getWideString(0);
+		} finally {
+		    Kernel32Util.freeLocalMemory(ptr);
+		}
 	}
 
 	/**
@@ -314,7 +318,13 @@ public abstract class Advapi32Util {
 		if (!Advapi32.INSTANCE.ConvertStringSidToSid(sidString, pSID)) {
 			throw new Win32Exception(Kernel32.INSTANCE.GetLastError());
 		}
-		return pSID.getValue().getBytes();
+
+		PSID value = pSID.getValue();
+		try {
+			return value.getBytes();
+		} finally {
+		    Kernel32Util.freeLocalMemory(value.getPointer());
+		}
 	}
 
 	/**
@@ -332,8 +342,13 @@ public abstract class Advapi32Util {
 		if (!Advapi32.INSTANCE.ConvertStringSidToSid(sidString, pSID)) {
 			throw new Win32Exception(Kernel32.INSTANCE.GetLastError());
 		}
-		return Advapi32.INSTANCE.IsWellKnownSid(pSID.getValue(),
-				wellKnownSidType);
+
+		PSID value = pSID.getValue();
+		try {
+			return Advapi32.INSTANCE.IsWellKnownSid(value, wellKnownSidType);
+		} finally {
+		    Kernel32Util.freeLocalMemory(value.getPointer());
+		}
 	}
 
 	/**
@@ -372,8 +387,7 @@ public abstract class Advapi32Util {
 	 * @return Account.
 	 */
 	public static Account getAccountBySid(String systemName, String sidString) {
-		return getAccountBySid(systemName, new PSID(
-				convertStringSidToSid(sidString)));
+		return getAccountBySid(systemName, new PSID(convertStringSidToSid(sidString)));
 	}
 
 	/**
@@ -975,9 +989,9 @@ public abstract class Advapi32Util {
 		byteData.write(0, lpData, 0, lpcbData.getValue());
 
 		if (lpType.getValue() == WinNT.REG_DWORD) {
-			result = new Integer(byteData.getInt(0));
+			result = Integer.valueOf(byteData.getInt(0));
 		} else if (lpType.getValue() == WinNT.REG_QWORD) {
-			result = new Long(byteData.getLong(0));
+			result = Long.valueOf(byteData.getLong(0));
 		} else if (lpType.getValue() == WinNT.REG_BINARY) {
 			result = byteData.getByteArray(0, lpcbData.getValue());
 		} else if ((lpType.getValue() == WinNT.REG_SZ)
@@ -2193,10 +2207,15 @@ public abstract class Advapi32Util {
         }
 
         int nLength = Advapi32.INSTANCE.GetSecurityDescriptorLength(ppSecurityDescriptor.getValue());
-        final Memory memory = new Memory(nLength);
-        memory.write(0, ppSecurityDescriptor.getValue().getByteArray(0, nLength), 0, nLength);
-        Kernel32.INSTANCE.LocalFree(ppSecurityDescriptor.getValue());
-        return memory;
+        Memory memory = new Memory(nLength);
+        Pointer secValue = ppSecurityDescriptor.getValue();
+        try {
+            byte[] data = secValue.getByteArray(0, nLength);
+            memory.write(0, data, 0, nLength);
+            return memory;
+        } finally {
+            Kernel32Util.freeLocalMemory(secValue);
+        }
     }
 
     /**

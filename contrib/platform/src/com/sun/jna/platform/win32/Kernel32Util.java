@@ -55,27 +55,59 @@ public abstract class Kernel32Util implements WinDef {
     }
 
     /**
-     * Format a message from the value obtained from
-     * {@link Kernel32#GetLastError} or {@link Native#getLastError}.
+     * Invokes {@link Kernel32#LocalFree(Pointer)} and checks if it succeeded.
      *
-     * @param code
-     *            int
+     * @param ptr The {@link Pointer} to the memory to be released - ignored if NULL
+     * @throws Win32Exception if non-{@code ERROR_SUCCESS} code reported
+     */
+    public static void freeLocalMemory(Pointer ptr) {
+        Pointer res = Kernel32.INSTANCE.LocalFree(ptr);
+        if (res != null) {
+            throw new Win32Exception(Kernel32.INSTANCE.GetLastError());
+        }
+    }
+
+    /**
+     * Invokes {@link Kernel32#GlobalFree(Pointer)} and checks if it succeeded.
+     *
+     * @param ptr The {@link Pointer} to the memory to be released - ignored if NULL
+     * @throws Win32Exception if non-{@code ERROR_SUCCESS} code reported
+     */
+    public static void freeGlobalMemory(Pointer ptr) {
+        Pointer res = Kernel32.INSTANCE.GlobalFree(ptr);
+        if (res != null) {
+            throw new Win32Exception(Kernel32.INSTANCE.GetLastError());
+        }
+    }
+
+    /**
+     * Format a message from the value obtained from
+     * {@link Kernel32#GetLastError()} or {@link Native#getLastError()}.
+     *
+     * @param code The error code
      * @return Formatted message.
      */
     public static String formatMessage(int code) {
         PointerByReference buffer = new PointerByReference();
-        if (0 == Kernel32.INSTANCE.FormatMessage(
+        int nLen = Kernel32.INSTANCE.FormatMessage(
                 WinBase.FORMAT_MESSAGE_ALLOCATE_BUFFER
-                        | WinBase.FORMAT_MESSAGE_FROM_SYSTEM
-                        | WinBase.FORMAT_MESSAGE_IGNORE_INSERTS, null, code, 0, // TODO:
-                                                                                // MAKELANGID(LANG_NEUTRAL,
-                                                                                // SUBLANG_DEFAULT)
-                buffer, 0, null)) {
-            throw new LastErrorException(Kernel32.INSTANCE.GetLastError());
+                | WinBase.FORMAT_MESSAGE_FROM_SYSTEM
+                | WinBase.FORMAT_MESSAGE_IGNORE_INSERTS,
+                null,
+                code,
+                0, // TODO: // MAKELANGID(LANG_NEUTRAL,SUBLANG_DEFAULT)
+                buffer, 0, null);
+        if (nLen == 0) {
+            throw new LastErrorException(Native.getLastError());
         }
-        String s = buffer.getValue().getWideString(0);
-        Kernel32.INSTANCE.LocalFree(buffer.getValue());
-        return s.trim();
+
+        Pointer ptr = buffer.getValue();
+        try {
+            String s = ptr.getWideString(0);
+            return s.trim();
+        } finally {
+            freeLocalMemory(ptr);
+        }
     }
 
     /**
@@ -94,6 +126,7 @@ public abstract class Kernel32Util implements WinDef {
      * @param code error code
      * @return formatted message
      */
+    @Deprecated
     public static String formatMessageFromHR(HRESULT code) {
         return formatMessage(code.intValue());
     }
@@ -680,19 +713,19 @@ public abstract class Kernel32Util implements WinDef {
 
         return volumeGUIDPath.substring(VOLUME_GUID_PATH_PREFIX.length(), volumeGUIDPath.length() - VOLUME_GUID_PATH_SUFFIX.length());
     }
-    
+
     /**
-     * 
+     *
      * This function retrieves the full path of the executable file of a given process.
-     * 
+     *
      * @param hProcess
      *          Handle for the running process
      * @param dwFlags
      *          0 - The name should use the Win32 path format.
-     *          1(WinNT.PROCESS_NAME_NATIVE) - The name should use the native system path format. 
-     * 
-     * @return the full path of the process's executable file of null if failed. To get extended error information, 
-     *         call GetLastError. 
+     *          1(WinNT.PROCESS_NAME_NATIVE) - The name should use the native system path format.
+     *
+     * @return the full path of the process's executable file of null if failed. To get extended error information,
+     *         call GetLastError.
      */
     public static final String QueryFullProcessImageName(HANDLE hProcess, int dwFlags) {
         char[] path = new char[WinDef.MAX_PATH];
@@ -791,7 +824,7 @@ public abstract class Kernel32Util implements WinDef {
 
     /**
      * Gets a list of all resources from the specified executable file
-     * 
+     *
      * @param path
      *            The path to the executable file
      * @return A map of resource type name/ID => resources.<br>
@@ -813,7 +846,7 @@ public abstract class Kernel32Util implements WinDef {
             @Override
             public boolean invoke(HMODULE module, Pointer type, Pointer lParam) {
                 // simulate IS_INTRESOURCE macro defined in WinUser.h
-                // basically that means that if "type" is less than or equal to 65,535 
+                // basically that means that if "type" is less than or equal to 65,535
                 // it assumes it's an ID.
                 // otherwise it assumes it's a pointer to a string
                 if (Pointer.nativeValue(type) <= 65535) {
@@ -830,13 +863,13 @@ public abstract class Kernel32Util implements WinDef {
             @Override
             public boolean invoke(HMODULE module, Pointer type, Pointer name, Pointer lParam) {
                 String typeName = "";
-                
+
                 if (Pointer.nativeValue(type) <= 65535) {
                     typeName = Pointer.nativeValue(type) + "";
                 } else {
                     typeName = type.getWideString(0);
                 }
-                
+
                 if (Pointer.nativeValue(name) < 65535) {
                     result.get(typeName).add(Pointer.nativeValue(name) + "");
                 } else {
@@ -846,7 +879,7 @@ public abstract class Kernel32Util implements WinDef {
                 return true;
             }
         };
-        
+
 
         Win32Exception err = null;
         try {
@@ -867,7 +900,7 @@ public abstract class Kernel32Util implements WinDef {
                     pointer = new Memory(Native.WCHAR_SIZE * (typeName.length() + 1));
                     pointer.setWideString(0, typeName);
                 }
-                   
+
                 boolean callResult = Kernel32.INSTANCE.EnumResourceNames(target, pointer, ernp, null);
 
                 if (!callResult) {
@@ -895,10 +928,10 @@ public abstract class Kernel32Util implements WinDef {
         }
         return result;
     }
-    
+
     /**
      * Returns all the executable modules for a given process ID.<br>
-     * 
+     *
      * @param processID
      *            The process ID to get executable modules for
      * @return All the modules in the process.
@@ -924,9 +957,9 @@ public abstract class Kernel32Util implements WinDef {
                 modules.add(next);
                 next = new Tlhelp32.MODULEENTRY32W();
             }
-            
+
             int lastError = Kernel32.INSTANCE.GetLastError();
-            // if we got a false from Module32Next, 
+            // if we got a false from Module32Next,
             // check to see if it returned false because we're genuinely done
             // or if something went wrong.
             if (lastError != W32Errors.ERROR_SUCCESS && lastError != W32Errors.ERROR_NO_MORE_FILES) {
@@ -945,7 +978,7 @@ public abstract class Kernel32Util implements WinDef {
                 }
             }
         }
-        
+
         if (we != null) {
             throw we;
         }

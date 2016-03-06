@@ -137,60 +137,85 @@ public class Advapi32Test extends TestCase {
     	String sidString = EVERYONE;
     	PSIDByReference sid = new PSIDByReference();
     	assertTrue("SID conversion failed", Advapi32.INSTANCE.ConvertStringSidToSid(sidString, sid));
-    	assertTrue("Converted SID not valid: " + sid.getValue(), Advapi32.INSTANCE.IsValidSid(sid.getValue()));
-    	int sidLength = Advapi32.INSTANCE.GetLengthSid(sid.getValue());
-    	assertTrue(sidLength > 0);
-    	assertTrue(Advapi32.INSTANCE.IsValidSid(sid.getValue()));
+
+    	PSID value = sid.getValue();
+    	try {
+        	assertTrue("Converted SID not valid: " + value, Advapi32.INSTANCE.IsValidSid(value));
+        	int sidLength = Advapi32.INSTANCE.GetLengthSid(value);
+        	assertTrue("Non positive sid length", sidLength > 0);
+        	assertTrue("Invalid sid", Advapi32.INSTANCE.IsValidSid(value));
+    	} finally {
+    	    Kernel32Util.freeLocalMemory(value.getPointer());
+    	}
     }
 
     public void testGetSidLength() {
     	String sidString = EVERYONE;
     	PSIDByReference sid = new PSIDByReference();
     	assertTrue("SID conversion failed", Advapi32.INSTANCE.ConvertStringSidToSid(sidString, sid));
-    	assertEquals("Wrong SID lenght", 12, Advapi32.INSTANCE.GetLengthSid(sid.getValue()));
+
+    	PSID value = sid.getValue();
+    	try {
+    	    assertEquals("Wrong SID length", 12, Advapi32.INSTANCE.GetLengthSid(value));
+    	} finally {
+    	    Kernel32Util.freeLocalMemory(value.getPointer());
+    	}
     }
 
     public void testLookupAccountSid() {
     	// get SID bytes
     	String sidString = EVERYONE;
     	PSIDByReference sid = new PSIDByReference();
-    	assertTrue(Advapi32.INSTANCE.ConvertStringSidToSid(sidString, sid));
-    	int sidLength = Advapi32.INSTANCE.GetLengthSid(sid.getValue());
-    	assertTrue(sidLength > 0);
-    	// lookup account
-    	IntByReference cchName = new IntByReference();
-    	IntByReference cchReferencedDomainName = new IntByReference();
-    	PointerByReference peUse = new PointerByReference();
-    	assertFalse(Advapi32.INSTANCE.LookupAccountSid(null, sid.getValue(),
-    			null, cchName, null, cchReferencedDomainName, peUse));
-		assertEquals(W32Errors.ERROR_INSUFFICIENT_BUFFER, Kernel32.INSTANCE.GetLastError());
-    	assertTrue(cchName.getValue() > 0);
-    	assertTrue(cchReferencedDomainName.getValue() > 0);
-		char[] referencedDomainName = new char[cchReferencedDomainName.getValue()];
-		char[] name = new char[cchName.getValue()];
-    	assertTrue(Advapi32.INSTANCE.LookupAccountSid(null, sid.getValue(),
-    			name, cchName, referencedDomainName, cchReferencedDomainName, peUse));
-		assertEquals(5, peUse.getPointer().getInt(0)); // SidTypeWellKnownGroup
-		String nameString = Native.toString(name);
-		String referencedDomainNameString = Native.toString(referencedDomainName);
-		assertTrue(nameString.length() > 0);
-		assertEquals("Everyone", nameString);
-		assertTrue(referencedDomainNameString.length() == 0);
-    	assertEquals(null, Kernel32.INSTANCE.LocalFree(sid.getValue().getPointer()));
+    	assertTrue("Failed to create sid", Advapi32.INSTANCE.ConvertStringSidToSid(sidString, sid));
+
+    	PSID value = sid.getValue();
+    	try {
+        	int sidLength = Advapi32.INSTANCE.GetLengthSid(value);
+        	assertTrue("Non-positive sid length", sidLength > 0);
+        	// lookup account
+        	IntByReference cchName = new IntByReference();
+        	IntByReference cchReferencedDomainName = new IntByReference();
+        	PointerByReference peUse = new PointerByReference();
+        	assertFalse(Advapi32.INSTANCE.LookupAccountSid(null, value,
+        			null, cchName, null, cchReferencedDomainName, peUse));
+    		assertEquals(W32Errors.ERROR_INSUFFICIENT_BUFFER, Kernel32.INSTANCE.GetLastError());
+        	assertTrue(cchName.getValue() > 0);
+        	assertTrue(cchReferencedDomainName.getValue() > 0);
+    		char[] referencedDomainName = new char[cchReferencedDomainName.getValue()];
+    		char[] name = new char[cchName.getValue()];
+        	assertTrue(Advapi32.INSTANCE.LookupAccountSid(null, value,
+        			name, cchName, referencedDomainName, cchReferencedDomainName, peUse));
+    		assertEquals(5, peUse.getPointer().getInt(0)); // SidTypeWellKnownGroup
+    		String nameString = Native.toString(name);
+    		String referencedDomainNameString = Native.toString(referencedDomainName);
+    		assertTrue(nameString.length() > 0);
+    		assertEquals("Everyone", nameString);
+    		assertTrue(referencedDomainNameString.length() == 0);
+    	} finally {
+    	    Kernel32Util.freeLocalMemory(value.getPointer());
+    	}
     }
 
     public void testConvertSid() {
     	String sidString = EVERYONE;
     	PSIDByReference sid = new PSIDByReference();
-    	assertTrue(Advapi32.INSTANCE.ConvertStringSidToSid(
-    			sidString, sid));
-    	PointerByReference convertedSidStringPtr = new PointerByReference();
-    	assertTrue(Advapi32.INSTANCE.ConvertSidToStringSid(
-    			sid.getValue(), convertedSidStringPtr));
-    	String convertedSidString = convertedSidStringPtr.getValue().getWideString(0);
-    	assertEquals(convertedSidString, sidString);
-    	assertEquals(null, Kernel32.INSTANCE.LocalFree(convertedSidStringPtr.getValue()));
-    	assertEquals(null, Kernel32.INSTANCE.LocalFree(sid.getValue().getPointer()));
+    	assertTrue("Failed to convert SID string", Advapi32.INSTANCE.ConvertStringSidToSid(sidString, sid));
+
+    	PSID value = sid.getValue();
+    	try {
+        	PointerByReference convertedSidStringPtr = new PointerByReference();
+        	assertTrue("Failed to convert SID string", Advapi32.INSTANCE.ConvertSidToStringSid(value, convertedSidStringPtr));
+
+        	Pointer conv = convertedSidStringPtr.getValue();
+        	try {
+            	String convertedSidString = conv.getWideString(0);
+            	assertEquals("Mismatched SID string", convertedSidString, sidString);
+        	} finally {
+        	    Kernel32Util.freeLocalMemory(conv);
+        	}
+    	} finally {
+    	    Kernel32Util.freeLocalMemory(value.getPointer());
+    	}
     }
 
     public void testLogonUser() {
@@ -594,26 +619,35 @@ public class Advapi32Test extends TestCase {
     public void testIsWellKnownSid() {
     	String sidString = EVERYONE;
     	PSIDByReference sid = new PSIDByReference();
-    	assertTrue(Advapi32.INSTANCE.ConvertStringSidToSid(sidString, sid));
-    	assertTrue(Advapi32.INSTANCE.IsWellKnownSid(sid.getValue(),
-    			WELL_KNOWN_SID_TYPE.WinWorldSid));
-    	assertFalse(Advapi32.INSTANCE.IsWellKnownSid(sid.getValue(),
-    			WELL_KNOWN_SID_TYPE.WinAccountAdministratorSid));
+    	assertTrue("sid conversion failed", Advapi32.INSTANCE.ConvertStringSidToSid(sidString, sid));
+
+    	PSID value = sid.getValue();
+    	try {
+    	    assertTrue("Not a world sid", Advapi32.INSTANCE.IsWellKnownSid(value, WELL_KNOWN_SID_TYPE.WinWorldSid));
+    	    assertFalse("Unexpected admin sid", Advapi32.INSTANCE.IsWellKnownSid(value, WELL_KNOWN_SID_TYPE.WinAccountAdministratorSid));
+    	} finally {
+    	    Kernel32Util.freeLocalMemory(value.getPointer());
+    	}
     }
 
     public void testCreateWellKnownSid() {
     	PSID pSid = new PSID(WinNT.SECURITY_MAX_SID_SIZE);
     	IntByReference cbSid = new IntByReference(WinNT.SECURITY_MAX_SID_SIZE);
-    	assertTrue(Advapi32.INSTANCE.CreateWellKnownSid(WELL_KNOWN_SID_TYPE.WinWorldSid,
-    			null, pSid, cbSid));
-    	assertTrue(Advapi32.INSTANCE.IsWellKnownSid(pSid,
-    			WELL_KNOWN_SID_TYPE.WinWorldSid));
-    	assertTrue(cbSid.getValue() <= WinNT.SECURITY_MAX_SID_SIZE);
+    	assertTrue("Failed to create well-known SID",
+    	        Advapi32.INSTANCE.CreateWellKnownSid(WELL_KNOWN_SID_TYPE.WinWorldSid, null, pSid, cbSid));
+    	assertTrue("Not recognized as well-known SID",
+    	        Advapi32.INSTANCE.IsWellKnownSid(pSid, WELL_KNOWN_SID_TYPE.WinWorldSid));
+    	assertTrue("Invalid SID size", cbSid.getValue() <= WinNT.SECURITY_MAX_SID_SIZE);
     	PointerByReference convertedSidStringPtr = new PointerByReference();
-    	assertTrue(Advapi32.INSTANCE.ConvertSidToStringSid(
-    			pSid, convertedSidStringPtr));
-    	String convertedSidString = convertedSidStringPtr.getValue().getWideString(0);
-    	assertEquals(EVERYONE, convertedSidString);
+    	assertTrue("Failed to convert SID", Advapi32.INSTANCE.ConvertSidToStringSid(pSid, convertedSidStringPtr));
+
+    	Pointer conv = convertedSidStringPtr.getValue();
+    	try {
+    	    String convertedSidString = conv.getWideString(0);
+    	    assertEquals("Mismatched SID string", EVERYONE, convertedSidString);
+    	} finally {
+    	    Kernel32Util.freeLocalMemory(conv);
+    	}
     }
 
     public void testOpenEventLog() {
@@ -944,8 +978,6 @@ public class Advapi32Test extends TestCase {
 
 
     public void testGetNamedSecurityInfoForFileNoSACL() throws Exception {
-    	// create a temp file
-        File file = createTempFile();
         int infoType = OWNER_SECURITY_INFORMATION
                        | GROUP_SECURITY_INFORMATION
                        | DACL_SECURITY_INFORMATION;
@@ -955,18 +987,25 @@ public class Advapi32Test extends TestCase {
         PointerByReference ppDacl = new PointerByReference();
         PointerByReference ppSecurityDescriptor = new PointerByReference();
 
-        assertEquals(Advapi32.INSTANCE.GetNamedSecurityInfo(
-                      file.getAbsolutePath(),
-                      AccCtrl.SE_OBJECT_TYPE.SE_FILE_OBJECT,
-                      infoType,
-                      ppsidOwner,
-                      ppsidGroup,
-                      ppDacl,
-                      null,
-                      ppSecurityDescriptor), 0);
-
-        Kernel32.INSTANCE.LocalFree(ppSecurityDescriptor.getValue());
-        file.delete();
+        File file = createTempFile();
+        try {
+            try {
+                assertEquals("GetNamedSecurityInfo(" + file + ")", 0,
+                        Advapi32.INSTANCE.GetNamedSecurityInfo(
+                              file.getAbsolutePath(),
+                              AccCtrl.SE_OBJECT_TYPE.SE_FILE_OBJECT,
+                              infoType,
+                              ppsidOwner,
+                              ppsidGroup,
+                              ppDacl,
+                              null,
+                              ppSecurityDescriptor));
+            } finally {
+                file.delete();
+            }
+        } finally {
+            Kernel32Util.freeLocalMemory(ppSecurityDescriptor.getValue());
+        }
     }
 
     public void testGetNamedSecurityInfoForFileWithSACL() throws Exception {
@@ -1018,24 +1057,26 @@ public class Advapi32Test extends TestCase {
         PointerByReference ppDacl = new PointerByReference();
         PointerByReference ppSacl = new PointerByReference();
         PointerByReference ppSecurityDescriptor = new PointerByReference();
-        // create a temp file
+
         File file = createTempFile();
         String filePath = file.getAbsolutePath();
         try {
-            assertEquals("GetNamedSecurityInfo(" + filePath + ")", 0,
-                         Advapi32.INSTANCE.GetNamedSecurityInfo(
-                                 filePath,
-                                 AccCtrl.SE_OBJECT_TYPE.SE_FILE_OBJECT,
-                                 infoType,
-                                 ppsidOwner,
-                                 ppsidGroup,
-                                 ppDacl,
-                                 ppSacl,
-                                 ppSecurityDescriptor));
-            // Clean up resources
-            Kernel32.INSTANCE.LocalFree(ppSecurityDescriptor.getValue());
+            try {
+                assertEquals("GetNamedSecurityInfo(" + filePath + ")", 0,
+                             Advapi32.INSTANCE.GetNamedSecurityInfo(
+                                     filePath,
+                                     AccCtrl.SE_OBJECT_TYPE.SE_FILE_OBJECT,
+                                     infoType,
+                                     ppsidOwner,
+                                     ppsidGroup,
+                                     ppDacl,
+                                     ppSacl,
+                                     ppSecurityDescriptor));
+            } finally {
+                file.delete();
+            }
         } finally {
-            file.delete();
+            Kernel32Util.freeLocalMemory(ppSecurityDescriptor.getValue());
         }
         if (impersontating) {
         	Advapi32.INSTANCE.SetThreadToken(null, null);
@@ -1063,18 +1104,17 @@ public class Advapi32Test extends TestCase {
         File file = createTempFile();
         String filePath = file.getAbsolutePath();
         try {
-            assertEquals("GetNamedSecurityInfo(" + filePath + ")", 0,
-                         Advapi32.INSTANCE.GetNamedSecurityInfo(
-                                 filePath,
-                                 AccCtrl.SE_OBJECT_TYPE.SE_FILE_OBJECT,
-                                 infoType,
-                                 ppsidOwner,
-                                 ppsidGroup,
-                                 ppDacl,
-                                 null,
-                                 ppSecurityDescriptor));
-
             try {
+                assertEquals("GetNamedSecurityInfo(" + filePath + ")", 0,
+                             Advapi32.INSTANCE.GetNamedSecurityInfo(
+                                     filePath,
+                                     AccCtrl.SE_OBJECT_TYPE.SE_FILE_OBJECT,
+                                     infoType,
+                                     ppsidOwner,
+                                     ppsidGroup,
+                                     ppDacl,
+                                     null,
+                                     ppSecurityDescriptor));
                 assertEquals("SetNamedSecurityInfo(" + filePath + ")", 0,
                              Advapi32.INSTANCE.SetNamedSecurityInfo(
                                      filePath,
@@ -1085,10 +1125,10 @@ public class Advapi32Test extends TestCase {
                                      ppDacl.getValue(),
                                      null));
             } finally {
-                Kernel32.INSTANCE.LocalFree(ppSecurityDescriptor.getValue());
+                file.delete();
             }
         } finally {
-            file.delete();
+            Kernel32Util.freeLocalMemory(ppSecurityDescriptor.getValue());
         }
     }
 
@@ -1149,18 +1189,18 @@ public class Advapi32Test extends TestCase {
         PointerByReference ppSecurityDescriptor = new PointerByReference();
         String filePath = file.getAbsolutePath();
         try {
-            assertEquals("GetNamedSecurityInfo(" + filePath + ")", 0,
-                    Advapi32.INSTANCE.GetNamedSecurityInfo(
-                          filePath,
-                          AccCtrl.SE_OBJECT_TYPE.SE_FILE_OBJECT,
-                          infoType,
-                          ppsidOwner,
-                          ppsidGroup,
-                          ppDacl,
-                          ppSacl,
-                          ppSecurityDescriptor));
-
             try {
+                assertEquals("GetNamedSecurityInfo(" + filePath + ")", 0,
+                        Advapi32.INSTANCE.GetNamedSecurityInfo(
+                              filePath,
+                              AccCtrl.SE_OBJECT_TYPE.SE_FILE_OBJECT,
+                              infoType,
+                              ppsidOwner,
+                              ppsidGroup,
+                              ppDacl,
+                              ppSacl,
+                              ppSecurityDescriptor));
+
                 // Send the DACL as a SACL
                 assertEquals("SetNamedSecurityInfo(" + filePath + ")", 0,
                         Advapi32.INSTANCE.SetNamedSecurityInfo(
@@ -1172,11 +1212,10 @@ public class Advapi32Test extends TestCase {
                               ppDacl.getValue(),
                               ppDacl.getValue()));
             } finally {
-                // Clean up resources
-                Kernel32.INSTANCE.LocalFree(ppSecurityDescriptor.getValue());
+                file.delete();
             }
         } finally {
-            file.delete();
+            Kernel32Util.freeLocalMemory(ppSecurityDescriptor.getValue());
         }
 
         if (impersontating) {
@@ -1193,51 +1232,65 @@ public class Advapi32Test extends TestCase {
     }
 
     public void testGetSecurityDescriptorLength() throws Exception {
-        // create a temp file
-        File file = createTempFile();
         int infoType = OWNER_SECURITY_INFORMATION
                        | GROUP_SECURITY_INFORMATION
                        | DACL_SECURITY_INFORMATION;
 
         PointerByReference ppSecurityDescriptor = new PointerByReference();
 
-        assertEquals(Advapi32.INSTANCE.GetNamedSecurityInfo(
-                      file.getAbsolutePath(),
-                      AccCtrl.SE_OBJECT_TYPE.SE_FILE_OBJECT,
-                      infoType,
-                      null,
-                      null,
-                      null,
-                      null,
-                      ppSecurityDescriptor), 0);
+        File file = createTempFile();
+        try {
+            try {
+                assertEquals("GetNamedSecurityInfo(" + file + ")", 0,
+                        Advapi32.INSTANCE.GetNamedSecurityInfo(
+                              file.getAbsolutePath(),
+                              AccCtrl.SE_OBJECT_TYPE.SE_FILE_OBJECT,
+                              infoType,
+                              null,
+                              null,
+                              null,
+                              null,
+                              ppSecurityDescriptor));
 
-        assertTrue(Advapi32.INSTANCE.GetSecurityDescriptorLength(ppSecurityDescriptor.getValue()) > 0);
-        Kernel32.INSTANCE.LocalFree(ppSecurityDescriptor.getValue());
-        file.delete();
+                assertTrue("GetSecurityDescriptorLength(" + file + ")",
+                        Advapi32.INSTANCE.GetSecurityDescriptorLength(ppSecurityDescriptor.getValue()) > 0);
+            } finally {
+                file.delete();
+            }
+        } finally {
+            Kernel32Util.freeLocalMemory(ppSecurityDescriptor.getValue());
+        }
     }
 
     public void testIsValidSecurityDescriptor() throws Exception {
-        // create a temp file
-        File file = createTempFile();
         int infoType = OWNER_SECURITY_INFORMATION
                        | GROUP_SECURITY_INFORMATION
                        | DACL_SECURITY_INFORMATION;
 
         PointerByReference ppSecurityDescriptor = new PointerByReference();
 
-        assertEquals(Advapi32.INSTANCE.GetNamedSecurityInfo(
-                      file.getAbsolutePath(),
-                      AccCtrl.SE_OBJECT_TYPE.SE_FILE_OBJECT,
-                      infoType,
-                      null,
-                      null,
-                      null,
-                      null,
-                      ppSecurityDescriptor), 0);
+        File file = createTempFile();
+        try {
+            try {
+                assertEquals("GetNamedSecurityInfo(" + file + ")",
+                        Advapi32.INSTANCE.GetNamedSecurityInfo(
+                              file.getAbsolutePath(),
+                              AccCtrl.SE_OBJECT_TYPE.SE_FILE_OBJECT,
+                              infoType,
+                              null,
+                              null,
+                              null,
+                              null,
+                              ppSecurityDescriptor), 0);
 
-        assertTrue(Advapi32.INSTANCE.IsValidSecurityDescriptor(ppSecurityDescriptor.getValue()));
-        Kernel32.INSTANCE.LocalFree(ppSecurityDescriptor.getValue());
-        file.delete();
+                assertTrue("IsValidSecurityDescriptor(" + file + ")",
+                        Advapi32.INSTANCE.IsValidSecurityDescriptor(ppSecurityDescriptor.getValue()));
+            } finally {
+                file.delete();
+            }
+        } finally {
+            Kernel32Util.freeLocalMemory(ppSecurityDescriptor.getValue());
+        }
     }
 
     public void testMapGenericReadMask() {
@@ -1428,7 +1481,7 @@ public class Advapi32Test extends TestCase {
         // create an encrypted file
         File file = createTempFile();
         String lpFileName = file.getAbsolutePath();
-        assertTrue(Advapi32.INSTANCE.EncryptFile(lpFileName));
+        assertTrue("EncryptFile(" + lpFileName + ")", Advapi32.INSTANCE.EncryptFile(lpFileName));
 
         // open file for export
         ULONG ulFlags = new ULONG(0);
