@@ -12,6 +12,7 @@
  */
 package com.sun.jna.platform.win32.COM;
 
+import com.sun.jna.LastErrorException;
 import java.util.ArrayList;
 
 import com.sun.jna.Native;
@@ -109,8 +110,14 @@ public abstract class COMUtils {
     public static void checkRC(HRESULT hr, EXCEPINFO pExcepInfo,
             IntByReference puArgErr) {
         if (FAILED(hr)) {
-            String formatMessageFromHR = Kernel32Util.formatMessage(hr);
-            throw new COMException(formatMessageFromHR, pExcepInfo, puArgErr);
+            String formatMessage;
+            try {
+                formatMessage = Kernel32Util.formatMessage(hr) + "(HRESULT: " + Integer.toHexString(hr.intValue()) + ")";
+            } catch (LastErrorException ex) {
+                // throws if HRESULT can't be resolved
+                formatMessage = "(HRESULT: " + Integer.toHexString(hr.intValue()) + ")";
+            }
+            throw new COMException(formatMessage, pExcepInfo, puArgErr);
         }
     }
 
@@ -185,11 +192,11 @@ public abstract class COMUtils {
     }
 
     /**
-     * Check is COM was initialized correctly. The initialization status is not changed!
+     * Check if COM was initialized correctly. The initialization status is not changed!
      *
      * <p>This is a debug function, not for normal usage!</p>
      * 
-     * @return
+     * @return whether COM has been initialized
      */
     public static boolean comIsInitialized() {
         WinNT.HRESULT hr = Ole32.INSTANCE.CoInitializeEx(Pointer.NULL, Ole32.COINIT_MULTITHREADED);

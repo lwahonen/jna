@@ -218,6 +218,15 @@ public interface Kernel32 extends StdCallLibrary, WinNT, Wincon {
     int GetTickCount();
 
     /**
+     * The GetTickCount64 function retrieves the number of milliseconds that 
+     * have elapsed since the system was started.
+     *
+     * @return Number of milliseconds that have elapsed since the system was
+     *         started.
+     */
+    long GetTickCount64();
+  
+    /**
      * The GetCurrentThreadId function retrieves the thread identifier of the
      * calling thread.
      *
@@ -735,14 +744,15 @@ public interface Kernel32 extends StdCallLibrary, WinNT, Wincon {
             int dwDesiredAccess, boolean bInheritHandle, int dwOptions);
 
     /**
-     * The CloseHandle function closes an open object handle.
+     * Closes an open object handle.
      *
      * @param hObject
      *            Handle to an open object. This parameter can be a pseudo
      *            handle or INVALID_HANDLE_VALUE.
      * @return If the function succeeds, the return value is nonzero. If the
      *         function fails, the return value is zero. To get extended error
-     *         information, call GetLastError.
+     *         information, call {@code GetLastError}.
+     * @see <A HREF="https://msdn.microsoft.com/en-us/library/windows/desktop/ms724211(v=vs.85).aspx">CloseHandle</A>
      */
     boolean CloseHandle(HANDLE hObject);
 
@@ -3325,4 +3335,16 @@ public interface Kernel32 extends StdCallLibrary, WinNT, Wincon {
      *         not contain module information.
      */
     boolean Module32NextW(HANDLE hSnapshot, Tlhelp32.MODULEENTRY32W lpme);
+    
+    /**
+     * Controls whether the system will handle the specified types of serious
+     * errors or whether the process will handle them.
+     * @see <a href="https://msdn.microsoft.com/en-us/library/windows/desktop/ms680621(v=vs.85).aspx">MSDN</a>
+     * 
+     * @param umode
+     *            The process error mode.
+     * @return The return value is the previous state of the error-mode bit
+     *         flags.
+     */
+    int SetErrorMode(int umode);
 }

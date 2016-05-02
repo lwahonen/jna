@@ -2,8 +2,8 @@ NOTE: as of JNA 4.0, JNA is now dual-licensed under LGPL and ASL (see LICENSE).
 
 NOTE: JNI native support is typically incompatible between minor versions, and almost always incompatible between major versions.
 
-Next release
-============
+Release 4.3 (Next release)
+===========
 
 Features
 --------
@@ -35,11 +35,22 @@ Features
 * [#577](https://github.com/java-native-access/jna/pull/577): Apply generic definitions wherever applicable - [@lgoldstein](https://github.com/lgoldstein).
 * [#569](https://github.com/java-native-access/jna/pull/569): Added `com.sun.jna.platform.win32.Winspool.PRINTER_INFO_2` support. Added GetPrinter and ClosePrinter functions in `com.sun.jna.platform.win32.Winspool` - [@IvanRF](https://github.com/IvanRF).
 * [#583](https://github.com/java-native-access/jna/pull/583): Added printer attributes and status - [@IvanRF](https://github.com/IvanRF).
-* [#589](https://github.com/java-native-access/jna/pull/589): Use MethodResultContext in direct mapping (as done in interface mapping) - [@marco2357](https://github.com/marco2357).
+* [#589](https://github.com/java-native-access/jna/pull/589): Use `com.sun.jna.MethodResultContext` in direct mapping (as done in interface mapping) - [@marco2357](https://github.com/marco2357).
 * [#595](https://github.com/java-native-access/jna/pull/595): Allow calling COM methods/getters requiring hybrid calling (METHOD+PROPERTYGET) - [@matthiasblaesing](https://github.com/matthiasblaesing).
-* [#582](https://github.com/java-native-access/jna/pull/582): Mavenize the build process - Phase 1: building the native code via Maven [@lgoldstein](https://github.com/lgoldstein).
-* [#606](https://github.com/java-native-access/jna/pull/606): Added Kerne32Util method to facilitate checking that calls to LocalFree/GlobalFree are successful [@lgoldstein](https://github.com/lgoldstein).
-* [#612](https://github.com/java-native-access/jna/pull/612): Kernel32Util#freeLocal/GlobalMemory always throws Win32Exception if failed [@lgoldstein](https://github.com/lgoldstein).
+* [#582](https://github.com/java-native-access/jna/pull/582): Mavenize the build process - Phase 1: building the native code via Maven - [@lgoldstein](https://github.com/lgoldstein).
+* [#606](https://github.com/java-native-access/jna/pull/606): Added Kernel32Util method to facilitate checking that calls to LocalFree/GlobalFree are successful - [@lgoldstein](https://github.com/lgoldstein).
+* [#612](https://github.com/java-native-access/jna/pull/612): `Kernel32Util.freeLocalMemory()`/`Kernel32Util.freeGlobalMemory()` always throw `com.sun.jna.platform.win32.Win32Exception` if failed - [@lgoldstein](https://github.com/lgoldstein).
+* [#608](https://github.com/java-native-access/jna/pull/608): Mavenize the build process - change parent and native pom artifactId/name to differentiate in IDE and build tools. - [@bhamail](https://github.com/bhamail)
+* [#613](https://github.com/java-native-access/jna/pull/613): Make `com.sun.jna.platform.win32.Win32Exception` extend `com.sun.jna.LastErrorException` - [@lgoldstein](https://github.com/lgoldstein).
+* [#614](https://github.com/java-native-access/jna/pull/614): Added standard `com.sun.jna.platform.win32.Kernel32Util.closeHandle()` method that throws a `com.sun.jna.platform.win32.Win32Exception` if failed to close the handle - [@lgoldstein](https://github.com/lgoldstein).
+* [#618](https://github.com/java-native-access/jna/pull/618): Implement SAFEARRAY access and bugfix VARIANT - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#616](https://github.com/java-native-access/jna/pull/616): Allow access to base interfaces (most important IDispatch) via ProxyObject and improve binding by allowing to use dispId for the call - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#621](https://github.com/java-native-access/jna/pull/621): Added TYPEFLAGS-constants for `wTypeFlags` in `com.sun.jna.platform.win32.OaIdl.TYPEATTR` - [@SevenOf9Sleeper](https://github.com/SevenOf9Sleeper).
+* [#625](https://github.com/java-native-access/jna/pull/625): Make conversion to/from java to/from VARIANT in `com.sun.jna.platform.win32.COM.util.Convert` more flexible and dependable - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#639](https://github.com/java-native-access/jna/pull/639): Add getloadavg() to OS X and Unix - [@dbwiddis](https://github.com/dbwiddis).
+* [#640](https://github.com/java-native-access/jna/pull/640): Add `com.sun.jna.platform.win32.Psapi.GetPerformanceInfo()`, `com.sun.jna.platform.win32.Kernel32.GetTickCount64()`, and `com.sun.jna.platform.win32.Kernel32.SetErrorMode()` - [@dbwiddis](https://github.com/dbwiddis).
+* [#642](https://github.com/java-native-access/jna/pull/642): COM calls with variable number of arguments (varargs) are now supported - [@SevenOf9Sleeper](https://github.com/SevenOf9Sleeper).
+* [#644](https://github.com/java-native-access/jna/pull/644): New ant target 'install' for installing JNA artifacts in local m2-repository - [@SevenOf9Sleeper](https://github.com/SevenOf9Sleeper).
 
 Bug Fixes
 ---------
@@ -52,8 +63,10 @@ Bug Fixes
 * [#593](https://github.com/java-native-access/jna/pull/593): Improve binding of TypeLib bindings - [@matthiasblaesing](https://github.com/matthiasblaesing).
 * [#578](https://github.com/java-native-access/jna/pull/578): Fix COM CallbackHandlers, allow usage of VARIANTs directly in c.s.j.p.w.COM.util.ProxyObject and fix native memory leak in c.s.j.p.w.COM.util.ProxyObject - [@matthiasblaesing](https://github.com/matthiasblaesing)
 * [#601](https://github.com/java-native-access/jna/pull/601): Remove COMThread and COM initialization from objects and require callers to initialize COM themselves. Asserts are added to guard correct usage. - [@matthiasblaesing](https://github.com/matthiasblaesing).
-* [#602] https://github.com/java-native-access/jna/pull/602): Make sure SID related memory is properly released once no longer required [@lgoldstein](https://github.com/lgoldstein).
+* [#602](https://github.com/java-native-access/jna/pull/602): Make sure SID related memory is properly released once no longer required [@lgoldstein](https://github.com/lgoldstein).
 * [#610](https://github.com/java-native-access/jna/pull/610): Fixed issue #604: Kernel32#GetLastError() always returns ERROR_SUCCESS [@lgoldstein](https://github.com/lgoldstein).
+* [#633](https://github.com/java-native-access/jna/pull/633): Restore default usage of platform native encoding for Java strings passed to native functions (was hard-coded to UTF-8 in 4.0 and later) [@amake](https://github.com/amake)
+* [#634](https://github.com/java-native-access/jna/pull/634): Improve BSTR handling - [@matthiasblaesing](https://github.com/matthiasblaesing).
 
 Release 4.2.1
 =============
