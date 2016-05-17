@@ -52,6 +52,7 @@ Features
 * [#642](https://github.com/java-native-access/jna/pull/642): COM calls with variable number of arguments (varargs) are now supported - [@SevenOf9Sleeper](https://github.com/SevenOf9Sleeper).
 * [#644](https://github.com/java-native-access/jna/pull/644): New ant target 'install' for installing JNA artifacts in local m2-repository - [@SevenOf9Sleeper](https://github.com/SevenOf9Sleeper).
 * [#649](https://github.com/java-native-access/jna/pull/649): Bugfix msoffice sample and add two samples taken from MSDN and translated from VisualBasic to Java  - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#654](https://github.com/java-native-access/jna/pull/654): Support named arguments for `com.sun.jna.platform.win32.COM.util.CallbackProxy` based callbacks - [@matthiasblaesing](https://github.com/matthiasblaesing).
 
 Bug Fixes
 ---------
@@ -68,6 +69,7 @@ Bug Fixes
 * [#610](https://github.com/java-native-access/jna/pull/610): Fixed issue #604: Kernel32#GetLastError() always returns ERROR_SUCCESS [@lgoldstein](https://github.com/lgoldstein).
 * [#633](https://github.com/java-native-access/jna/pull/633): Restore default usage of platform native encoding for Java strings passed to native functions (was hard-coded to UTF-8 in 4.0 and later) [@amake](https://github.com/amake)
 * [#634](https://github.com/java-native-access/jna/pull/634): Improve BSTR handling and add `SysStringByteLen` and `SysStringLen` to `com.sun.jna.platform.win32.OleAuto` - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#646](https://github.com/java-native-access/jna/issues/646): `platform.win32.COM.COMBindingBaseObject` swallows reason if instantiation fails - [@matthiasblaesing](https://github.com/matthiasblaesing).
 
 Release 4.2.1
 =============
