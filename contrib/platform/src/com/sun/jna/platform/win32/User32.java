@@ -188,11 +188,30 @@ public interface User32 extends StdCallLibrary, WinUser, WinNT {
      *            Long pointer to a RECT structure that receives the screen
      *            coordinates of the upper-left and lower-right corners of the
      *            window.
-     * @return Nonzero indicates success. Zero indicates failure. To get
-     *         extended error information, call GetLastError.
+     * @return If the function succeeds, the return value is nonzero. If the
+     *         function fails, the return value is zero.
      */
     boolean GetWindowRect(HWND hWnd, RECT rect);
 
+    /**
+     * This function retrieves the coordinates of a window's client area. 
+     * The client coordinates specify the upper-left and lower-right corners of the 
+     * client area. Because client coordinates are relative to the upper-left 
+     * corner of a window's client area, the coordinates of the upper-left corner 
+     * are (0,0).
+     *
+     * @param hWnd
+     *            Handle to the window.
+     * @param rect
+     *            Long pointer to a RECT structure that structure that receives 
+     *            the client coordinates. The left and top members are zero. The 
+     *            right and bottom members contain the width and height of the 
+     *            window.
+     * @return If the function succeeds, the return value is nonzero. If the
+     *         function fails, the return value is zero.
+     */
+    boolean GetClientRect(HWND hWnd, RECT rect);
+    
     /**
      * This function copies the text of the specified window's title bar - if it
      * has one - into a buffer. If the specified window is a control, the text
@@ -788,6 +807,46 @@ public interface User32 extends StdCallLibrary, WinUser, WinNT {
      */
     void PostMessage(HWND hWnd, int msg, WPARAM wParam, LPARAM lParam);
 
+    /**
+     * Posts a message to the message queue of the specified thread. It returns
+     * without waiting for the thread to process the message.
+     * 
+     * @param idThread The identifier of the thread to which the message is to 
+     * be posted.
+     * 
+     * <p>The function fails if the specified thread does not have a 
+     * message queue. The system creates a thread's message queue when the
+     * thread makes its first call to one of the User or GDI functions.</p>
+     * 
+     * <p>Message posting is subject to UIPI. The thread of a process can post 
+     * messages only to posted-message queues of threads in processes of lesser
+     * or equal integrity level.</p>
+     * 
+     * <p>This thread must have the SE_TCB_NAME privilege to post a message to a
+     * thread that belongs to a process with the same locally unique identifier
+     * (LUID) but is in a different desktop. Otherwise, the function fails
+     * and returns ERROR_INVALID_THREAD_ID.</p>
+     * 
+     * <p>This thread must either belong to the same desktop as the calling 
+     * thread or to a process with the same LUID. Otherwise, the function
+     * fails and returns ERROR_INVALID_THREAD_ID.</p>
+     * 
+     * @param Msg The type of message to be posted.
+     *
+     * @param wParam Additional message-specific information.
+     * 
+     * @param lParam Additional message-specific information.
+     * 
+     * @return If the function succeeds, the return value is nonzero.
+     * 
+     * <p>If the function fails, the return value is zero. To get extended error
+     * information, call GetLastError.</p><p>GetLastError returns 
+     * ERROR_INVALID_THREAD_ID if idThread is not a valid thread identifier, or
+     * if the thread specified by idThread does not have a message queue.</p>
+     * <p>GetLastError returns ERROR_NOT_ENOUGH_QUOTA when the message limit is hit.</p>
+     */
+    int PostThreadMessage(int  idThread, int  Msg, WPARAM wParam,  LPARAM lParam);
+    
     /**
      * This function indicates to Windows that a thread has made a request to
      * terminate (quit). It is typically used in response to a WM_DESTROY
@@ -2357,4 +2416,18 @@ public interface User32 extends StdCallLibrary, WinUser, WinNT {
      *         error information, call GetLastError.<br>
      */
     int GetClassLong(HWND hWnd, int nIndex);
+    
+    /**
+     * Registers a new clipboard format. This format can then be used as a 
+     * valid clipboard format. 
+     * 
+     * @param formatName The name of the new format. 
+     * 
+     * @return If the function succeeds, the return value identifies the 
+     * registered clipboard format.
+     * 
+     * <p> If the function fails, the return value is zero. To get extended
+     * error information, call GetLastError.</p>
+     */
+    public int RegisterClipboardFormat(String formatName);
 }
