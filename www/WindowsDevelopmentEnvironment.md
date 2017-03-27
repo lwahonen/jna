@@ -24,7 +24,7 @@ To use the MS compiler, ensure that the appropriate 32-bit or 64-bit versions
 of cl.exe/ml.exe/ml64.exe/link.exe are in your PATH and that the INCLUDE and
 LIB environment variables are set properly (as in VCVARS.BAT). 
 
-Sample configuration setting up INCLUDE/LIB:
+Sample configuration setting up INCLUDE/LIB (see an alternative below):
 
 ``` shell
 export MSVC="/c/Program Files (x86)/Microsoft Visual Studio 10.0/vc"
@@ -58,3 +58,44 @@ for each file that it's complaining about.
 ### Building
 
 Type `ant` from the top to build the project.
+
+Recipe for building on windows
+------------------------------
+
+This is the contents of a note I made for myself to be able to build JNA on
+windows.
+
+<pre>
+0. Start-Point: A clean Windows 10 Installation with all patches as of 2016-06-10
+1. Install Visual C++ Build Tools 2015 (http://landinghub.visualstudio.com/visual-cpp-build-tools) (the 8.1 SDK is enough)
+2. Install Oracle JDK 8u121 (64 bit)
+3. Install Cygwin (https://cygwin.com/install.html)
+	- make
+	- automake
+	- automake1.15
+	- libtool
+	- mingw64-x86_64-gcc-g++ (Version 5.4.0-3)
+	- mingw64-x86_64-gcc-core (Version 5.4.0-2)
+	- gcc-g++
+	- diffutils
+        - git 
+4. Ensure ant, maven, cygwin are accessible from the PATH
+5. Run 
+	"C:\Program Files (x86)\Microsoft Visual C++ Build Tools\vcbuildtools.bat" x64
+   inside a windows command prompt
+6. Point JAVA_HOME to the root of a 64 Bit JDK
+7. Run native build
+
+For 32bit:
+
+- Install:
+    - mingw64-i686-gcc-g++ (Version 5.4.0-3)
+    - mingw64-i686-gcc-core (Version 5.4.0-2)
+- Modify the recipe:
+    - Step 2:
+        Install JDK 8u121 (32 bit)
+    - Step 5: 
+        "C:\Program Files (x86)\Microsoft Visual C++ Build Tools\vcbuildtools.bat" x86
+    - Step 6:
+        Point JAVA_HOME to the root of a 32 Bit JDK
+</pre>

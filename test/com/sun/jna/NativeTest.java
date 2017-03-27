@@ -1,14 +1,25 @@
 /* Copyright (c) 2007-2013 Timothy Wall, All Rights Reserved
  *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
+ * The contents of this file is dual-licensed under 2 
+ * alternative Open Source/Free licenses: LGPL 2.1 or later and 
+ * Apache License 2.0. (starting with JNA version 4.0.0).
+ * 
+ * You can freely decide which license you want to apply to 
+ * the project.
+ * 
+ * You may obtain a copy of the LGPL License at:
+ * 
+ * http://www.gnu.org/licenses/licenses.html
+ * 
+ * A copy is also included in the downloadable source code package
+ * containing JNA, in file "LGPL2.1".
+ * 
+ * You may obtain a copy of the Apache License at:
+ * 
+ * http://www.apache.org/licenses/
+ * 
+ * A copy is also included in the downloadable source code package
+ * containing JNA, in file "AL2.0".
  */
 package com.sun.jna;
 
@@ -57,6 +68,8 @@ public class NativeTest extends TestCase {
             }
         }
     }
+    
+    @SuppressWarnings("deprecation")
     public void testVersion() {
         String[] INPUTS = { "1.0", "1.0.1", "2.1.3" };
         float[] EXPECTED = { 1.0f, 1.0f, 2.1f };
@@ -511,5 +524,14 @@ public class NativeTest extends TestCase {
             }
             try { Thread.sleep(300000); } catch(Exception e) { }
         }
+    }
+    
+    public void testVersionComparison() {
+        assertTrue("Equal version", Native.isCompatibleVersion("5.1.0", "5.1.0"));
+        assertTrue("New revision", Native.isCompatibleVersion("5.2.0", "5.2.1"));
+        assertTrue("New minor provided, older minor expected", Native.isCompatibleVersion("5.1.0", "5.10.0"));
+        assertFalse("Old minor provided, new minor expected", Native.isCompatibleVersion("5.10.0", "5.1.0"));
+        assertFalse("Different major (expected < provided)", Native.isCompatibleVersion("4.0.0", "5.0.0"));
+        assertFalse("Different major (expected > provided)", Native.isCompatibleVersion("5.0.0", "4.0.0"));
     }
 }

@@ -1,14 +1,25 @@
 /* Copyright (c) 2010 Daniel Doubrovkine, All Rights Reserved
  *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
+ * The contents of this file is dual-licensed under 2 
+ * alternative Open Source/Free licenses: LGPL 2.1 or later and 
+ * Apache License 2.0. (starting with JNA version 4.0.0).
+ * 
+ * You can freely decide which license you want to apply to 
+ * the project.
+ * 
+ * You may obtain a copy of the LGPL License at:
+ * 
+ * http://www.gnu.org/licenses/licenses.html
+ * 
+ * A copy is also included in the downloadable source code package
+ * containing JNA, in file "LGPL2.1".
+ * 
+ * You may obtain a copy of the Apache License at:
+ * 
+ * http://www.apache.org/licenses/
+ * 
+ * A copy is also included in the downloadable source code package
+ * containing JNA, in file "AL2.0".
  */
 package com.sun.jna.platform.win32;
 
@@ -30,6 +41,7 @@ import static com.sun.jna.platform.win32.WinNT.SACL_SECURITY_INFORMATION;
 import static com.sun.jna.platform.win32.WinNT.SE_DACL_PROTECTED;
 import static com.sun.jna.platform.win32.WinNT.SE_SACL_PROTECTED;
 import static com.sun.jna.platform.win32.WinNT.STANDARD_RIGHTS_READ;
+import static com.sun.jna.platform.win32.WinNT.TOKEN_ADJUST_PRIVILEGES;
 import static com.sun.jna.platform.win32.WinNT.TOKEN_DUPLICATE;
 import static com.sun.jna.platform.win32.WinNT.TOKEN_IMPERSONATE;
 import static com.sun.jna.platform.win32.WinNT.TOKEN_QUERY;
@@ -37,6 +49,7 @@ import static com.sun.jna.platform.win32.WinNT.UNPROTECTED_DACL_SECURITY_INFORMA
 import static com.sun.jna.platform.win32.WinNT.UNPROTECTED_SACL_SECURITY_INFORMATION;
 
 import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -58,6 +71,7 @@ import com.sun.jna.platform.win32.WinDef.DWORDByReference;
 import com.sun.jna.platform.win32.WinDef.ULONG;
 import com.sun.jna.platform.win32.WinDef.ULONGByReference;
 import com.sun.jna.platform.win32.WinNT.ACCESS_ACEStructure;
+import com.sun.jna.platform.win32.WinNT.ACCESS_ALLOWED_ACE;
 import com.sun.jna.platform.win32.WinNT.ACL;
 import com.sun.jna.platform.win32.WinNT.EVENTLOGRECORD;
 import com.sun.jna.platform.win32.WinNT.GENERIC_MAPPING;
@@ -70,6 +84,7 @@ import com.sun.jna.platform.win32.WinNT.SECURITY_DESCRIPTOR_RELATIVE;
 import com.sun.jna.platform.win32.WinNT.SECURITY_IMPERSONATION_LEVEL;
 import com.sun.jna.platform.win32.WinNT.SID_AND_ATTRIBUTES;
 import com.sun.jna.platform.win32.WinNT.SID_NAME_USE;
+import com.sun.jna.platform.win32.WinNT.TOKEN_TYPE;
 import com.sun.jna.platform.win32.WinReg.HKEY;
 import com.sun.jna.platform.win32.WinReg.HKEYByReference;
 import com.sun.jna.ptr.IntByReference;
@@ -366,7 +381,27 @@ public abstract class Advapi32Util {
 		return Advapi32.INSTANCE.IsWellKnownSid(pSID, wellKnownSidType);
 	}
 
+    /**
+     * Align cbAcl on a DWORD
+     * @param cbAcl size to align
+     * @return the aligned size
+     */
+    public static int alignOnDWORD(int cbAcl) {
+        return (cbAcl + (DWORD.SIZE - 1)) & 0xfffffffc;
+    }
+
 	/**
+     * Helper function to calculate the size of an ACE for a given PSID size
+     * @param sidLength length of the sid
+     * @return size of the ACE
+     */
+    public static int getAceSize(int sidLength) {
+        return Native.getNativeSize(ACCESS_ALLOWED_ACE.class, null)
+                + sidLength
+                - DWORD.SIZE;
+    }
+
+    /**
 	 * Get an account name from a string SID on the local machine.
 	 *
 	 * @param sidString
@@ -2624,5 +2659,208 @@ public abstract class Advapi32Util {
 
         // close
         Advapi32.INSTANCE.CloseEncryptedFileRaw(pvContext.getValue());
+    }
+
+    /**
+     * Convenience class to enable certain Windows process privileges
+     */
+    public static class Privilege implements Closeable {
+        /**
+         * If true, the thread is currently impersonating
+         */
+        private boolean currentlyImpersonating = false;
+
+        /**
+         * If true, the privileges have been enabled
+         */
+        private boolean privilegesEnabled = false;
+
+        /**
+         * LUID form of the privileges
+         */
+        private final WinNT.LUID[] pLuids;
+
+        /**
+         * Construct and enable a set of privileges
+         * @param privileges the names of the privileges in the form of SE_* from Advapi32.java
+         * @throws IllegalArgumentException
+         */
+        public Privilege(String... privileges) throws IllegalArgumentException, Win32Exception {
+            pLuids = new WinNT.LUID[privileges.length];
+            int i = 0;
+            for (String p : privileges) {
+                pLuids[i] = new WinNT.LUID();
+                if (!Advapi32.INSTANCE.LookupPrivilegeValue(null, p, pLuids[i])) {
+                    throw new IllegalArgumentException("Failed to find privilege \"" + privileges[i] + "\" - " + Kernel32.INSTANCE.GetLastError());
+                }
+                i++;
+            }
+        }
+
+        /**
+         * Calls disable() to remove the privileges
+         * @see java.io.Closeable#close()
+         */
+        @Override
+        public void close() {
+            this.disable();
+        }
+
+        /**
+         * Enables the given privileges. If required, it will duplicate the process token. No resources are left open when this completes. That is, it is
+         * NOT required to drop the privileges, although it is considered a best practice if you do not need it. This class is state full. It keeps track
+         * of whether it has enabled the privileges. Multiple calls to enable() without a drop() in between have no affect.
+         * @return pointer to self (Privilege) as a convenience for try with resources statements
+         * @throws Win32Exception
+         */
+        public Privilege enable() throws Win32Exception {
+            // Ignore if already enabled.
+            if (privilegesEnabled)
+                return this;
+
+            // Get thread token
+            final HANDLEByReference phThreadToken = new HANDLEByReference();
+
+            try {
+                phThreadToken.setValue(getThreadToken());
+                WinNT.TOKEN_PRIVILEGES tp = new WinNT.TOKEN_PRIVILEGES(pLuids.length);
+                for (int i = 0; i < pLuids.length; i++) {
+                    tp.Privileges[i] = new WinNT.LUID_AND_ATTRIBUTES(pLuids[i], new DWORD(WinNT.SE_PRIVILEGE_ENABLED));
+                }
+                if (!Advapi32.INSTANCE.AdjustTokenPrivileges(phThreadToken.getValue(), false, tp, 0, null, null)) {
+                    throw new Win32Exception(Kernel32.INSTANCE.GetLastError());
+                }
+                privilegesEnabled = true;
+            }
+            catch (Win32Exception ex) {
+                // If fails, clean up
+                if (currentlyImpersonating) {
+                    Advapi32.INSTANCE.SetThreadToken(null, null);
+                    currentlyImpersonating = false;
+                }
+                else {
+                    if (privilegesEnabled) {
+                        WinNT.TOKEN_PRIVILEGES tp = new WinNT.TOKEN_PRIVILEGES(pLuids.length);
+                        for (int i = 0; i < pLuids.length; i++) {
+                            tp.Privileges[i] = new WinNT.LUID_AND_ATTRIBUTES(pLuids[i], new DWORD(0));
+                        }
+                        Advapi32.INSTANCE.AdjustTokenPrivileges(phThreadToken.getValue(), false, tp, 0, null, null);
+                        privilegesEnabled = false;
+                    }
+                }
+                throw ex;
+            }
+            finally {
+                // Always close the thread token
+                if ((phThreadToken.getValue() != WinBase.INVALID_HANDLE_VALUE)
+                        && (phThreadToken.getValue() != null)) {
+                    Kernel32.INSTANCE.CloseHandle(phThreadToken.getValue());
+                    phThreadToken.setValue(null);
+                }
+            }
+            return this;
+        }
+
+        /**
+         * Disabled the prior enabled privilege
+         * @throws Win32Exception
+         */
+        public void disable() throws Win32Exception {
+            // Get thread token
+            final HANDLEByReference phThreadToken = new HANDLEByReference();
+
+            try {
+                phThreadToken.setValue(getThreadToken());
+                if (currentlyImpersonating) {
+                    Advapi32.INSTANCE.SetThreadToken(null, null);
+                }
+                else
+                {
+                    if (privilegesEnabled) {
+                        WinNT.TOKEN_PRIVILEGES tp = new WinNT.TOKEN_PRIVILEGES(pLuids.length);
+                        for (int i = 0; i < pLuids.length; i++) {
+                            tp.Privileges[i] = new WinNT.LUID_AND_ATTRIBUTES(pLuids[i], new DWORD(0));
+                        }
+                        Advapi32.INSTANCE.AdjustTokenPrivileges(phThreadToken.getValue(), false, tp, 0, null, null);
+                        privilegesEnabled = false;
+                    }
+                }
+            }
+            finally {
+                // Close the thread token
+                if ((phThreadToken.getValue() != WinBase.INVALID_HANDLE_VALUE)
+                        && (phThreadToken.getValue() != null)) {
+                    Kernel32.INSTANCE.CloseHandle(phThreadToken.getValue());
+                    phThreadToken.setValue(null);
+                }
+            }
+        }
+
+        /**
+         * Get a handle to the thread token. May duplicate the process token
+         * and set as the thread token if ther thread has no token.
+         * @return HANDLE to the thread token
+         * @throws Win32Exception
+         */
+        private HANDLE getThreadToken() throws Win32Exception {
+            // we need to create a new token here for the duplicate
+            final HANDLEByReference phThreadToken = new HANDLEByReference();
+            final HANDLEByReference phProcessToken = new HANDLEByReference();
+
+            try {
+                // open thread token
+                if (!Advapi32.INSTANCE.OpenThreadToken(Kernel32.INSTANCE.GetCurrentThread(),
+                        TOKEN_ADJUST_PRIVILEGES,
+                        false,
+                        phThreadToken)) {
+                    // OpenThreadToken may fail with W32Errors.ERROR_NO_TOKEN if current thread is anonymous. Check for that condition here. If not, throw an error.
+                    int lastError = Kernel32.INSTANCE.GetLastError();
+                    if (W32Errors.ERROR_NO_TOKEN != lastError) {
+                        throw new Win32Exception(lastError);
+                    }
+
+                    // Due to ERROR_NO_TOKEN, we need to open the process token to duplicate it, then set our thread token.
+                    if (!Advapi32.INSTANCE.OpenProcessToken(Kernel32.INSTANCE.GetCurrentProcess(), TOKEN_DUPLICATE, phProcessToken)) {
+                        throw new Win32Exception(Kernel32.INSTANCE.GetLastError());
+                    }
+
+                    // Process token opened, now duplicate
+                    if (!Advapi32.INSTANCE.DuplicateTokenEx(phProcessToken.getValue(),
+                            TOKEN_ADJUST_PRIVILEGES | TOKEN_IMPERSONATE,
+                            null,
+                            SECURITY_IMPERSONATION_LEVEL.SecurityImpersonation,
+                            TOKEN_TYPE.TokenImpersonation,
+                            phThreadToken)) {
+                        throw new Win32Exception(Kernel32.INSTANCE.GetLastError());
+                    }
+
+                    // And set thread token.
+                    if (!Advapi32.INSTANCE.SetThreadToken(null, phThreadToken.getValue())) {
+                        throw new Win32Exception(Kernel32.INSTANCE.GetLastError());
+                    }
+                    currentlyImpersonating = true;
+                }
+            }
+            catch (Win32Exception ex) {
+                // Close the thread token
+                if ((phThreadToken.getValue() != WinBase.INVALID_HANDLE_VALUE)
+                        && (phThreadToken.getValue() != null)) {
+                    Kernel32.INSTANCE.CloseHandle(phThreadToken.getValue());
+                    phThreadToken.setValue(null);
+                }
+                throw ex;
+            }
+            finally
+            {
+                // Always close the process token
+                if ((phProcessToken.getValue() != WinBase.INVALID_HANDLE_VALUE)
+                        && (phProcessToken.getValue() != null)) {
+                    Kernel32.INSTANCE.CloseHandle(phProcessToken.getValue());
+                    phProcessToken.setValue(null);
+                }
+            }
+
+            return phThreadToken.getValue();
+        }
     }
 }

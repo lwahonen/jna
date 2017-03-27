@@ -1,12 +1,23 @@
-/* This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- * <p/>
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
+/* The contents of this file is dual-licensed under 2 
+ * alternative Open Source/Free licenses: LGPL 2.1 or later and 
+ * Apache License 2.0. (starting with JNA version 4.0.0).
+ * 
+ * You can freely decide which license you want to apply to 
+ * the project.
+ * 
+ * You may obtain a copy of the LGPL License at:
+ * 
+ * http://www.gnu.org/licenses/licenses.html
+ * 
+ * A copy is also included in the downloadable source code package
+ * containing JNA, in file "LGPL2.1".
+ * 
+ * You may obtain a copy of the Apache License at:
+ * 
+ * http://www.apache.org/licenses/
+ * 
+ * A copy is also included in the downloadable source code package
+ * containing JNA, in file "AL2.0".
  */
 package com.sun.jna;
 
@@ -122,7 +133,7 @@ public class Pointer {
      * or -1 if the value is not found.
      */
     public long indexOf(long offset, byte value) {
-        return Native.indexOf(peer + offset, value);
+        return Native.indexOf(this, this.peer, offset, value);
     }
 
     /**
@@ -135,7 +146,7 @@ public class Pointer {
      * @param length number of elements from native pointer that must be copied
      */
     public void read(long offset, byte[] buf, int index, int length) {
-        Native.read(peer + offset, buf, index, length);
+        Native.read(this, this.peer, offset, buf, index, length);
     }
 
     /**
@@ -148,7 +159,7 @@ public class Pointer {
      * @param length number of elements from native pointer that must be copied
      */
     public void read(long offset, short[] buf, int index, int length) {
-        Native.read(peer + offset, buf, index, length);
+        Native.read(this, this.peer, offset, buf, index, length);
     }
 
     /**
@@ -161,7 +172,7 @@ public class Pointer {
      * @param length number of elements from native pointer that must be copied
      */
     public void read(long offset, char[] buf, int index, int length) {
-        Native.read(peer + offset, buf, index, length);
+        Native.read(this, this.peer, offset, buf, index, length);
     }
 
     /**
@@ -174,7 +185,7 @@ public class Pointer {
      * @param length number of elements from native pointer that must be copied
      */
     public void read(long offset, int[] buf, int index, int length) {
-        Native.read(peer + offset, buf, index, length);
+        Native.read(this, this.peer, offset, buf, index, length);
     }
 
     /**
@@ -187,7 +198,7 @@ public class Pointer {
      * @param length number of elements from native pointer that must be copied
      */
     public void read(long offset, long[] buf, int index, int length) {
-        Native.read(peer + offset, buf, index, length);
+        Native.read(this, this.peer, offset, buf, index, length);
     }
 
     /**
@@ -200,7 +211,7 @@ public class Pointer {
      * @param length number of elements from native pointer that must be copied
      */
     public void read(long offset, float[] buf, int index, int length) {
-        Native.read(peer + offset, buf, index, length);
+        Native.read(this, this.peer, offset, buf, index, length);
     }
 
     /**
@@ -213,7 +224,7 @@ public class Pointer {
      * @param length number of elements from native pointer that must be copied
      */
     public void read(long offset, double[] buf, int index, int length) {
-        Native.read(peer + offset, buf, index, length);
+        Native.read(this, this.peer, offset, buf, index, length);
     }
 
     /**
@@ -252,7 +263,7 @@ public class Pointer {
      *               copied
      */
     public void write(long offset, byte[] buf, int index, int length) {
-        Native.write(peer + offset, buf, index, length);
+        Native.write(this, this.peer, offset, buf, index, length);
     }
 
     /**
@@ -266,7 +277,7 @@ public class Pointer {
      *               copied
      */
     public void write(long offset, short[] buf, int index, int length) {
-        Native.write(peer + offset, buf, index, length);
+        Native.write(this, this.peer, offset, buf, index, length);
     }
 
     /**
@@ -280,7 +291,7 @@ public class Pointer {
      *               copied
      */
     public void write(long offset, char[] buf, int index, int length) {
-        Native.write(peer + offset, buf, index, length);
+        Native.write(this, this.peer, offset, buf, index, length);
     }
 
     /**
@@ -294,7 +305,7 @@ public class Pointer {
      *               copied
      */
     public void write(long offset, int[] buf, int index, int length) {
-        Native.write(peer + offset, buf, index, length);
+        Native.write(this, this.peer, offset, buf, index, length);
     }
 
     /**
@@ -308,7 +319,7 @@ public class Pointer {
      *               copied
      */
     public void write(long offset, long[] buf, int index, int length) {
-        Native.write(peer + offset, buf, index, length);
+        Native.write(this, this.peer, offset, buf, index, length);
     }
 
     /**
@@ -322,7 +333,7 @@ public class Pointer {
      *               copied
      */
     public void write(long offset, float[] buf, int index, int length) {
-        Native.write(peer + offset, buf, index, length);
+        Native.write(this, this.peer, offset, buf, index, length);
     }
 
     /**
@@ -336,7 +347,7 @@ public class Pointer {
      *               copied
      */
     public void write(long offset, double[] buf, int index, int length) {
-        Native.write(peer + offset, buf, index, length);
+        Native.write(this, this.peer, offset, buf, index, length);
     }
 
     /** Write the given array of Pointer to native memory.
@@ -539,7 +550,7 @@ public class Pointer {
      * @return the <code>byte</code> value being pointed to
      */
     public byte getByte(long offset) {
-        return Native.getByte(peer + offset);
+        return Native.getByte(this, this.peer, offset);
     }
 
     /**
@@ -551,7 +562,7 @@ public class Pointer {
      * @return the <code>wchar_t</code> value being pointed to
      */
     public char getChar(long offset) {
-        return Native.getChar(peer + offset);
+        return Native.getChar(this, this.peer, offset);
     }
 
     /**
@@ -563,7 +574,7 @@ public class Pointer {
      * @return the <code>short</code> value being pointed to
      */
     public short getShort(long offset) {
-        return Native.getShort(peer + offset);
+        return Native.getShort(this, this.peer, offset);
     }
 
     /**
@@ -575,7 +586,7 @@ public class Pointer {
      * @return the <code>int</code> value being pointed to
      */
     public int getInt(long offset) {
-        return Native.getInt(peer + offset);
+        return Native.getInt(this, this.peer, offset);
     }
 
     /**
@@ -587,7 +598,7 @@ public class Pointer {
      * @return the <code>long</code> value being pointed to
      */
     public long getLong(long offset) {
-        return Native.getLong(peer + offset);
+        return Native.getLong(this, this.peer, offset);
     }
 
     /**
@@ -611,7 +622,7 @@ public class Pointer {
      * @return the <code>float</code> value being pointed to
      */
     public float getFloat(long offset) {
-        return Native.getFloat(peer + offset);
+        return Native.getFloat(this, this.peer, offset);
     }
 
     /**
@@ -623,7 +634,7 @@ public class Pointer {
      * @return the <code>double</code> value being pointed to
      */
     public double getDouble(long offset) {
-        return Native.getDouble(peer + offset);
+        return Native.getDouble(this, this.peer, offset);
     }
 
     /**
@@ -649,7 +660,7 @@ public class Pointer {
      * @return a direct ByteBuffer that accesses the memory being pointed to,
      */
     public ByteBuffer getByteBuffer(long offset, long length) {
-        return Native.getDirectByteBuffer(peer + offset, length).order(ByteOrder.nativeOrder());
+        return Native.getDirectByteBuffer(this, this.peer, offset, length).order(ByteOrder.nativeOrder());
     }
 
     /**
@@ -671,7 +682,7 @@ v     * @param wide whether to convert from a wide or standard C string
 
     /** Read a wide (<code>const wchar_t *</code>) string from memory. */
     public String getWideString(long offset) {
-        return Native.getWideString(peer + offset);
+        return Native.getWideString(this, this.peer, offset);
     }
 
     /**
@@ -693,7 +704,7 @@ v     * @param wide whether to convert from a wide or standard C string
      * @return the <code>String</code> value being pointed to
      */
     public String getString(long offset, String encoding) {
-        return Native.getString(peer + offset, encoding);
+        return Native.getString(this, offset, encoding);
     }
 
     /** Read a native array of bytes of size <code>arraySize</code> from the
@@ -1018,7 +1029,7 @@ v     * @param wide whether to convert from a wide or standard C string
      * @param value value to be written
      */
     public void setMemory(long offset, long length, byte value) {
-        Native.setMemory(peer + offset, length, value);
+        Native.setMemory(this, this.peer, offset, length, value);
     }
 
     /**
@@ -1031,7 +1042,7 @@ v     * @param wide whether to convert from a wide or standard C string
      * @param value <code>byte</code> value to set
      */
     public void setByte(long offset, byte value) {
-        Native.setByte(peer + offset, value);
+        Native.setByte(this, this.peer, offset, value);
     }
 
     /**
@@ -1044,7 +1055,7 @@ v     * @param wide whether to convert from a wide or standard C string
      * @param value <code>short</code> value to set
      */
     public void setShort(long offset, short value) {
-        Native.setShort(peer + offset, value);
+        Native.setShort(this, this.peer, offset, value);
     }
 
     /**
@@ -1057,7 +1068,7 @@ v     * @param wide whether to convert from a wide or standard C string
      * @param value <code>char</code> value to set
      */
     public void setChar(long offset, char value) {
-        Native.setChar(peer + offset, value);
+        Native.setChar(this, this.peer, offset, value);
     }
 
     /**
@@ -1070,7 +1081,7 @@ v     * @param wide whether to convert from a wide or standard C string
      * @param value <code>int</code> value to set
      */
     public void setInt(long offset, int value) {
-        Native.setInt(peer + offset, value);
+        Native.setInt(this, this.peer, offset, value);
     }
 
     /**
@@ -1083,7 +1094,7 @@ v     * @param wide whether to convert from a wide or standard C string
      * @param value <code>long</code> value to set
      */
     public void setLong(long offset, long value) {
-        Native.setLong(peer + offset, value);
+        Native.setLong(this, this.peer, offset, value);
     }
 
     /**
@@ -1113,7 +1124,7 @@ v     * @param wide whether to convert from a wide or standard C string
      * @param value <code>float</code> value to set
      */
     public void setFloat(long offset, float value) {
-        Native.setFloat(peer + offset, value);
+        Native.setFloat(this, this.peer, offset, value);
     }
 
     /**
@@ -1126,7 +1137,7 @@ v     * @param wide whether to convert from a wide or standard C string
      * @param value <code>double</code> value to set
      */
     public void setDouble(long offset, double value) {
-        Native.setDouble(peer + offset, value);
+        Native.setDouble(this, this.peer, offset, value);
     }
 
     /**
@@ -1141,7 +1152,7 @@ v     * @param wide whether to convert from a wide or standard C string
      * pointer.
      */
     public void setPointer(long offset, Pointer value) {
-        Native.setPointer(peer + offset, value != null ? value.peer : 0);
+        Native.setPointer(this, this.peer, offset, value != null ? value.peer : 0);
     }
 
     /**
@@ -1176,7 +1187,7 @@ v     * @param wide whether to convert from a wide or standard C string
      * @param value  <code>java.lang.String</code> value to set
      */
     public void setWideString(long offset, String value) {
-        Native.setWideString(peer + offset, value);
+        Native.setWideString(this, this.peer, offset, value);
     }
 
     /**

@@ -1,26 +1,47 @@
 /* Copyright (c) 2015 Michael Freeman, All Rights Reserved
  * 
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+ * The contents of this file is dual-licensed under 2 
+ * alternative Open Source/Free licenses: LGPL 2.1 or later and 
+ * Apache License 2.0. (starting with JNA version 4.0.0).
  * 
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.  
+ * You can freely decide which license you want to apply to 
+ * the project.
+ * 
+ * You may obtain a copy of the LGPL License at:
+ * 
+ * http://www.gnu.org/licenses/licenses.html
+ * 
+ * A copy is also included in the downloadable source code package
+ * containing JNA, in file "LGPL2.1".
+ * 
+ * You may obtain a copy of the Apache License at:
+ * 
+ * http://www.apache.org/licenses/
+ * 
+ * A copy is also included in the downloadable source code package
+ * containing JNA, in file "AL2.0".
  */
 package com.sun.jna.platform.win32;
 
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
+import java.awt.image.DataBuffer;
+import java.awt.image.DataBufferInt;
+import java.awt.image.DirectColorModel;
+import java.awt.image.Raster;
+import java.awt.image.WritableRaster;
 
 import com.sun.jna.Memory;
 import com.sun.jna.Native;
+import com.sun.jna.platform.win32.GDI32;
+import com.sun.jna.platform.win32.User32;
+import com.sun.jna.platform.win32.Win32Exception;
 import com.sun.jna.platform.win32.WinDef.HBITMAP;
 import com.sun.jna.platform.win32.WinDef.HDC;
 import com.sun.jna.platform.win32.WinDef.HWND;
 import com.sun.jna.platform.win32.WinDef.RECT;
+import com.sun.jna.platform.win32.WinError;
+import com.sun.jna.platform.win32.WinGDI;
 import com.sun.jna.platform.win32.WinGDI.BITMAPINFO;
 import com.sun.jna.platform.win32.WinNT.HANDLE;
 
@@ -30,6 +51,13 @@ import com.sun.jna.platform.win32.WinNT.HANDLE;
  * @author mlfreeman[at]gmail.com
  */
 public class GDI32Util {
+	private static final DirectColorModel SCREENSHOT_COLOR_MODEL = new DirectColorModel(24, 0x00FF0000, 0xFF00, 0xFF);
+	private static final int[] SCREENSHOT_BAND_MASKS = {
+	        SCREENSHOT_COLOR_MODEL.getRedMask(),
+            SCREENSHOT_COLOR_MODEL.getGreenMask(),
+            SCREENSHOT_COLOR_MODEL.getBlueMask()
+	};
+
 	/**
 	 * Takes a screenshot of the given window
 	 * 
@@ -75,8 +103,6 @@ public class GDI32Util {
 		BufferedImage image = null;
 		
 		try {
-			image = new BufferedImage(windowWidth, windowHeight, BufferedImage.TYPE_INT_RGB);
-			
 			hdcTargetMem = GDI32.INSTANCE.CreateCompatibleDC(hdcTarget);
 			if (hdcTargetMem == null) {
 				throw new Win32Exception(Native.getLastError());
@@ -111,8 +137,11 @@ public class GDI32Util {
 				throw new Win32Exception(Native.getLastError());
 			}
 
-			image.setRGB(0, 0, windowWidth, windowHeight, buffer.getIntArray(0, windowWidth * windowHeight), 0,
-					windowWidth);
+			int bufferSize = windowWidth * windowHeight;
+			DataBuffer dataBuffer = new DataBufferInt(buffer.getIntArray(0, bufferSize), bufferSize);
+			WritableRaster raster = Raster.createPackedRaster(dataBuffer, windowWidth, windowHeight, windowWidth,
+                                                              SCREENSHOT_BAND_MASKS, null);
+			image = new BufferedImage(SCREENSHOT_COLOR_MODEL, raster, false, null);
 
 		} catch (Win32Exception e) {
 			we = e;

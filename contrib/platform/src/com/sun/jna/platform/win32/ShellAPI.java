@@ -1,14 +1,25 @@
 /* Copyright (c) 2010 Daniel Doubrovkine, All Rights Reserved
  *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
+ * The contents of this file is dual-licensed under 2 
+ * alternative Open Source/Free licenses: LGPL 2.1 or later and 
+ * Apache License 2.0. (starting with JNA version 4.0.0).
+ * 
+ * You can freely decide which license you want to apply to 
+ * the project.
+ * 
+ * You may obtain a copy of the LGPL License at:
+ * 
+ * http://www.gnu.org/licenses/licenses.html
+ * 
+ * A copy is also included in the downloadable source code package
+ * containing JNA, in file "LGPL2.1".
+ * 
+ * You may obtain a copy of the Apache License at:
+ * 
+ * http://www.apache.org/licenses/
+ * 
+ * A copy is also included in the downloadable source code package
+ * containing JNA, in file "AL2.0".
  */
 package com.sun.jna.platform.win32;
 
@@ -287,22 +298,11 @@ public interface ShellAPI extends StdCallLibrary {
 	 * enclose each mark in a pair of quotation marks, as in the following
 	 * example.
 	 * </p>
-	 * <div id="code-snippet-2" class="codeSnippetContainer" xmlns=""> <div
-	 * class="codeSnippetContainerTabs"> </div>
-	 * <div class="codeSnippetContainerCodeContainer"> <div class=
-	 * "codeSnippetToolBar"> <div class="codeSnippetToolBarText"> <a name=
-	 * "CodeSnippetCopyLink" style="display: none;" title=
-	 * "Copy to clipboard." href=
-	 * "javascript:if (window.epx.codeSnippet)window.epx.codeSnippet.copyCode('CodeSnippetContainerCode_3de148bb-edf3-4344-8ecf-c211304bfa9e');"
-	 * >Copy</a> </div> </div>
-	 * <div id="CodeSnippetContainerCode_3de148bb-edf3-4344-8ecf-c211304bfa9e"
-	 * class="codeSnippetContainerCode" dir="ltr"> <div style="color:Black;">
-	 *
+         * <p>
 	 * <pre>
 	 * sei.lpParameters = &quot;An example: \&quot;\&quot;\&quot;quoted text\&quot;\&quot;\&quot;&quot;;
 	 * </pre>
-	 *
-	 * </div> </div> </div> </div>
+         * </p>
 	 * <p>
 	 * In this case, the application receives three parameters: <em>An</em>,
 	 * <em>example:</em>, and <em>"quoted text"</em>.

@@ -2,8 +2,36 @@ NOTE: as of JNA 4.0, JNA is now dual-licensed under LGPL and AL 2.0 (see LICENSE
 
 NOTE: JNI native support is typically incompatible between minor versions, and almost always incompatible between major versions.
 
-Release 4.3 (Next release)
-===========
+Release 4.5.0 (Next release)
+============================
+
+Features
+--------
+* [#774](https://github.com/java-native-access/jna/pull/774): Addition win32 api : SendMessage, GetActiveWindow, COPYDATASTRUCT and a few constants + a demo application - [@cnico](https://github.com/cnico).
+
+Bug Fixes
+---------
+* [#776](https://github.com/java-native-access/jna/issues/776): Do not include ClassPath attribute in MANIFEST.MF of jna-platform. - [@matthiasblaesing](https://github.com/matthiasblaesing).
+
+Release 4.4.0
+=============
+
+Features
+--------
+* [#757](https://github.com/java-native-access/jna/issues/757): Build android archive (AAR) - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#767](https://github.com/java-native-access/jna/pull/767): Add Win32 API mapping for Shlwapi PathIsUNC - [@ivanwick](https://github.com/ivanwick).
+* [#753](https://github.com/java-native-access/jna/issues/753): Support arm hardfloat and softfloat by introducing armel as platform (ARM EABI Little-endian) - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#772](https://github.com/java-native-access/jna/pull/772): Improved speed of GDIUtil.getScreenshot() by ~30% - [@sommd](https://github.com/sommd).
+
+Bug Fixes
+---------
+* [#754](https://github.com/java-native-access/jna/issues/754): Move MSVC build to standard stdbool.h and require Visual C++ 2015 (sizeof(bool) = 1 is now also true on MSVC build) - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#399](https://github.com/java-native-access/jna/issues/399): Check native version before attempting to call into native code - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#763](https://github.com/java-native-access/jna/issues/763): Fix vararg calls without fixed parts - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#770](https://github.com/java-native-access/jna/pull/770): Fix for free data handle in DdemlUtil. - [@stolarczykt](https://github.com/stolarczykt).
+
+Release 4.3.0
+=============
 
 Features
 --------
@@ -60,6 +88,17 @@ Features
 * [#680](https://github.com/java-native-access/jna/pull/680): Added `SetCurrentProcessExplicitAppUserModelID` and `GetCurrentProcessExplicitAppUserModelID` to `com.sun.jna.platform.win32.Shell32` for setting the [System.AppUserModel.ID](https://msdn.microsoft.com/en-us/library/windows/desktop/dd391569.aspx) of the host process - [@rednoah](https://github.com/rednoah).
 * [#693](https://github.com/java-native-access/jna/pull/693): Bind DDEML (Dynamic Data Exchange Management Library), add a thread implementation that runs a windows message loop - [@matthiasblaesing](https://github.com/matthiasblaesing).
 * [#702](https://github.com/java-native-access/jna/pull/702): Added `GetClientRect` to `com/sun/jna/platform/win32/User32` - [@Jonatino](https://github.com/Jonatino).
+* [#689](https://github.com/java-native-access/jna/pull/689): Add `GetProcAddress(HMODULE, int)` to `com.sun.jna.platform.win32.Kernel32` - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#723](https://github.com/java-native-access/jna/pull/723): Added `com.sun.jna.platform.win32.Wevtapi` and `com.sun.jna.platform.win32.Winevt` - [@sakamotodesu](https://github.com/sakamotodesu).
+* [#720](https://github.com/java-native-access/jna/issues/720): Added `SetThreadExecutionState` to `com.sun.jna.platform.win32.Kernel32` - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#738](https://github.com/java-native-access/jna/pull/738): Added `GetSecurityDescriptorOwner`, `SetSecurityDescriptorOwner`, `GetSecurityDescriptorGroup`, `SetSecurityDescriptorGroup`, `GetSecurityDescriptorControl`, `SetSecurityDescriptorControl`, `GetSecurityDescriptorDacl`, `SetSecurityDescriptorDacl`, `MakeSelfRelativeSD`, `MakeAbsoluteSD`, `EqualSid`, `InitializeSecurityDescriptor`, `InitializeAcl`, `AddAce`, `AddAccessAllowedAce`, `AddAccessAllowedAceEx`, and `GetAce` to `com.sun.jna.platform.win32.Advapi32 - [@amarcionek](https://github.com/amarcionek).
+* [#738](https://github.com/java-native-access/jna/pull/738): Added `RtlNtStatusToDosError` to `com.sun.jna.platform.win32.NtDll - [@amarcionek](https://github.com/amarcionek).
+* [#732](https://github.com/java-native-access/jna/pull/732): Added `com.sun.jna.platform.win32.WinioctlUtil` for help in determining FSCTL_* codes - [@amarcionek](https://github.com/amarcionek).
+* [#732](https://github.com/java-native-access/jna/pull/732): Added `com.sun.jna.platform.win32.Ntifs` with Reparse Point structures and defines - [@amarcionek](https://github.com/amarcionek).
+* [#732](https://github.com/java-native-access/jna/pull/732): Added initialization of FILETIME from LARGE_INTEGER - [@amarcionek](https://github.com/amarcionek).
+* [#732](https://github.com/java-native-access/jna/pull/732): Added `GetFileInformationByHandleEx` and `SetFileInformationByHandle` to `com.sun.jna.platform.win32.Kernel32` - [@amarcionek](https://github.com/amarcionek).
+* [#740](https://github.com/java-native-access/jna/pull/740): Modified `com.sun.jna.platform.win32.WinioctlUtil` for simplicity dealing with FSCTL_* codes - [@amarcionek](https://github.com/amarcionek).
+* [#745](https://github.com/java-native-access/jna/pull/745): Added Secur32#QueryContextAttributes - [@barney2k7](https://github.com/barney2k7).
 
 Bug Fixes
 ---------
@@ -82,6 +121,11 @@ Bug Fixes
 * [#624](https://github.com/java-native-access/jna/issues/624): WinDef.DWORD getLow() & getHigh() using incorrect bit mask - [@matthiasblaesing](https://github.com/matthiasblaesing).
 * [#668](https://github.com/java-native-access/jna/issues/668): Correct typemapper used for structures defined in `com.sun.jna.platform.win32.DsGetDC`, `com.sun.jna.platform.win32.LMAccess`, `com.sun.jna.platform.win32.LMShare`, `com.sun.jna.platform.win32.Sspi`, `com.sun.jna.platform.win32.WinBase`, `com.sun.jna.platform.win32.WinCrypt`, `com.sun.jna.platform.win32.WinUser` and `com.sun.jna.platform.win32.Winnetwk` - [@matthiasblaesing](https://github.com/matthiasblaesing).
 * [#696](https://github.com/java-native-access/jna/issues/696): COMLateBindingObject.getAutomationProperty method that takes iDispatch parameter doesn't use it - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#664](https://github.com/java-native-access/jna/issues/664): Prevent premature GC of Pointer and Function objects by passing whole object into JNI call in addition to the raw pointer value - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#669](https://github.com/java-native-access/jna/pull/669): Ensure XSI-compliant strerror_r is used, to prevent corrupted error messages on linux - [@DavidKeller](https://github.com/DavidKeller).
+* [#697](https://github.com/java-native-access/jna/issues/697): Ensure disposed memory is removed from Memory#allocatedMemory map - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#731](https://github.com/java-native-access/jna/issues/731): Require mingw-w64 instead of mingw as the alternative to the MSVC build - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#747](https://github.com/java-native-access/jna/issues/747): - Call `Native.toString()` in `#getFileName()` and `#getAlternateFileName()` in `c.s.j.p.win32.WinBase` instead of custom NUL terminator logic - [@jhult](https://github.com/jhult).
 
 Release 4.2.1
 =============

@@ -1,14 +1,25 @@
 /* Copyright (c) 2007, 2013 Timothy Wall, Markus Karg, All Rights Reserved
  *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- * <p/>
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
+ * The contents of this file is dual-licensed under 2 
+ * alternative Open Source/Free licenses: LGPL 2.1 or later and 
+ * Apache License 2.0. (starting with JNA version 4.0.0).
+ * 
+ * You can freely decide which license you want to apply to 
+ * the project.
+ * 
+ * You may obtain a copy of the LGPL License at:
+ * 
+ * http://www.gnu.org/licenses/licenses.html
+ * 
+ * A copy is also included in the downloadable source code package
+ * containing JNA, in file "LGPL2.1".
+ * 
+ * You may obtain a copy of the Apache License at:
+ * 
+ * http://www.apache.org/licenses/
+ * 
+ * A copy is also included in the downloadable source code package
+ * containing JNA, in file "AL2.0".
  */
 package com.sun.jna.platform.win32;
 
@@ -729,10 +740,14 @@ public interface User32 extends StdCallLibrary, WinUser, WinNT {
      * @param wMsgFilterMax
      *            Specifies the integer value of the highest message value to be
      *            retrieved.
-     * @return Nonzero indicates that the function retrieves a message other
-     *         than WM_QUIT. Zero indicates that the function retrieves the
-     *         WM_QUIT message, or that lpMsg is an invalid pointer. To get
-     *         extended error information, call GetLastError.
+     * @return If the function retrieves a message other than WM_QUIT, the
+     *         return value is nonzero.
+     *
+     * <p>If the function retrieves the WM_QUIT message, the return value is zero.</p>
+     *
+     * <p>If there is an error, the return value is -1. For example, the function
+     * fails if hWnd is an invalid window handle or lpMsg is an invalid pointer.
+     * To get extended error information, call GetLastError.</p>
      */
     int GetMessage(MSG lpMsg, HWND hWnd, int wMsgFilterMin, int wMsgFilterMax);
 
@@ -2430,4 +2445,44 @@ public interface User32 extends StdCallLibrary, WinUser, WinNT {
      * error information, call GetLastError.</p>
      */
     public int RegisterClipboardFormat(String formatName);
+    
+    /**
+     * Retrieves the window handle to the active window attached to the 
+     * calling thread's message queue.
+     * 
+     * @return Type: HWND The return value is the handle to the active 
+     * window attached to the calling thread's message queue. Otherwise, 
+     * the return value is NULL.
+     */
+    public HWND GetActiveWindow();
+  
+	/**
+	 * Sends the specified message to a window or windows. 
+	 * The SendMessage function calls the window procedure for the specified window and 
+	 * does not return until the window procedure has processed the message.
+	 * 
+ 	 * To send a message and return immediately, use the SendMessageCallback or SendNotifyMessage function. 
+ 	 * To post a message to a thread's message queue and return immediately, 
+ 	 * use the PostMessage or PostThreadMessage function.
+	 * 
+	 * @param hWnd A handle to the window whose window procedure will receive the message. 
+	 * 		If this parameter is HWND_BROADCAST ((HWND)0xffff), the message is sent to all 
+	 * 		top-level windows in the system, including disabled or invisible unowned windows, 
+	 * 		overlapped windows, and pop-up windows; but the message is not sent to child windows.
+	 * 		Message sending is subject to UIPI. The thread of a process can send messages 
+	 * 		only to message queues of threads in processes of lesser or equal integrity level.
+	 * 
+	 * @param msg The message to be sent.
+	 * 		For lists of the system-provided messages, see System-Defined Messages.
+	 * @param wParam Additional message-specific information.
+	 * @param lParam Additional message-specific information.
+	 * 
+	 * @return The return value specifies the result of the message processing; it depends on the message sent.
+	 * 
+	 * Two classic usage : 
+	 *  - with a WM_USER+x msg value : wParam and lParam are numeric values
+	 *  - with a WM_COPYDATA msg value : wParam is the length of the structure and lParam a pointer to a COPYDATASTRUCT 
+	 */
+    LRESULT SendMessage(HWND hWnd, int msg, WPARAM wParam, LPARAM lParam);
+	
 }

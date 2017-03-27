@@ -63,32 +63,67 @@
     nbproject/build-impl.xml file.
 
     -->
-
-    <target name="-do-jar-without-manifest">
-       <jar jarfile="${dist.jar}" compress="${jar.compress}">
-         <manifest>
-           <attribute name="Main-Class" value="com.sun.jna.Native"/>
-           <attribute name="Manifest-Version" value="1.0"/>
-           <attribute name="Implementation-Title" value="${impl.title}"/>
-           <attribute name="Implementation-Vendor" value="${vendor}"/>
-           <attribute name="Implementation-Version" value="${impl.version}"/>
-           <attribute name="Specification-Title" value="${spec.title}"/>
-           <attribute name="Specification-Vendor" value="${spec.vendor}"/>
-           <attribute name="Specification-Version" value="${spec.version}"/>
-           <!--
-              OSGi Bundle attributes
-              See http://www.osgi.org/Specifications/Reference
-            -->
-           <attribute name="Bundle-Category" value="jni"/>
-           <attribute name="Bundle-ManifestVersion" value="2"/>
-           <attribute name="Bundle-Name" value="jna-platform"/>
-           <attribute name="Bundle-Description" value="JNA Platform Library"/>
-           <attribute name="Bundle-SymbolicName" value="com.sun.jna.platform"/>
-           <attribute name="Bundle-Version" value="${osgi.version}"/>
-           <attribute name="Bundle-RequiredExecutionEnvironment" value="J2SE-1.4"/>
-           <attribute name="Bundle-Vendor" value="${vendor}"/>
-           <attribute name="Require-Bundle" value="com.sun.jna;bundle-version=&quot;${osgi.version}&quot;"/>
-           <attribute name="Export-Package"
+    
+    <!-- the -init-macrodef-copylibs target superseeds the target defined in
+    build-impl.xml. The classpath that the base copylibs target adds to the
+    MANIFEST.MF interferes with spring-boot and tomcat   -->
+    <target name="-init-macrodef-copylibs">
+        <macrodef name="copylibs" uri="http://www.netbeans.org/ns/j2se-project/3">
+            <attribute default="${manifest.file}" name="manifest"/>
+            <element name="customize" optional="true"/>
+            <sequential>
+                <property location="${build.classes.dir}" name="build.classes.dir.resolved"/>
+                <pathconvert property="run.classpath.without.build.classes.dir">
+                    <path path="${run.classpath}"/>
+                    <map from="${build.classes.dir.resolved}" to=""/>
+                </pathconvert>
+                <pathconvert pathsep=" " property="jar.classpath">
+                    <path path="${run.classpath.without.build.classes.dir}"/>
+                    <chainedmapper>
+                        <flattenmapper/>
+                        <filtermapper>
+                            <replacestring from=" " to="%20"/>
+                        </filtermapper>
+                        <globmapper from="*" to="lib/*"/>
+                    </chainedmapper>
+                </pathconvert>
+                <taskdef classname="org.netbeans.modules.java.j2seproject.copylibstask.CopyLibs" classpath="${libs.CopyLibs.classpath}" name="copylibs"/>
+                <copylibs compress="${jar.compress}" excludeFromCopy="${copylibs.excludes}" index="${jar.index}" indexMetaInf="${jar.index.metainf}" jarfile="${dist.jar}" manifest="@{manifest}" rebase="${copylibs.rebase}" runtimeclasspath="${run.classpath.without.build.classes.dir}">
+                    <fileset dir="${build.classes.dir}" excludes="${dist.archive.excludes}"/>
+                    <manifest>
+                        <!--<attribute name="Class-Path" value="${jar.classpath}"/>-->
+                        <customize/>
+                    </manifest>
+                </copylibs>
+            </sequential>
+        </macrodef>
+    </target>
+    
+    <target name="-pre-jar">
+        <tempfile deleteonexit="true" destdir="${build.dir}" property="tmp.manifest.file"/>
+        <manifest file="${tmp.manifest.file}" mode="replace">
+            <attribute name="Main-Class" value="com.sun.jna.Native"/>
+            <attribute name="Manifest-Version" value="1.0"/>
+            <attribute name="Implementation-Title" value="${impl.title}"/>
+            <attribute name="Implementation-Vendor" value="${vendor}"/>
+            <attribute name="Implementation-Version" value="${impl.version}"/>
+            <attribute name="Specification-Title" value="${spec.title}"/>
+            <attribute name="Specification-Vendor" value="${spec.vendor}"/>
+            <attribute name="Specification-Version" value="${spec.version}"/>
+            <!--
+               OSGi Bundle attributes
+               See http://www.osgi.org/Specifications/Reference
+             -->
+            <attribute name="Bundle-Category" value="jni"/>
+            <attribute name="Bundle-ManifestVersion" value="2"/>
+            <attribute name="Bundle-Name" value="jna-platform"/>
+            <attribute name="Bundle-Description" value="JNA Platform Library"/>
+            <attribute name="Bundle-SymbolicName" value="com.sun.jna.platform"/>
+            <attribute name="Bundle-Version" value="${osgi.version}"/>
+            <attribute name="Bundle-RequiredExecutionEnvironment" value="J2SE-1.4"/>
+            <attribute name="Bundle-Vendor" value="${vendor}"/>
+            <attribute name="Require-Bundle" value="com.sun.jna;bundle-version=&quot;${osgi.version}&quot;"/>
+            <attribute name="Export-Package"
                    value="
 com.sun.jna.platform,
 com.sun.jna.platform.dnd,
@@ -100,9 +135,7 @@ com.sun.jna.platform.win32.COM.tlb,
 com.sun.jna.platform.win32.COM.tlb.imp,
 com.sun.jna.platform.wince
 "/>
-         </manifest>
-         <fileset dir="${build.classes.dir}"/>
-       </jar>
+        </manifest>
     </target>
 
     <target name="test" depends="init,compile,compile-test,-pre-test-run" description="Run platform unit tests.">

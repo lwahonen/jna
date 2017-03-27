@@ -1,20 +1,30 @@
 /* Copyright (c) 2007 Timothy Wall, All Rights Reserved
  *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
+ * The contents of this file is dual-licensed under 2 
+ * alternative Open Source/Free licenses: LGPL 2.1 or later and 
+ * Apache License 2.0. (starting with JNA version 4.0.0).
+ * 
+ * You can freely decide which license you want to apply to 
+ * the project.
+ * 
+ * You may obtain a copy of the LGPL License at:
+ * 
+ * http://www.gnu.org/licenses/licenses.html
+ * 
+ * A copy is also included in the downloadable source code package
+ * containing JNA, in file "LGPL2.1".
+ * 
+ * You may obtain a copy of the Apache License at:
+ * 
+ * http://www.apache.org/licenses/
+ * 
+ * A copy is also included in the downloadable source code package
+ * containing JNA, in file "AL2.0".
  */
 package com.sun.jna.platform.win32;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
 
 import com.sun.jna.FromNativeContext;
 import com.sun.jna.IntegerType;
@@ -39,6 +49,15 @@ import com.sun.jna.win32.StdCallLibrary.StdCallCallback;
 @SuppressWarnings("serial")
 public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
 
+    int MINCHAR     = 0x80;
+    int MAXCHAR     = 0x7f;
+    int MINSHORT    = 0x8000;
+    int MAXSHORT    = 0x7fff;
+    int MINLONG     = 0x80000000;
+    int MAXLONG     = 0x7fffffff;
+    int MAXBYTE     = 0xff;
+    int MAXWORD     = 0xffff;
+    int MAXDWORD    = 0xffffffff;
     //
     // The following are masks for the predefined standard access types
     //
@@ -828,6 +847,16 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
     int FILE_SUPPORTS_OPEN_BY_FILE_ID = 0x01000000;
     int FILE_SUPPORTS_USN_JOURNAL = 0x02000000;
 
+    // Reparse point tags
+    int IO_REPARSE_TAG_MOUNT_POINT              = 0xA0000003;
+    int IO_REPARSE_TAG_HSM                      = 0xC0000004;
+    int IO_REPARSE_TAG_HSM2                     = 0x80000006;
+    int IO_REPARSE_TAG_SIS                      = 0x80000007;
+    int IO_REPARSE_TAG_WIM                      = 0x80000008;
+    int IO_REPARSE_TAG_CSV                      = 0x80000009;
+    int IO_REPARSE_TAG_DFS                      = 0x8000000A;
+    int IO_REPARSE_TAG_SYMLINK                  = 0xA000000C;
+    int IO_REPARSE_TAG_DFSR                     = 0x80000012;
 
     // The controllable aspects of the DefineDosDevice function.
     // see https://msdn.microsoft.com/en-us/library/windows/desktop/aa363904(v=vs.85).aspx
@@ -835,6 +864,15 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
     int DDD_REMOVE_DEFINITION = 0x00000002;
     int DDD_EXACT_MATCH_ON_REMOVE = 0x00000004;
     int DDD_NO_BROADCAST_SYSTEM = 0x00000008;
+
+    int COMPRESSION_FORMAT_NONE          = 0x0000;
+    int COMPRESSION_FORMAT_DEFAULT       = 0x0001;
+    int COMPRESSION_FORMAT_LZNT1         = 0x0002;
+    int COMPRESSION_FORMAT_XPRESS        = 0x0003;
+    int COMPRESSION_FORMAT_XPRESS_HUFF   = 0x0004;
+    int COMPRESSION_ENGINE_STANDARD      = 0x0000;
+    int COMPRESSION_ENGINE_MAXIMUM       = 0x0100;
+    int COMPRESSION_ENGINE_HIBER         = 0x0200;
 
     /**
      * The FILE_NOTIFY_INFORMATION structure describes the changes found by the
@@ -2246,6 +2284,25 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
     int SERVICE_INTERACTIVE_PROCESS = 0x00000100;
     int SERVICE_TYPE_ALL = SERVICE_WIN32 | SERVICE_ADAPTER | SERVICE_DRIVER
             | SERVICE_INTERACTIVE_PROCESS;
+    
+    //
+    // Start Type
+    //
+
+    int SERVICE_BOOT_START   = 0x00000000;
+    int SERVICE_SYSTEM_START = 0x00000001;
+    int SERVICE_AUTO_START   = 0x00000002;
+    int SERVICE_DEMAND_START = 0x00000003;
+    int SERVICE_DISABLED     = 0x00000004;
+
+    //
+    // Error control type
+    //
+    int SERVICE_ERROR_IGNORE   = 0x00000000;
+    int SERVICE_ERROR_NORMAL   = 0x00000001;
+    int SERVICE_ERROR_SEVERE   = 0x00000002;
+    int SERVICE_ERROR_CRITICAL = 0x00000003;
+    
     int STATUS_PENDING = 0x00000103;
 
     // Privilege Constants
@@ -2432,6 +2489,7 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
     int SE_RM_CONTROL_VALID         = 0x00004000;
     int SE_SELF_RELATIVE            = 0x00008000;
 
+    int SECURITY_DESCRIPTOR_REVISION = 0x00000001;
 
     public static class SECURITY_DESCRIPTOR extends Structure {
         public static class ByReference extends SECURITY_DESCRIPTOR implements
@@ -2446,8 +2504,15 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
         }
 
         public SECURITY_DESCRIPTOR(byte[] data) {
+            super();
             this.data = data;
             useMemory(new Memory(data.length));
+        }
+
+        public SECURITY_DESCRIPTOR(int size) {
+            super();
+            useMemory(new Memory(size));
+            data = new byte[size];
         }
 
         public SECURITY_DESCRIPTOR(Pointer memory) {
@@ -2461,8 +2526,26 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
         }
     }
 
+    int ACL_REVISION        = 2;
+    int ACL_REVISION_DS     = 4;
+
+    // This is the history of ACL revisions.  Add a new one whenever
+    // ACL_REVISION is updated
+    int ACL_REVISION1       = 1;
+    int ACL_REVISION2       = 2;
+    int ACL_REVISION3       = 3;
+    int ACL_REVISION4       = 4;
+    int MIN_ACL_REVISION    = ACL_REVISION2;
+    int MAX_ACL_REVISION    = ACL_REVISION4;
+
     public static class ACL extends Structure {
         public static final List<String> FIELDS = createFieldsOrder("AclRevision", "Sbz1", "AclSize", "AceCount", "Sbz2");
+
+        /*
+         * Maximum size chosen based on technet article:
+         * https://technet.microsoft.com/en-us/library/cc781716.aspx
+         */
+        public static int MAX_ACL_SIZE = 64 * 1024;
 
         public byte AclRevision;
         public byte Sbz1;
@@ -2474,6 +2557,11 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
 
         public ACL() {
             super();
+        }
+
+        public ACL(int size) {
+            super();
+            useMemory(new Memory(size));
         }
 
         public ACL(Pointer pointer) {
@@ -2511,6 +2599,31 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
         }
     }
 
+    public static class PACLByReference extends ByReference {
+        public PACLByReference() {
+            this(null);
+        }
+
+        public PACLByReference(ACL h) {
+            super(Pointer.SIZE);
+            setValue(h);
+        }
+
+        public void setValue(ACL h) {
+            getPointer().setPointer(0, h != null ? h.getPointer() : null);
+        }
+
+        public ACL getValue() {
+            Pointer p = getPointer().getPointer(0);
+            if (p == null) {
+                return null;
+            }
+            else {
+                return new ACL(p);
+            }
+        }
+    }
+
     public static class SECURITY_DESCRIPTOR_RELATIVE extends Structure {
         public static class ByReference extends SECURITY_DESCRIPTOR_RELATIVE
                 implements Structure.ByReference {
@@ -2526,10 +2639,10 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
         public int Sacl;
         public int Dacl;
 
-        private ACL DACL;
         private PSID OWNER;
         private PSID GROUP;
         private ACL SACL;
+        private ACL DACL;
 
         public SECURITY_DESCRIPTOR_RELATIVE() {
             super();
@@ -2539,6 +2652,10 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
             super(new Memory(data.length));
             getPointer().write(0, data, 0, data.length);
             setMembers();
+        }
+
+        public SECURITY_DESCRIPTOR_RELATIVE(int length) {
+            super(new Memory(length));
         }
 
         public SECURITY_DESCRIPTOR_RELATIVE(Pointer p) {
@@ -2601,6 +2718,15 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
             super(p);
         }
 
+        public ACEStructure(byte AceType, byte AceFlags, short AceSize, PSID psid) {
+            super();
+            this.AceType = AceType;
+            this.AceFlags = AceFlags;
+            this.AceSize = AceSize;
+            this.psid = psid;
+            write();
+        }
+
         public String getSidString() {
             return Advapi32Util.convertSidToStringSid(psid);
         }
@@ -2631,46 +2757,69 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
      * ACCESS_ALLOWED_ACE and ACCESS_DENIED_ACE have the same structure layout
      */
     public static abstract class ACCESS_ACEStructure extends ACEStructure {
-        public static final List<String> EXTRA_ABSTRACT_FIELDS = createFieldsOrder("Mask", "SidStart");
-        private static final AtomicReference<List<String>> fieldsHolder = new AtomicReference<List<String>>(null);
-        private static List<String> resolveEffectiveFields(List<String> baseFields) {
-            List<String> fields;
-            synchronized (fieldsHolder) {
-                fields = fieldsHolder.get();
-                if (fields == null) {
-                    fields = createFieldsOrder(baseFields, EXTRA_ABSTRACT_FIELDS);
-                    fieldsHolder.set(fields);
-                }
-            }
-
-            return fields;
-        }
+        public static final List<String> FIELDS = createFieldsOrder(ACEStructure.FIELDS, "Mask", "SidStart");
 
         public int Mask;
         /**
-         * first 4 bytes of the SID
+         * First 4 bytes of the SID
+         * Only used to have a valid field defined - use sid!
          */
-        public DWORD SidStart;
+        public byte[] SidStart = new byte[4];
 
         public ACCESS_ACEStructure() {
             super();
         }
 
+        public ACCESS_ACEStructure(int Mask, byte AceType, byte AceFlags, PSID psid) {
+            super();
+            this.calculateSize(true);
+            this.AceType = AceType;
+            this.AceFlags = AceFlags;
+            this.AceSize = (short) (super.fieldOffset("SidStart") + psid.getBytes().length);
+            this.psid = psid;
+            this.Mask = Mask;
+            this.SidStart = psid.getPointer().getByteArray(0, SidStart.length);
+            this.allocateMemory(AceSize);
+            write();
+        }
+
         public ACCESS_ACEStructure(Pointer p) {
             super(p);
             read();
-            // AceSize - size of public members of the structure + size of DWORD
-            // (SidStart)
-            int sizeOfSID = super.AceSize - size() + 4;
-            // ACE_HEADER + size of int (Mask)
-            int offsetOfSID = 4 + 4;
-            byte[] data = p.getByteArray(offsetOfSID, sizeOfSID);
-            psid = new PSID(data);
+        }
+
+        /**
+         * Write override due to psid not being a managed field
+         */
+        @Override
+        public void write() {
+            super.write();
+            int offsetOfSID = super.fieldOffset("SidStart");
+            int sizeOfSID = super.AceSize - super.fieldOffset("SidStart");
+            if(psid != null) {
+                // Get bytes from the PSID
+                byte[] psidWrite = psid.getBytes();
+                assert psidWrite.length <= sizeOfSID;
+                // Write those bytes to native memory
+                getPointer().write(offsetOfSID, psidWrite, 0, sizeOfSID);
+            }
+        }
+
+        @Override
+        public void read() {
+            super.read();
+            int offsetOfSID = super.fieldOffset("SidStart");
+            int sizeOfSID = super.AceSize - super.fieldOffset("SidStart");
+            if(sizeOfSID > 0) {
+                psid = new PSID(getPointer().getByteArray(offsetOfSID, sizeOfSID));
+            } else {
+                psid = new PSID();
+            }
         }
 
         @Override
         protected List<String> getFieldOrder() {
-            return resolveEffectiveFields(super.getFieldOrder());
+            return FIELDS;
         }
     }
 
@@ -2683,6 +2832,10 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
         public ACCESS_ALLOWED_ACE(Pointer p) {
             super(p);
         }
+
+        public ACCESS_ALLOWED_ACE(int Mask, byte AceFlags, PSID psid) {
+            super(Mask, ACCESS_ALLOWED_ACE_TYPE, AceFlags, psid);
+        }
     }
 
     /* Access denied ACE */
@@ -2693,6 +2846,10 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
 
         public ACCESS_DENIED_ACE(Pointer p) {
             super(p);
+        }
+
+        public ACCESS_DENIED_ACE(int Mask, byte AceFlags, PSID psid) {
+            super(Mask, ACCESS_DENIED_ACE_TYPE, AceFlags, psid);
         }
     }
 
@@ -3083,17 +3240,21 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
          * Specifies whether the server is to be given a snapshot of the
          * client's security context (called static tracking), or is to be
          * continually updated to track changes to the client's security context
-         * (called dynamic tracking). The SECURITY_STATIC_TRACKING value
-         * specifies static tracking, and the SECURITY_DYNAMIC_TRACKING value
-         * specifies dynamic tracking. Not all communications mechanisms support
-         * dynamic tracking; those that do not will default to static tracking.
+         * (called dynamic tracking). The {@link WinNT#SECURITY_STATIC_TRACKING}
+         * value specifies static tracking, and the
+         * {@link WinNT#SECURITY_DYNAMIC_TRACKING} value specifies dynamic
+         * tracking. Not all communications mechanisms support dynamic tracking;
+         * those that do not will default to static tracking.
          */
-        public short ContextTrackingMode;
+        public byte ContextTrackingMode;
         /**
          * Specifies whether the server may enable or disable privileges and
          * groups that the client's security context may include.
+         * 
+         * <p>This is a boolean value. See {@link WinNT#BOOLEAN_TRUE} and 
+         * {@link WinNT#BOOLEAN_FALSE}.</p>
          */
-        public BOOL EffectiveOnly;
+        public byte EffectiveOnly;
 
         @Override
         public void write() {
@@ -3106,4 +3267,9 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
             return FIELDS;
         }
     }
+    
+    byte SECURITY_DYNAMIC_TRACKING = (byte) 1;
+    byte SECURITY_STATIC_TRACKING = (byte) 0;
+    byte BOOLEAN_TRUE = (byte) 1;
+    byte BOOLEAN_FALSE = (byte) 0;
 }

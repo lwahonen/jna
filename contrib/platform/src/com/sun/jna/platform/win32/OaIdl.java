@@ -1,5 +1,24 @@
 /*
- *
+ * The contents of this file is dual-licensed under 2 
+ * alternative Open Source/Free licenses: LGPL 2.1 or later and 
+ * Apache License 2.0. (starting with JNA version 4.0.0).
+ * 
+ * You can freely decide which license you want to apply to 
+ * the project.
+ * 
+ * You may obtain a copy of the LGPL License at:
+ * 
+ * http://www.gnu.org/licenses/licenses.html
+ * 
+ * A copy is also included in the downloadable source code package
+ * containing JNA, in file "LGPL2.1".
+ * 
+ * You may obtain a copy of the Apache License at:
+ * 
+ * http://www.apache.org/licenses/
+ * 
+ * A copy is also included in the downloadable source code package
+ * containing JNA, in file "AL2.0".
  */
 package com.sun.jna.platform.win32;
 
@@ -57,6 +76,7 @@ import static com.sun.jna.platform.win32.Variant.VT_UNKNOWN;
 import static com.sun.jna.platform.win32.Variant.VT_VARIANT;
 import com.sun.jna.ptr.ByReference;
 import com.sun.jna.ptr.PointerByReference;
+import java.io.Closeable;
 import java.util.Date;
 
 /**
@@ -230,12 +250,20 @@ public interface OaIdl {
 
         public Date getAsJavaDate() {
             long days = (((long) this.date) * MICRO_SECONDS_PER_DAY) + DATE_OFFSET;
-            int hours = (int) (24 * Math.abs(this.date - ((long) this.date)));
+            double timePart = 24 * Math.abs(this.date - ((long) this.date));
+            int hours = (int) timePart;
+            timePart = 60 * (timePart - ((int) timePart));
+            int minutes = (int) timePart;
+            timePart = 60 * (timePart - ((int) timePart));
+            int seconds = (int) timePart;
+            timePart = 1000 * (timePart - ((int) timePart));
+            int milliseconds = (int) timePart;
             
             Date baseDate = new Date(days);
             baseDate.setHours(hours);
-            baseDate.setMinutes(0);
-            baseDate.setSeconds(0);
+            baseDate.setMinutes(minutes);
+            baseDate.setSeconds(seconds);
+            baseDate.setTime(baseDate.getTime() + milliseconds);
             return baseDate;
         }
         
@@ -243,10 +271,16 @@ public interface OaIdl {
             double msSinceOrigin = javaDate.getTime() - DATE_OFFSET;
             double daysAsFract = msSinceOrigin / MICRO_SECONDS_PER_DAY;
             
-            double dayPart = Math.floor(daysAsFract);
-            double hourPart = Math.signum(daysAsFract) * (javaDate.getHours() / 24d);
+            Date dayDate = new Date(javaDate.getTime());
+            dayDate.setHours(0);
+            dayDate.setMinutes(0);
+            dayDate.setSeconds(0);
+            dayDate.setTime(dayDate.getTime() / 1000 * 1000); // Clear milliseconds
             
-            this.date = dayPart + hourPart;
+            double integralPart = Math.floor(daysAsFract);
+            double fractionalPart = Math.signum(daysAsFract) * ((javaDate.getTime() - dayDate.getTime()) / (24d * 60 * 60 * 1000));
+            
+            this.date = integralPart + fractionalPart;
         }
         
         @Override
@@ -509,7 +543,8 @@ public interface OaIdl {
     };
 
     /**
-     * General comment: All indices in the helper methods use java int.
+     * Implementation of SAFEARRAY. Implements Closable, which in this case 
+     * delegates to destroy, to free native memory on close.
      * 
      * <p>VARTYPE for the SAFEARRAY can be:</p>
      *
@@ -536,11 +571,14 @@ public interface OaIdl {
      * <li>VT_VARIANT</li>
      * </ul>
      * 
+     * <p>General comment: All indices in the helper methods use java int.</p>
+     * 
      * <p>The native type for the indices is LONG, which is defined as:</p>
      * 
      * <blockquote>A 32-bit signed integer. The range is �2147483648 through 2147483647 decimal.</blockquote>
      */
-    public static class SAFEARRAY extends Structure {
+    public static class SAFEARRAY extends Structure implements Closeable {
+
         public static class ByReference extends SAFEARRAY implements
                 Structure.ByReference {
         }
@@ -878,6 +916,13 @@ public interface OaIdl {
             COMUtils.checkRC(res);
         }
 
+        /**
+         * Implemented to satisfy Closeable interface, delegates to destroy.
+         */
+        public void close() {
+            destroy();
+        }
+        
         /**
          * Retrieve lower bound for the selected dimension.
          *

@@ -3,9 +3,11 @@ package com.sun.jna.platform.win32;
 import junit.framework.TestCase;
 
 import com.sun.jna.platform.win32.OaIdl.DATE;
+import com.sun.jna.platform.win32.OaIdl.SAFEARRAY;
 import com.sun.jna.platform.win32.OaIdl.VARIANT_BOOL;
 import com.sun.jna.platform.win32.Variant.VARIANT;
 import com.sun.jna.platform.win32.WTypes.BSTR;
+import com.sun.jna.platform.win32.WTypes.VARTYPE;
 import com.sun.jna.platform.win32.WinBase.SYSTEMTIME;
 import com.sun.jna.platform.win32.WinDef.BOOL;
 import com.sun.jna.platform.win32.WinDef.BYTE;
@@ -20,6 +22,7 @@ import java.util.Date;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 
 public class VariantTest extends TestCase {
@@ -123,7 +126,17 @@ public class VariantTest extends TestCase {
         assertThat(new DATE(5.50d).getAsJavaDate(), equalTo(new Date(1900 - 1900, 1 - 1, 4, 12, 0, 0)));
         assertThat(new DATE(5.875d).getAsJavaDate(), equalTo(new Date(1900 - 1900, 1 - 1, 4, 21, 0, 0)));
         
+        // Test roundtripping with sub hour resolution
+        // This test allows for a rounding error of 500ms, this follows MSDN:
+        // https://msdn.microsoft.com/en-us/library/aa393691.aspx
+        // the resolution is higher, but it is not requested to be
         
+        // Date was choosen from the example that made the problem visible
+        // in testing
+        Date testDate = new Date(2016 - 1900, 10 - 1, 12, 2, 59, 19);
+        
+        assertTrue("java.util.Date -> com.sun.jna.platform.win32.OaIdl.DATE -> java.util.Date roundtrip failed",
+                Math.abs(new DATE(testDate).getAsJavaDate().getTime() - testDate.getTime()) < 500);
     }
 
     public void testVariantConstructors() {
@@ -238,5 +251,18 @@ public class VariantTest extends TestCase {
         assertThat(variant.getValue(), instanceOf(USHORT.class));
         assertThat(((USHORT) variant.getValue()).intValue(), equalTo((int) testChar));
         assertThat(variant.intValue(), equalTo((int) testChar));
+    }
+    
+    public void testVariantSafearrayWrapping() {
+        SAFEARRAY safearray = OaIdl.SAFEARRAY.createSafeArray(new VARTYPE(Variant.VT_I1), 5);
+        try {
+            VARIANT variant = new VARIANT(safearray);
+            assertThat(variant.getVarType().intValue(), equalTo((int) (Variant.VT_I1 | Variant.VT_ARRAY)));
+            Object wrappedValue = variant.getValue();
+            assertThat(wrappedValue, instanceOf(SAFEARRAY.class));
+            assertThat(safearray.getUBound(0), is(4));
+        } finally {
+            safearray.destroy();
+        }
     }
 }

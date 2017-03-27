@@ -1,14 +1,25 @@
 /* Copyright (c) 2007-2013 Timothy Wall, All Rights Reserved
  *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- * <p/>
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
+ * The contents of this file is dual-licensed under 2 
+ * alternative Open Source/Free licenses: LGPL 2.1 or later and 
+ * Apache License 2.0. (starting with JNA version 4.0.0).
+ * 
+ * You can freely decide which license you want to apply to 
+ * the project.
+ * 
+ * You may obtain a copy of the LGPL License at:
+ * 
+ * http://www.gnu.org/licenses/licenses.html
+ * 
+ * A copy is also included in the downloadable source code package
+ * containing JNA, in file "LGPL2.1".
+ * 
+ * You may obtain a copy of the Apache License at:
+ * 
+ * http://www.apache.org/licenses/
+ * 
+ * A copy is also included in the downloadable source code package
+ * containing JNA, in file "AL2.0".
  */
 #ifndef DISPATCH_H
 #define DISPATCH_H
@@ -18,7 +29,7 @@
 #include "ffi.h"
 #include "com_sun_jna_Function.h"
 #include "com_sun_jna_Native.h"
-#if defined(__sun__) || defined(_AIX)
+#if defined(__sun__) || defined(_AIX) || defined(__linux__)
 #  include <alloca.h>
 #endif
 #ifdef _WIN32
@@ -36,6 +47,9 @@
 #define GET_LAST_ERROR() GetLastError()
 #define SET_LAST_ERROR(CODE) SetLastError(CODE)
 #else
+#ifndef _XOPEN_SOURCE /* AIX power-aix 1 7 00F84C0C4C00 defins 700 */
+#define _XOPEN_SOURCE 600
+#endif
 #define GET_LAST_ERROR() errno
 #define SET_LAST_ERROR(CODE) (errno = (CODE))
 #endif /* _WIN32 */
@@ -143,7 +157,7 @@ typedef struct _callback {
 
 #if defined(_MSC_VER)
 #include "snprintf.h"
-#define strdup _strdup
+#define STRDUP _strdup
 #if defined(_WIN64)
 #define L2A(X) ((void *)(X))
 #define A2L(X) ((jlong)(X))
@@ -151,6 +165,9 @@ typedef struct _callback {
 #define L2A(X) ((void *)(unsigned long)(X))
 #define A2L(X) ((jlong)(unsigned long)(X))
 #endif
+#else
+#include <stdio.h>
+#define STRDUP strdup
 #endif
 
 /* Convenience macros */

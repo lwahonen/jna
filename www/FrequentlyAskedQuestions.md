@@ -3,7 +3,7 @@ Frequently Asked Questions
 
 I'm having trouble generating correct library mappings
 ------------------------------------------------------
-Make sure you've read [this page](https://github.com/java-native-access/jna/blob/master/www/Mappings.md) and [this one](http://java-native-access.github.io/jna/4.2.0/javadoc/overview-summary.html#overview_description).  Try [JNAerator](http://code.google.com/p/jnaerator/).  If you find its output too verbose, delete the mappings you don't need, or copy out the ones you do need.
+Make sure you've read [this page](https://github.com/java-native-access/jna/blob/master/www/Mappings.md) and [this one](http://java-native-access.github.io/jna/4.2.1/overview-summary.html#overview.description).  Try [JNAerator](http://code.google.com/p/jnaerator/).  If you find its output too verbose, delete the mappings you don't need, or copy out the ones you do need.
 
 JNA is missing function XXX in its platform library mappings
 ------------------------------------------------------------
@@ -20,7 +20,17 @@ That's all it takes.  If you'd like to submit the change back to JNA, make sure 
 Calling `Native.loadLibrary()` causes an UnsatisfiedLinkError
 -------------------------------------------------------------
 
-Set the system property `jna.debug_load=true`, and JNA will print its library search steps to the console.  `jna.debug_load.jna` will trace the search for JNA's own native support.
+Set the system property `jna.debug_load=true`, and JNA will print its library 
+search steps to the console. `jna.debug_load.jna` will trace the search for 
+JNA's own native support.
+
+If the native prefix value is misdetected. It can be overriden by the 
+`jna.prefix` system property. For example if the binary running the JVM follows
+the arm softfloat ABI, you can specify the `armel` prefix like this:
+
+```
+java -Djna.prefix=linux-armel <normalCall>
+```
 
 My library mapping causes an UnsatisfiedLinkError
 -------------------------------------------------
@@ -157,11 +167,6 @@ Does JNA work with J2ME/Windows CE/Mobile?
 
 There is an implementation included in the regular JNA distribution built with cegcc and tested against phoneME.
 
-I need to use a COM/OCX/ActiveX object. Can JNA do that?
---------------------------------------------------------
-
-Not really. Try JACOB or com4j, both of which can parse a COM interface definition and generate a Java object to match it.  JNAerator is also working on generating COM bindings.
-
 Why does the VM sometimes crash in my shutdown hook on Windows?
 ---------------------------------------------------------------
 
@@ -187,4 +192,11 @@ You might expect a speedup of about an order of magnitude moving to JNA direct m
 
 JNA COM support
 ---------------
-There is a new implementation to support COM in conjunction with JNA directly. The development is relatively young, honestly the development has been finished just end of February '13. Please note that fact if you use the COM support in JNA, there could be things missing or not absolutely tested or still not working. Please use the jna user group to report your experience with the JNA Com support. 
+There are two implementations to support COM in conjunction with JNA directly.
+Please see the [PlatformLibrary](https://github.com/java-native-access/jna/blob/master/www/PlatformLibrary.md)
+documentation for more information and use the jna user group to report your 
+experience with the JNA COM support. 
+
+Additional resource that should be checked are JACOB or com4j, both of which can 
+parse a COM interface definition and generate a Java object to match it.  
+JNAerator is also working on generating COM bindings.

@@ -1,14 +1,25 @@
 /* Copyright (c) 2007-2015 Timothy Wall, All Rights Reserved
  *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- * <p/>
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
+ * The contents of this file is dual-licensed under 2 
+ * alternative Open Source/Free licenses: LGPL 2.1 or later and 
+ * Apache License 2.0. (starting with JNA version 4.0.0).
+ * 
+ * You can freely decide which license you want to apply to 
+ * the project.
+ * 
+ * You may obtain a copy of the LGPL License at:
+ * 
+ * http://www.gnu.org/licenses/licenses.html
+ * 
+ * A copy is also included in the downloadable source code package
+ * containing JNA, in file "LGPL2.1".
+ * 
+ * You may obtain a copy of the Apache License at:
+ * 
+ * http://www.apache.org/licenses/
+ * 
+ * A copy is also included in the downloadable source code package
+ * containing JNA, in file "AL2.0".
  */
 package com.sun.jna;
 
@@ -132,12 +143,63 @@ public final class Native implements Version {
     static final int MAX_ALIGNMENT;
     static final int MAX_PADDING;
 
+    @Deprecated
     public static float parseVersion(String v) {
         return Float.parseFloat(v.substring(0, v.lastIndexOf(".")));
+    }
+    
+    /**
+     * Version string must have the structure <major>.<minor>.<revision>
+     * a bugfix change in the native code increments revision, the minor is
+     * incremented for backwards compatible changes and the major version
+     * is changed for backwards incompatbile changes.
+     * 
+     * @param expectedVersion
+     * @param nativeVersion
+     * @return true if nativeVersion describes a version compatible to expectedVersion
+     */
+    static boolean isCompatibleVersion(String expectedVersion, String nativeVersion) {
+        String[] expectedVersionParts = expectedVersion.split("\\.");
+        String[] nativeVersionParts = nativeVersion.split("\\.");
+        if(expectedVersionParts.length < 3 || nativeVersionParts.length < 3) {
+            return false;
+        }
+        
+        int expectedMajor = Integer.parseInt(expectedVersionParts[0]);
+        int nativeMajor = Integer.parseInt(nativeVersionParts[0]);
+        int expectedMinor = Integer.parseInt(expectedVersionParts[1]);
+        int nativeMinor = Integer.parseInt(nativeVersionParts[1]);
+        
+        if(expectedMajor != nativeMajor) {
+            return false;
+        }
+        
+        if(expectedMinor > nativeMinor) {
+            return false;
+        }
+        
+        return true;
     }
 
     static {
         loadNativeDispatchLibrary();
+
+        if (! isCompatibleVersion(VERSION_NATIVE, getNativeVersion())) {
+            String LS = System.getProperty("line.separator");
+            throw new Error(LS + LS
+                            + "There is an incompatible JNA native library installed on this system" + LS
+                            + "Expected: " + VERSION_NATIVE + LS
+                            + "Found:    " + getNativeVersion() + LS
+                            + (jnidispatchPath != null
+                               ? "(at " + jnidispatchPath + ")" : System.getProperty("java.library.path"))
+                            + "." + LS
+                            + "To resolve this issue you may do one of the following:" + LS
+                            + " - remove or uninstall the offending library" + LS
+                            + " - set the system property jna.nosys=true" + LS
+                            + " - set jna.boot.library.path to include the path to the version of the " + LS
+                            + "   jnidispatch library included with the JNA jar file you are using" + LS);
+        }
+        
         POINTER_SIZE = sizeof(TYPE_VOIDP);
         LONG_SIZE = sizeof(TYPE_LONG);
         WCHAR_SIZE = sizeof(TYPE_WCHAR_T);
@@ -149,20 +211,6 @@ public final class Native implements Version {
         initIDs();
         if (Boolean.getBoolean("jna.protected")) {
             setProtected(true);
-        }
-        float version = parseVersion(getNativeVersion());
-        if (version != parseVersion(VERSION_NATIVE)) {
-            String LS = System.getProperty("line.separator");
-            throw new Error(LS + LS
-                            + "There is an incompatible JNA native library installed on this system" + LS
-                            + (jnidispatchPath != null
-                               ? "(at " + jnidispatchPath + ")" : System.getProperty("java.library.path"))
-                            + "." + LS
-                            + "To resolve this issue you may do one of the following:" + LS
-                            + " - remove or uninstall the offending library" + LS
-                            + " - set the system property jna.nosys=true" + LS
-                            + " - set jna.boot.library.path to include the path to the version of the " + LS
-                            + "   jnidispatch library included with the JNA jar file you are using" + LS);
         }
         MAX_ALIGNMENT = Platform.isSPARC() || Platform.isWindows()
             || (Platform.isLinux() && (Platform.isARM() || Platform.isPPC()))
@@ -330,6 +378,10 @@ public final class Native implements Version {
      * encoding.  If there is no NUL terminator, the String will comprise the
      * entire array.
      *
+     * <p><strong>Usage note</strong>: This function assumes, that {@code buf}
+     * holds a {@code char} array. This means only single-byte encodings are
+     * supported.</p>
+     * 
      * @param buf The buffer containing the encoded bytes
      * @param encoding The encoding name - if {@code null} then the platform
      * default encoding will be used
@@ -1962,107 +2014,126 @@ public final class Native implements Version {
                                                          String encoding);
 
     /**
-     * Call the native function being represented by this object
-     * @param fp function pointer
-     * @param   callFlags calling convention to be used
-     * @param   args
-     *                  Arguments to pass to the native function
+     * Call the native function.
      *
-     * @return  The value returned by the target native function
-     */
-    static  native int invokeInt(long fp, int callFlags, Object[] args);
-
-    /**
-     * Call the native function being represented by this object
-     * @param fp function pointer
-     * @param   callFlags calling convention to be used
-     * @param   args
-     *                  Arguments to pass to the native function
+     * @param function  Present to prevent the GC to collect the Function object
+     *                  prematurely
+     * @param fp        function pointer
+     * @param callFlags calling convention to be used
+     * @param args      Arguments to pass to the native function
      *
-     * @return  The value returned by the target native function
+     * @return The value returned by the target native function
      */
-    static native long invokeLong(long fp, int callFlags, Object[] args);
+    static  native int invokeInt(Function function, long fp, int callFlags, Object[] args);
 
     /**
-     * Call the native function being represented by this object
-     * @param fp function pointer
-     * @param   callFlags calling convention to be used
-     * @param   args
-     *                  Arguments to pass to the native function
-     */
-    static native void invokeVoid(long fp, int callFlags, Object[] args);
-
-    /**
-     * Call the native function being represented by this object
-     * @param fp function pointer
-     * @param   callFlags calling convention to be used
-     * @param   args
-     *                  Arguments to pass to the native function
+     * Call the native function.
      *
-     * @return  The value returned by the target native function
-     */
-    static native float invokeFloat(long fp, int callFlags, Object[] args);
-
-    /**
-     * Call the native function being represented by this object
-     * @param fp function pointer
-     * @param   callFlags calling convention to be used
-     * @param   args
-     *                  Arguments to pass to the native function
+     * @param function  Present to prevent the GC to collect the Function object
+     *                  prematurely
+     * @param fp        function pointer
+     * @param callFlags calling convention to be used
+     * @param args      Arguments to pass to the native function
      *
-     * @return  The value returned by the target native function
+     * @return The value returned by the target native function
      */
-    static native double invokeDouble(long fp, int callFlags, Object[] args);
+    static native long invokeLong(Function function, long fp, int callFlags, Object[] args);
 
     /**
-     * Call the native function being represented by this object
-     * @param fp function pointer
-     * @param   callFlags calling convention to be used
-     * @param   args
-     *                  Arguments to pass to the native function
+     * Call the native function.
      *
-     * @return  The native pointer returned by the target native function
+     * @param function  Present to prevent the GC to collect the Function object
+     *                  prematurely
+     * @param fp        function pointer
+     * @param callFlags calling convention to be used
+     * @param args      Arguments to pass to the native function
      */
-    static native long invokePointer(long fp, int callFlags, Object[] args);
+    static native void invokeVoid(Function function, long fp, int callFlags, Object[] args);
 
     /**
-     * Call the native function being represented by this object, returning
-     * a struct by value.
-     * @param fp function pointer
-     * @param   callFlags calling convention to be used
-     * @param   args Arguments to pass to the native function
-     * @param   memory Memory for pre-allocated structure to hold the result
-     * @param   typeInfo Native type information for the Structure
+     * Call the native function.
+     *
+     * @param function  Present to prevent the GC to collect the Function object
+     *                  prematurely
+     * @param fp        function pointer
+     * @param callFlags calling convention to be used
+     * @param args      Arguments to pass to the native function
+     *
+     * @return The value returned by the target native function
      */
-    private static native void invokeStructure(long fp, int callFlags,
+    static native float invokeFloat(Function function, long fp, int callFlags, Object[] args);
+
+    /**
+     * Call the native function.
+     *
+     * @param function  Present to prevent the GC to collect the Function object
+     *                  prematurely
+     * @param fp        function pointer
+     * @param callFlags calling convention to be used
+     * @param args      Arguments to pass to the native function
+     *
+     * @return The value returned by the target native function
+     */
+    static native double invokeDouble(Function function, long fp, int callFlags, Object[] args);
+
+    /**
+     * Call the native function.
+     *
+     * @param function  Present to prevent the GC to collect the Function object
+     *                  prematurely
+     * @param fp        function pointer
+     * @param callFlags calling convention to be used
+     * @param args      Arguments to pass to the native function
+     *
+     * @return The value returned by the target native function
+     */
+    static native long invokePointer(Function function, long fp, int callFlags, Object[] args);
+
+    /**
+     * Call the native function, returning a struct by value.
+     * 
+     * @param function  Present to prevent the GC to collect the Function object
+     *                  prematurely
+     * @param fp        function pointer
+     * @param callFlags calling convention to be used
+     * @param args      Arguments to pass to the native function
+     * @param memory    Memory for pre-allocated structure to hold the result
+     * @param typeInfo  Native type information for the Structure
+     */
+    private static native void invokeStructure(Function function, long fp, int callFlags,
                                                Object[] args, long memory,
                                                long type_info);
 
     /**
-     * Call the native function being represented by this object, returning
-     * a struct by value.
-     * @param fp function pointer
-     * @param   callFlags calling convention to be used
-     * @param   args Arguments to pass to the native function
+     * Call the native function, returning a struct by value.
+     * 
+     * @param function  Present to prevent the GC to collect the Function object
+     *                  prematurely
+     * @param fp        function pointer
+     * @param callFlags calling convention to be used
+     * @param args      Arguments to pass to the native function
+     * 
      * @return the passed-in Structure
      */
-    static Structure invokeStructure(long fp, int callFlags, Object[] args,
+    static Structure invokeStructure(Function function, long fp, int callFlags, Object[] args,
                                      Structure s) {
-        invokeStructure(fp, callFlags, args, s.getPointer().peer,
+        invokeStructure(function, fp, callFlags, args, s.getPointer().peer,
                         s.getTypeInfo().peer);
         return s;
     }
 
     /**
-     * Call the native function being represented by this object, returning
-     * a Java <code>Object</code>.
-     * @param fp function pointer
-     * @param   callFlags calling convention to be used
-     * @param   args Arguments to pass to the native function
+     * Call the native function, returning a Java <code>Object</code>.
+     * 
+     * @param function  Present to prevent the GC to collect the Function object
+     *                  prematurely
+     * @param fp        function pointer
+     * @param callFlags calling convention to be used
+     * @param args      Arguments to pass to the native function
      *
      * @return  The returned Java <code>Object</code>
      */
-    static native Object invokeObject(long fp, int callFlags, Object[] args);
+    static native Object invokeObject(Function function, long fp, int callFlags, Object[] args);
 
     /** Open the requested native library with default options. */
     static long open(String name) {
@@ -2079,49 +2150,80 @@ public final class Native implements Version {
 
     static native long findSymbol(long handle, String name);
 
-    static native long indexOf(long addr, byte value);
+    /*
+    ============================================================================
+    
+    The first argument of the following read, write, get<Type> and set<Type>
+    function is present to protect it from the GC.
+    
+    Although on the native side only the baseaddr and offset are used to access
+    the memory, the Pointer argument must not be removed. This is the usecase:
+    
+    --------------------------------------
+    Memory pointer = <init>;
+    <do something and work on Memory>
+    String result = pointer.getWideString(0)
+    <do nothing more with Memory>
+    --------------------------------------
+    
+    In getWideString the pointer address is resolved and is passed to native. If
+    the Memory object itself is not passed to native, the GC can collect the
+    object at that point as it is not used anymore and the finalizers could run.
+    
+    The would introduce a race between the native call and the GC running the
+    finalizers. The finalizers free the allocated memory, which results in
+    a SEGFAULT.
+    
+    Passing only the Pointer object and loading the peer value via JNI was not
+    implemented, as in microbenchmarks it showed large impact. Passing the
+    Pointer object instead of the peer and offset value to getInt resulted in
+    a performance of 70% of the unmodified source.
+    
+    ============================================================================     
+     */
+    static native long indexOf(Pointer pointer, long baseaddr, long offset, byte value);
 
-    static native void read(long addr, byte[] buf, int index, int length);
+    static native void read(Pointer pointer, long baseaddr, long offset, byte[] buf, int index, int length);
 
-    static native void read(long addr, short[] buf, int index, int length);
+    static native void read(Pointer pointer, long baseaddr, long offset, short[] buf, int index, int length);
 
-    static native void read(long addr, char[] buf, int index, int length);
+    static native void read(Pointer pointer, long baseaddr, long offset, char[] buf, int index, int length);
 
-    static native void read(long addr, int[] buf, int index, int length);
+    static native void read(Pointer pointer, long baseaddr, long offset, int[] buf, int index, int length);
 
-    static native void read(long addr, long[] buf, int index, int length);
+    static native void read(Pointer pointer, long baseaddr, long offset, long[] buf, int index, int length);
 
-    static native void read(long addr, float[] buf, int index, int length);
+    static native void read(Pointer pointer, long baseaddr, long offset, float[] buf, int index, int length);
 
-    static native void read(long addr, double[] buf, int index, int length);
+    static native void read(Pointer pointer, long baseaddr, long offset, double[] buf, int index, int length);
 
-    static native void write(long addr, byte[] buf, int index, int length);
+    static native void write(Pointer pointer, long baseaddr, long offset, byte[] buf, int index, int length);
 
-    static native void write(long addr, short[] buf, int index, int length);
+    static native void write(Pointer pointer, long baseaddr, long offset, short[] buf, int index, int length);
 
-    static native void write(long addr, char[] buf, int index, int length);
+    static native void write(Pointer pointer, long baseaddr, long offset, char[] buf, int index, int length);
 
-    static native void write(long addr, int[] buf, int index, int length);
+    static native void write(Pointer pointer, long baseaddr, long offset, int[] buf, int index, int length);
 
-    static native void write(long addr, long[] buf, int index, int length);
+    static native void write(Pointer pointer, long baseaddr, long offset, long[] buf, int index, int length);
 
-    static native void write(long addr, float[] buf, int index, int length);
+    static native void write(Pointer pointer, long baseaddr, long offset, float[] buf, int index, int length);
 
-    static native void write(long addr, double[] buf, int index, int length);
+    static native void write(Pointer pointer, long baseaddr, long offset, double[] buf, int index, int length);
 
-    static native byte getByte(long addr);
+    static native byte getByte(Pointer pointer, long baseaddr, long offset);
 
-    static native char getChar(long addr);
+    static native char getChar(Pointer pointer, long baseaddr, long offset);
 
-    static native short getShort(long addr);
+    static native short getShort(Pointer pointer, long baseaddr, long offset);
 
-    static native int getInt(long addr);
+    static native int getInt(Pointer pointer, long baseaddr, long offset);
 
-    static native long getLong(long addr);
+    static native long getLong(Pointer pointer, long baseaddr, long offset);
 
-    static native float getFloat(long addr);
+    static native float getFloat(Pointer pointer, long baseaddr, long offset);
 
-    static native double getDouble(long addr);
+    static native double getDouble(Pointer pointer, long baseaddr, long offset);
 
     static Pointer getPointer(long addr) {
         long peer = _getPointer(addr);
@@ -2130,14 +2232,14 @@ public final class Native implements Version {
 
     private static native long _getPointer(long addr);
 
-    static native String getWideString(long addr);
+    static native String getWideString(Pointer pointer, long baseaddr, long offset);
 
-    static String getString(long addr) {
-        return getString(addr, getDefaultStringEncoding());
+    static String getString(Pointer pointer, long offset) {
+        return getString(pointer, offset, getDefaultStringEncoding());
     }
 
-    static String getString(long addr, String encoding) {
-        byte[] data = getStringBytes(addr);
+    static String getString(Pointer pointer, long offset, String encoding) {
+        byte[] data = getStringBytes(pointer, pointer.peer, offset);
         if (encoding != null) {
             try {
                 return new String(data, encoding);
@@ -2148,28 +2250,30 @@ public final class Native implements Version {
         return new String(data);
     }
 
-    static native byte[] getStringBytes(long addr);
+    static native byte[] getStringBytes(Pointer pointer, long baseaddr, long offset);
 
-    static native void setMemory(long addr, long length, byte value);
+    static native void setMemory(Pointer pointer, long baseaddr, long offset, long length, byte value);
 
-    static native void setByte(long addr, byte value);
+    static native void setByte(Pointer pointer, long baseaddr, long offset, byte value);
 
-    static native void setShort(long addr, short value);
+    static native void setShort(Pointer pointer, long baseaddr, long offset, short value);
 
-    static native void setChar(long addr, char value);
+    static native void setChar(Pointer pointer, long baseaddr, long offset, char value);
 
-    static native void setInt(long addr, int value);
+    static native void setInt(Pointer pointer, long baseaddr, long offset, int value);
 
-    static native void setLong(long addr, long value);
+    static native void setLong(Pointer pointer, long baseaddr, long offset, long value);
 
-    static native void setFloat(long addr, float value);
+    static native void setFloat(Pointer pointer, long baseaddr, long offset, float value);
 
-    static native void setDouble(long addr, double value);
+    static native void setDouble(Pointer pointer, long baseaddr, long offset, double value);
 
-    static native void setPointer(long addr, long value);
+    static native void setPointer(Pointer pointer, long baseaddr, long offset, long value);
 
-    static native void setWideString(long addr, String value);
-
+    static native void setWideString(Pointer pointer, long baseaddr, long offset, String value);
+    
+    static native ByteBuffer getDirectByteBuffer(Pointer pointer, long addr, long offset, long length);
+    
     /**
      * Call the real native malloc
      * @param size size of the memory to be allocated
@@ -2191,8 +2295,10 @@ public final class Native implements Version {
      *
      * @param addr base address of the JNA-originated memory
      * @param length Length of ByteBuffer
-     * @return a direct ByteBuffer that accesses the memory being pointed to,
+     * @return a direct ByteBuffer that accesses the memory being pointed to
+     * @deprecated Use {@link Pointer#getByteBuffer(long, long)} (since 4.3.0)
      */
+    @Deprecated
     public static native ByteBuffer getDirectByteBuffer(long addr, long length);
 
     private static final ThreadLocal<Memory> nativeThreadTerminationFlag =
