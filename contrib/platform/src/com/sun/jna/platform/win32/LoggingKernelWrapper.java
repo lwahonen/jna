@@ -42,8 +42,8 @@ public class LoggingKernelWrapper implements InvocationHandler {
                 new LoggingKernelWrapper(target));
     };
 
-    public static void createLibraryProxyFor() throws Exception {
-        Field field=Kernel32.class.getField("INSTANCE");
+    public static void createLibraryProxyFor(Class targetClass) throws Exception {
+        Field field= targetClass.getField("INSTANCE");
         field.setAccessible(true);
 
         Field modifiersField = Field.class.getDeclaredField("modifiers");
