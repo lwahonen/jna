@@ -1,13 +1,15 @@
 package com.sun.jna.platform.win32;
 
+import com.sun.jna.platform.win32.LoggingKernelWrapper;
+
 import java.lang.reflect.*;
 import java.util.logging.Logger;
 
 public class LoggingKernelWrapper implements InvocationHandler {
 
-    private Kernel32 target;
+    private Object target;
 
-    private LoggingKernelWrapper(Kernel32 target) {
+    private LoggingKernelWrapper(Object target) {
         if (target == null) throw new IllegalArgumentException("'target' can't be null.");
         this.target = target;
     }
@@ -33,12 +35,12 @@ public class LoggingKernelWrapper implements InvocationHandler {
                 "THE INJECTED CODE SAYS: " + cause);
     }
 
-    public Kernel32 getTarget() { return target; }
+    public Object getTarget() { return target; }
 
-    public static Kernel32 createProxy(Kernel32 target) {
-        return (Kernel32) Proxy.newProxyInstance(
-                Kernel32.class.getClassLoader(),
-                new Class[] { Kernel32.class },
+    public static Object createProxy(Object target, Class interfaceClass) {
+        return Proxy.newProxyInstance(
+                interfaceClass.getClassLoader(),
+                new Class[] {interfaceClass},
                 new LoggingKernelWrapper(target));
     };
 
@@ -49,9 +51,11 @@ public class LoggingKernelWrapper implements InvocationHandler {
         Field modifiersField = Field.class.getDeclaredField("modifiers");
         modifiersField.setAccessible(true);
         modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
-        Kernel32 wrapper = LoggingKernelWrapper.createProxy(Kernel32.INSTANCE);
+        Object target = field.get(null);
+        Object wrapper = LoggingKernelWrapper.createProxy(target, targetClass);
 
         field.set(null, wrapper);
     }
+
 
 }
