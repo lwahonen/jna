@@ -108,8 +108,8 @@ public final class Native implements Version {
 
     // Used by tests, do not remove
     static String jnidispatchPath = null;
-    private static final Map<Class<?>, Map<String, Object>> typeOptions = new WeakHashMap<Class<?>, Map<String, Object>>();
-    private static final Map<Class<?>, Reference<?>> libraries = new WeakHashMap<Class<?>, Reference<?>>();
+    private static final Map<Class<?>, Map<String, Object>> typeOptions = Collections.synchronizedMap(new WeakHashMap<Class<?>, Map<String, Object>>());
+    private static final Map<Class<?>, Reference<?>> libraries = Collections.synchronizedMap(new WeakHashMap<Class<?>, Reference<?>>());
     private static final String _OPTION_ENCLOSING_LIBRARY = "enclosing-library";
     private static final UncaughtExceptionHandler DEFAULT_HANDLER =
         new UncaughtExceptionHandler() {
@@ -142,11 +142,6 @@ public final class Native implements Version {
 
     static final int MAX_ALIGNMENT;
     static final int MAX_PADDING;
-
-    @Deprecated
-    public static float parseVersion(String v) {
-        return Float.parseFloat(v.substring(0, v.lastIndexOf(".")));
-    }
     
     /**
      * Version string must have the structure <major>.<minor>.<revision>
@@ -205,7 +200,7 @@ public final class Native implements Version {
         WCHAR_SIZE = sizeof(TYPE_WCHAR_T);
         SIZE_T_SIZE = sizeof(TYPE_SIZE_T);
         BOOL_SIZE = sizeof(TYPE_BOOL);
-
+        
         // Perform initialization of other JNA classes until *after*
         // initializing the above final fields
         initIDs();
@@ -213,7 +208,7 @@ public final class Native implements Version {
             setProtected(true);
         }
         MAX_ALIGNMENT = Platform.isSPARC() || Platform.isWindows()
-            || (Platform.isLinux() && (Platform.isARM() || Platform.isPPC()))
+            || (Platform.isLinux() && (Platform.isARM() || Platform.isPPC() || Platform.isMIPS()))
             || Platform.isAIX()
             || Platform.isAndroid()
             ? 8 : LONG_SIZE;
@@ -293,21 +288,6 @@ public final class Native implements Version {
      * if this platform supports protecting memory accesses.
      */
     public static synchronized native boolean isProtected();
-
-    /** This method is obsolete.  The last error value is always preserved.
-     * @see #getLastError()
-     * @deprecated Last error is always preserved and available via {@link #getLastError()}
-     */
-    @Deprecated
-    public static void setPreserveLastError(boolean enable) { }
-
-    /** Indicates whether the system last error result is preserved
-     * after every invocation.  Always returns <code>true</code><p>
-     * @see #getLastError()
-     * @deprecated Last error is always preserved and available via {@link #getLastError()}
-     */
-    @Deprecated
-    public static boolean getPreserveLastError() { return true; }
 
     /** Utility method to get the native window ID for a Java {@link Window}
      * as a <code>long</code> value.
@@ -498,7 +478,7 @@ public final class Native implements Version {
      * @throws UnsatisfiedLinkError if the library cannot be found or
      * dependent libraries are missing.
      */
-    public static <T> T loadLibrary(Class<T> interfaceClass) {
+    public static <T extends Library> T loadLibrary(Class<T> interfaceClass) {
         return loadLibrary(null, interfaceClass);
     }
 
@@ -517,7 +497,7 @@ public final class Native implements Version {
      * dependent libraries are missing.
      * @see #loadLibrary(String, Class, Map)
      */
-    public static <T> T loadLibrary(Class<T> interfaceClass, Map<String, ?> options) {
+    public static <T extends Library> T loadLibrary(Class<T> interfaceClass, Map<String, ?> options) {
         return loadLibrary(null, interfaceClass, options);
     }
 
@@ -535,7 +515,7 @@ public final class Native implements Version {
      * dependent libraries are missing.
      * @see #loadLibrary(String, Class, Map)
      */
-    public static <T> T loadLibrary(String name, Class<T> interfaceClass) {
+    public static <T extends Library> T loadLibrary(String name, Class<T> interfaceClass) {
         return loadLibrary(name, interfaceClass, Collections.<String, Object>emptyMap());
     }
 
@@ -555,8 +535,9 @@ public final class Native implements Version {
      * @throws UnsatisfiedLinkError if the library cannot be found or
      * dependent libraries are missing.
      */
-    public static <T> T loadLibrary(String name, Class<T> interfaceClass, Map<String, ?> options) {
+    public static <T extends Library> T loadLibrary(String name, Class<T> interfaceClass, Map<String, ?> options) {
         if (!Library.class.isAssignableFrom(interfaceClass)) {
+            // Maybe still possible if the caller is not using generics?
             throw new IllegalArgumentException("Interface (" + interfaceClass.getSimpleName() + ")"
                     + " of library=" + name + " does not extend " + Library.class.getSimpleName());
         }
@@ -574,24 +555,22 @@ public final class Native implements Version {
      * Expects that lock on libraries is already held
      */
     private static void loadLibraryInstance(Class<?> cls) {
-        synchronized(libraries) {
-            if (cls != null && !libraries.containsKey(cls)) {
-                try {
-                    Field[] fields = cls.getFields();
-                    for (int i=0;i < fields.length;i++) {
-                        Field field = fields[i];
-                        if (field.getType() == cls
-                            && Modifier.isStatic(field.getModifiers())) {
-                            // Ensure the field gets initialized by reading it
-                            libraries.put(cls, new WeakReference<Object>(field.get(null)));
-                            break;
-                        }
+        if (cls != null && !libraries.containsKey(cls)) {
+            try {
+                Field[] fields = cls.getFields();
+                for (int i=0;i < fields.length;i++) {
+                    Field field = fields[i];
+                    if (field.getType() == cls
+                        && Modifier.isStatic(field.getModifiers())) {
+                        // Ensure the field gets initialized by reading it
+                        libraries.put(cls, new WeakReference<Object>(field.get(null)));
+                        break;
                     }
                 }
-                catch (Exception e) {
-                    throw new IllegalArgumentException("Could not access instance of "
-                                                       + cls + " (" + e + ")");
-                }
+            }
+            catch (Exception e) {
+                throw new IllegalArgumentException("Could not access instance of "
+                                                   + cls + " (" + e + ")");
             }
         }
     }
@@ -609,15 +588,13 @@ public final class Native implements Version {
         }
         // Check for direct-mapped libraries, which won't necessarily
         // implement com.sun.jna.Library.
-        synchronized(libraries) {
-            if (typeOptions.containsKey(cls)) {
-                Map<String, ?> libOptions = typeOptions.get(cls);
-                Class<?> enclosingClass = (Class<?>)libOptions.get(_OPTION_ENCLOSING_LIBRARY);
-                if (enclosingClass != null) {
-                    return enclosingClass;
-                }
-                return cls;
+        Map<String, ?> libOptions = typeOptions.get(cls);
+        if (libOptions != null) {
+            Class<?> enclosingClass = (Class<?>)libOptions.get(_OPTION_ENCLOSING_LIBRARY);
+            if (enclosingClass != null) {
+                return enclosingClass;
             }
+            return cls;
         }
         if (Library.class.isAssignableFrom(cls)) {
             return cls;
@@ -649,11 +626,9 @@ public final class Native implements Version {
     public static Map<String, Object> getLibraryOptions(Class<?> type) {
         Map<String, Object> libraryOptions;
         // cached already ?
-        synchronized(libraries) {
-            libraryOptions = typeOptions.get(type);
-            if (libraryOptions != null) {
-                return libraryOptions;
-            }
+        libraryOptions = typeOptions.get(type);
+        if (libraryOptions != null) {
+            return libraryOptions;
         }
 
         Class<?> mappingClass = findEnclosingLibraryClass(type);
@@ -663,43 +638,41 @@ public final class Native implements Version {
             mappingClass = type;
         }
 
-        synchronized(libraries) {
-            libraryOptions = typeOptions.get(mappingClass);
-            if (libraryOptions != null) {
-                typeOptions.put(type, libraryOptions);  // cache for next time
-                return libraryOptions;
-            }
-
-            try {
-                Field field = mappingClass.getField("OPTIONS");
-                field.setAccessible(true);
-                libraryOptions = (Map<String, Object>) field.get(null);
-                if (libraryOptions == null) {
-                    throw new IllegalStateException("Null options field");
-                }
-            } catch (NoSuchFieldException e) {
-                libraryOptions = Collections.<String, Object>emptyMap();
-            } catch (Exception e) {
-                throw new IllegalArgumentException("OPTIONS must be a public field of type java.util.Map (" + e + "): " + mappingClass);
-            }
-            // Make a clone of the original options
-            libraryOptions = new HashMap<String, Object>(libraryOptions);
-            if (!libraryOptions.containsKey(Library.OPTION_TYPE_MAPPER)) {
-                libraryOptions.put(Library.OPTION_TYPE_MAPPER, lookupField(mappingClass, "TYPE_MAPPER", TypeMapper.class));
-            }
-            if (!libraryOptions.containsKey(Library.OPTION_STRUCTURE_ALIGNMENT)) {
-                libraryOptions.put(Library.OPTION_STRUCTURE_ALIGNMENT, lookupField(mappingClass, "STRUCTURE_ALIGNMENT", Integer.class));
-            }
-            if (!libraryOptions.containsKey(Library.OPTION_STRING_ENCODING)) {
-                libraryOptions.put(Library.OPTION_STRING_ENCODING, lookupField(mappingClass, "STRING_ENCODING", String.class));
-            }
-            libraryOptions = cacheOptions(mappingClass, libraryOptions, null);
-            // Store the original lookup class, if different from the mapping class
-            if (type != mappingClass) {
-                typeOptions.put(type, libraryOptions);
-            }
+        libraryOptions = typeOptions.get(mappingClass);
+        if (libraryOptions != null) {
+            typeOptions.put(type, libraryOptions);  // cache for next time
             return libraryOptions;
         }
+
+        try {
+            Field field = mappingClass.getField("OPTIONS");
+            field.setAccessible(true);
+            libraryOptions = (Map<String, Object>) field.get(null);
+            if (libraryOptions == null) {
+                throw new IllegalStateException("Null options field");
+            }
+        } catch (NoSuchFieldException e) {
+            libraryOptions = Collections.<String, Object>emptyMap();
+        } catch (Exception e) {
+            throw new IllegalArgumentException("OPTIONS must be a public field of type java.util.Map (" + e + "): " + mappingClass);
+        }
+        // Make a clone of the original options
+        libraryOptions = new HashMap<String, Object>(libraryOptions);
+        if (!libraryOptions.containsKey(Library.OPTION_TYPE_MAPPER)) {
+            libraryOptions.put(Library.OPTION_TYPE_MAPPER, lookupField(mappingClass, "TYPE_MAPPER", TypeMapper.class));
+        }
+        if (!libraryOptions.containsKey(Library.OPTION_STRUCTURE_ALIGNMENT)) {
+            libraryOptions.put(Library.OPTION_STRUCTURE_ALIGNMENT, lookupField(mappingClass, "STRUCTURE_ALIGNMENT", Integer.class));
+        }
+        if (!libraryOptions.containsKey(Library.OPTION_STRING_ENCODING)) {
+            libraryOptions.put(Library.OPTION_STRING_ENCODING, lookupField(mappingClass, "STRING_ENCODING", String.class));
+        }
+        libraryOptions = cacheOptions(mappingClass, libraryOptions, null);
+        // Store the original lookup class, if different from the mapping class
+        if (type != mappingClass) {
+            typeOptions.put(type, libraryOptions);
+        }
+        return libraryOptions;
     }
 
     private static Object lookupField(Class<?> mappingClass, String fieldName, Class<?> resultClass) {
@@ -1632,8 +1605,10 @@ public final class Native implements Version {
     private static final int CVT_TYPE_MAPPER = 23;
     private static final int CVT_TYPE_MAPPER_STRING = 24;
     private static final int CVT_TYPE_MAPPER_WSTRING = 25;
+    private static final int CVT_OBJECT = 26;
+    private static final int CVT_JNIENV = 27;
 
-    private static int getConversion(Class<?> type, TypeMapper mapper) {
+    private static int getConversion(Class<?> type, TypeMapper mapper, boolean allowObjects) {
         if (type == Boolean.class) type = boolean.class;
         else if (type == Byte.class) type = byte.class;
         else if (type == Short.class) type = short.class;
@@ -1722,7 +1697,10 @@ public final class Native implements Version {
             }
             return CVT_NATIVE_MAPPED;
         }
-        return CVT_UNSUPPORTED;
+        if (JNIEnv.class == type) {
+            return CVT_JNIENV;
+        }
+        return allowObjects ? CVT_OBJECT : CVT_UNSUPPORTED;
     }
 
     /**
@@ -1755,6 +1733,7 @@ public final class Native implements Version {
         List<Method> mlist = new ArrayList<Method>();
         Map<String, ?> options = lib.getOptions();
         TypeMapper mapper = (TypeMapper) options.get(Library.OPTION_TYPE_MAPPER);
+        boolean allowObjects = Boolean.TRUE.equals(options.get(Library.OPTION_ALLOW_OBJECTS));
         options = cacheOptions(cls, options, null);
 
         for (Method m : methods) {
@@ -1775,7 +1754,7 @@ public final class Native implements Version {
             int[] cvt = new int[ptypes.length];
             ToNativeConverter[] toNative = new ToNativeConverter[ptypes.length];
             FromNativeConverter fromNative = null;
-            int rcvt = getConversion(rclass, mapper);
+            int rcvt = getConversion(rclass, mapper, allowObjects);
             boolean throwLastError = false;
             switch (rcvt) {
                 case CVT_UNSUPPORTED:
@@ -1799,6 +1778,7 @@ public final class Native implements Version {
                     rtype = FFIType.get(NativeMappedConverter.getInstance(rclass).nativeType()).peer;
                     break;
                 case CVT_STRUCTURE:
+                case CVT_OBJECT:
                     closure_rtype = rtype = FFIType.get(Pointer.class).peer;
                     break;
                 case CVT_STRUCTURE_BYVAL:
@@ -1812,7 +1792,7 @@ public final class Native implements Version {
             for (int t=0;t < ptypes.length;t++) {
                 Class<?> type = ptypes[t];
                 sig += getSignature(type);
-                int conversionType = getConversion(type, mapper);
+                int conversionType = getConversion(type, mapper, allowObjects);
                 cvt[t] = conversionType;
                 if (conversionType == CVT_UNSUPPORTED) {
                     throw new IllegalArgumentException(type + " is not a supported argument type (in method " + method.getName() + " in " + cls + ")");
@@ -1892,23 +1872,21 @@ public final class Native implements Version {
     private static Map<String, Object> cacheOptions(Class<?> cls, Map<String, ?> options, Object proxy) {
         Map<String, Object> libOptions = new HashMap<String, Object>(options);
         libOptions.put(_OPTION_ENCLOSING_LIBRARY, cls);
-        synchronized(libraries) {
-            typeOptions.put(cls, libOptions);
-            if (proxy != null) {
-                libraries.put(cls, new WeakReference<Object>(proxy));
-            }
+        typeOptions.put(cls, libOptions);
+        if (proxy != null) {
+            libraries.put(cls, new WeakReference<Object>(proxy));
+        }
 
-            // If it's a direct mapping, AND implements a Library interface,
-            // cache the library interface as well, so that any nested
-            // classes get the appropriate associated options
-            if (!cls.isInterface()
-                && Library.class.isAssignableFrom(cls)) {
-                Class<?> ifaces[] = cls.getInterfaces();
-                for (Class<?> ifc : ifaces) {
-                    if (Library.class.isAssignableFrom(ifc)) {
-                        cacheOptions(ifc, libOptions, proxy);
-                        break;
-                    }
+        // If it's a direct mapping, AND implements a Library interface,
+        // cache the library interface as well, so that any nested
+        // classes get the appropriate associated options
+        if (!cls.isInterface()
+            && Library.class.isAssignableFrom(cls)) {
+            Class<?> ifaces[] = cls.getInterfaces();
+            for (Class<?> ifc : ifaces) {
+                if (Library.class.isAssignableFrom(ifc)) {
+                    cacheOptions(ifc, libOptions, proxy);
+                    break;
                 }
             }
         }
@@ -2290,16 +2268,10 @@ public final class Native implements Version {
     public static native void free(long ptr);
 
     /**
-     * Get a direct ByteBuffer mapped to the memory pointed to by the pointer.
-     * This method calls through to the JNA NewDirectByteBuffer method.
-     *
-     * @param addr base address of the JNA-originated memory
-     * @param length Length of ByteBuffer
-     * @return a direct ByteBuffer that accesses the memory being pointed to
-     * @deprecated Use {@link Pointer#getByteBuffer(long, long)} (since 4.3.0)
+     * @deprecated retained to keep native signature
      */
     @Deprecated
-    public static native ByteBuffer getDirectByteBuffer(long addr, long length);
+    private static native ByteBuffer getDirectByteBuffer(long addr, long length);
 
     private static final ThreadLocal<Memory> nativeThreadTerminationFlag =
         new ThreadLocal<Memory>() {

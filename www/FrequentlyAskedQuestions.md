@@ -200,3 +200,40 @@ experience with the JNA COM support.
 Additional resource that should be checked are JACOB or com4j, both of which can 
 parse a COM interface definition and generate a Java object to match it.  
 JNAerator is also working on generating COM bindings.
+
+JNA on Android
+--------------
+
+To use JNA on Android add the following dependency to gradle (note the `@aar`):
+
+```
+compile 'net.java.dev.jna:jna:4.4.0@aar'
+```
+
+If you're using Proguard, you should also add the following to your Proguard rules:
+
+```
+-dontwarn java.awt.*
+-keep class com.sun.jna.* { *; }
+-keepclassmembers class * extends com.sun.jna.* { public *; }
+```
+
+On Windows, MSDN shows that TheFuncName is in somelib.dll but JNA throws UnsatisifiedLinkError: The specified procedure could not be found.
+-------------------------------------------------------------------------------------------------------------------------------------------
+
+Make sure you're on a version of Windows that contains the function.
+
+Some windows functions are documented as TheFuncName but are actually implemented 
+as TheFuncNameA and TheFuncNameW in the library. You can see this with 
+Dependency Walker (depends.exe) from http://dependencywalker.com when you open 
+the DLL. 
+
+The convention is, that the “A” suffix indicates a function expecting ANSI/
+windows code page encoding and a “W” suffix indicates a function expecting wide
+(unicode, UTF-16) strings.
+
+JNA won't automatically resolve one or the other variant. You should use a
+a combination of TypeMapper and FunctionMapper (see 
+`com.sun.jna.win32.W32APIOptions.DEFAULT_OPTIONS`) so that you can leave off the 
+“-A” or “-W” suffix (you never need to use both simultaneously) and use 
+“String” rather than explicit “WString”.

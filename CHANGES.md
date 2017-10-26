@@ -2,19 +2,86 @@ NOTE: as of JNA 4.0, JNA is now dual-licensed under LGPL and AL 2.0 (see LICENSE
 
 NOTE: JNI native support is typically incompatible between minor versions, and almost always incompatible between major versions.
 
-Release 4.5.0 (Next release)
+Release 5.0.0 (Next release)
 ============================
+
+Features
+--------
+
+Bug Fixes
+---------
+* [#652](https://github.com/java-native-access/jna/issues/652): Dead Lock in class initialization - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#843](https://github.com/java-native-access/jna/pull/843): Correctly bind `com.sun.jna.platform.win32.SecBufferDesc` and add convenience binding as `com.sun.jna.platform.win32.SspiUtil.ManagedSecBufferDesc`. Bind SSPI functions `InitializeSecurityContext`, `AcceptSecurityContext`, `QueryCredentialsAttributes`, `QuerySecurityPackageInfo`, `EncryptMessage`, `DecryptMessage`, `MakeSignature`, `VerifySignature` in `com.sun.jna.platform.win32.Secur32` - [@matthiasblaesing](https://github.com/matthiasblaesing).
+
+
+Breaking Changes
+----------------
+
+* `com.sun.jna.Pointer#SIZE` is removed. Its use is replaced by `com.sun.jna.Native#POINTER_SIZE` 
+  to prevent a class loading deadlock, when JNA is initialized from multiple threads
+* `com.sun.jna.Pointer#getString(long offset, boolean wide)` is removed. It was replaced by
+  `com.sun.jna.Pointer#getString(long offset)` or
+  `com.sun.jna.Pointer#getWideString(long offset)`
+* `com.sun.jna.Pointer#getStringArray(long offset, boolean wide)` is removed. It was replaced by
+  `com.sun.jna.Pointer#getStringArray(long offset)` or
+  `com.sun.jna.Pointer#getWideStringArray(long offset)`
+* `com.sun.jna.Pointer#setString(long offset, String value, boolean wide)` is removed. It was replaced by
+  `com.sun.jna.Pointer#setString(long offset, String value)` or
+  `com.sun.jna.Pointer#setWideString(long offset, String value)`
+* `com.sun.jna.Structure#setFieldOrder` is removed. It was replaced by 
+  `com.sun.jna.Structure#getFieldOrder` and threw an `java.lang.Error` on call.
+* `com.sun.jna.Native#parseVersion` was removed without replacement
+* `com.sun.jna.Native#setPreserveLastError` and `com.sun.jna.Native#getPreserveLastError`
+  were removed without replacement. They were turned into NOOPs in the past.
+* `com.sun.jna.Native#getDirectByteBuffer` was replaced by `com.sun.jna.Pointer#getByteBuffer`
+* `com.sun.jna.Native#loadLibrary` methods return a `T` instance and expect
+  a `Class<T>` as parameter. `T` was unconstraint and was modified to
+  extend `com.sun.jna.Library`. This change is source compatible, but not
+  binary compatbile, so bindings need to be recompiled.
+* `com.sun.jna.platform.win32.Sspi.SecBufferDesc` was incompatibly changed to 
+  match the correct native semantics. SecBufferDesc describing more than one
+  buffer were broken. For most usecases 
+  `com.sun.jna.platform.win32.SspiUtil.ManagedSecBufferDesc` is the best 
+  alternative.
+* `com.sun.jna.platform.win32.WinBase.FILETIME#toLong()` was replaced by
+  `com.sun.jna.platform.win32.WinBase.FILETIME#toTime()`
+* `com.sun.jna.platform.win32.Variant#COM_DAYS_ADJUSTMENT` was removed
+* `com.sun.jna.platform.win32.Variant#MICRO_SECONDS_PER_DAY` was removed
+* `com.sun.jna.platform.win32.Variant.VARIANT#toJavaDate` was removed
+* `com.sun.jna.platform.win32.Variant.VARIANT#fromJavaDate` was removed
+* `com.sun.jna.platform.win32.User32#MonitorFromPoint(Point pt, int dwFlags)`
+  was replaced by
+  `com.sun.jna.platform.win32.User32#MonitorFromPoint(Point.ByValue pt, int dwFlags)`
+* `com.sun.jna.platform.win32.OleAuto.LoadTypeLib(WString, PointerByReference)`
+  was replaced by
+  `com.sun.jna.platform.win32.OleAuto.LoadTypeLib(String, PointerByReference)`
+* `com.sun.jna.platform.win32.Kernel32Util.formatMessageFromHR(HRESULT)`
+  was replaced by
+  `com.sun.jna.platform.win32.Kernel32Util.formatMessage(HRESULT)`
+
+Release 4.5.0
+=============
 
 Features
 --------
 * [#774](https://github.com/java-native-access/jna/pull/774): Addition win32 api : SendMessage, GetActiveWindow, COPYDATASTRUCT and a few constants + a demo application - [@cnico](https://github.com/cnico).
 * [#783](https://github.com/java-native-access/jna/pull/783): Add Ole32 functions: `OleBuildVersion`, `OleInitialize`, `OleUninitialize`, `OleFlushClipboard`, `OleRun`, add VARIANT conversion functions to OleAuto, add default locale, LCID and LANG to WinNT - [@matthiasblaesing](https://github.com/matthiasblaesing).
 * [#784](https://github.com/java-native-access/jna/issues/784): Added Solaris Kstat library - [@dbwiddis](https://github.com/dbwiddis).
+* [#805](https://github.com/java-native-access/jna/issues/805): Provide a way to pass JNIEnv pointer to native method and support OPTION_ALLOW_OBJECTs for direct mapping - [@ncruces](https://github.com/ncruces).
+* [#816](https://github.com/java-native-access/jna/pull/816): Support `boolean[]` in direct mapping - [@ncruces](https://github.com/ncruces).
+* [#827](https://github.com/java-native-access/jna/pull/827): Add support for linux-mips64el - [@all7](https://github.com/all7).
+* [#845](https://github.com/java-native-access/jna/issues/845): Add support for linux-s390x - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#771](https://github.com/java-native-access/jna/issues/771): Rebuild native libraries for linux-x86 and linux-x86-64 with an against an older GLIBC (minimum version of glibc for these architectures is now 2.7) - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#821](https://github.com/java-native-access/jna/issues/821): Move windows service related functions and structures in ntservice sample project to `com.sun.jna.platform.win32.Advapi32`: `StartServiceCtrlDispatcher`, `RegisterServiceCtrlHandler`, `RegisterServiceCtrlHandlerEx`, `SetServiceStatus`, `CreateService`, `DeleteService` and `com.sun.jna.platform.win32.Winsvc`: `Handler`, `HandlerEx`, `SERVICE_MAIN_FUNCTION`, `SERVICE_TABLE_ENTRY`, `SERVICE_DESCRIPTION`, `SERVICE_STATUS_HANDLE` - [@matthiasblaesing](https://github.com/matthiasblaesing).
 
 Bug Fixes
 ---------
 * [#776](https://github.com/java-native-access/jna/issues/776): Do not include ClassPath attribute in MANIFEST.MF of jna-platform. - [@matthiasblaesing](https://github.com/matthiasblaesing).
 * [#785](https://github.com/java-native-access/jna/issues/785): OaIdlUtil#toPrimitiveArray fails if dimension bounds are not 0-based - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#795](https://github.com/java-native-access/jna/issues/795): com.sun.jna.platform.win32.WinDef.WORDByReference holds a WORD which is defined to 16 bit on windows, so it needs to be accessed as short (getShort()). Fix suggested by  - [@kdeines](https://github.com/kdeines).
+* [#804](https://github.com/java-native-access/jna/pull/804) Main-Class in jna-platform.jar collides with java 9 module system - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#838](https://github.com/java-native-access/jna/pull/838): Fix binding of `com.sun.jna.platform.win32.User32#MonitorFromPoint` - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#834](https://github.com/java-native-access/jna/issues/834): Declare structure members of LPPRINTER_DEFAULTS as public - [@matthiasblaesing](https://github.com/matthiasblaesing).
 
 Release 4.4.0
 =============

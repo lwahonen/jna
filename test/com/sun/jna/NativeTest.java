@@ -61,20 +61,11 @@ public class NativeTest extends TestCase {
                 Method m = Native.class.getMethod("loadLibrary", paramTypes);
                 Class<?> returnType = m.getReturnType();
                 signature.append(Native.getSignature(returnType));
-                assertSame("Mismatched return type for signature=" + signature, Object.class, returnType);
+                assertSame("Mismatched return type for signature=" + signature, Library.class, returnType);
 //                System.out.println("===>" + m.getName() + ": " + signature);
             } catch(NoSuchMethodError err) {
                 fail("No method for signature=" + signature);
             }
-        }
-    }
-    
-    @SuppressWarnings("deprecation")
-    public void testVersion() {
-        String[] INPUTS = { "1.0", "1.0.1", "2.1.3" };
-        float[] EXPECTED = { 1.0f, 1.0f, 2.1f };
-        for (int i=0;i < INPUTS.length;i++) {
-            assertEquals("Incorrectly parsed version", EXPECTED[i], Native.parseVersion(INPUTS[i]));
         }
     }
 
