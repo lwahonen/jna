@@ -99,7 +99,6 @@ public abstract class WinspoolUtil {
 		if (!Winspool.INSTANCE.OpenPrinter(printerName, pHandle, null))
 			throw new Win32Exception(Kernel32.INSTANCE.GetLastError());
 
-		Win32Exception we = null;
 		PRINTER_INFO_2 pinfo2 = null;
 
 		try {
@@ -112,19 +111,11 @@ public abstract class WinspoolUtil {
 				throw new Win32Exception(Kernel32.INSTANCE.GetLastError());
 
 			pinfo2.read();
-		} catch (Win32Exception e) {
-			we = e;
 		} finally {
 			if (!Winspool.INSTANCE.ClosePrinter(pHandle.getValue())) {
 				Win32Exception ex = new Win32Exception(Kernel32.INSTANCE.GetLastError());
-				if (we != null) {
-					ex.addSuppressed(we);
-				}
+				throw ex;
 			}
-		}
-
-		if (we != null) {
-			throw we;
 		}
 
 		return pinfo2;

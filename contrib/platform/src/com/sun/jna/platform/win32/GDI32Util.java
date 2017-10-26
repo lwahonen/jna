@@ -88,8 +88,6 @@ public class GDI32Util {
 			throw new Win32Exception(Native.getLastError());
 		}
 
-		Win32Exception we = null;
-
 		// device context used for drawing
 		HDC hdcTargetMem = null;
 
@@ -143,8 +141,6 @@ public class GDI32Util {
                                                               SCREENSHOT_BAND_MASKS, null);
 			image = new BufferedImage(SCREENSHOT_COLOR_MODEL, raster, false, null);
 
-		} catch (Win32Exception e) {
-			we = e;
 		} finally {
 			if (hOriginal != null) {
 				// per MSDN, set the display surface back when done drawing
@@ -152,20 +148,14 @@ public class GDI32Util {
 				// failure modes are null or equal to HGDI_ERROR
 				if (result == null || WinGDI.HGDI_ERROR.equals(result)) {
 					Win32Exception ex = new Win32Exception(Native.getLastError());
-					if (we != null) {
-						ex.addSuppressed(we);
-					}
-					we = ex;
+					throw ex;
 				}
 			}
 
 			if (hBitmap != null) {
 				if (!GDI32.INSTANCE.DeleteObject(hBitmap)) {
 					Win32Exception ex = new Win32Exception(Native.getLastError());
-					if (we != null) {
-						ex.addSuppressed(we);
-					}
-					we = ex;
+					throw ex;
 				}
 			}
 
@@ -173,10 +163,7 @@ public class GDI32Util {
 				// get rid of the device context when done
 				if (!GDI32.INSTANCE.DeleteDC(hdcTargetMem)) {
 					Win32Exception ex = new Win32Exception(Native.getLastError());
-					if (we != null) {
-						ex.addSuppressed(we);
-					}
-					we = ex;
+					throw ex;
 				}
 			}
 
@@ -187,9 +174,6 @@ public class GDI32Util {
 			}
 		}
 
-		if (we != null) {
-			throw we;
-		}
 		return image;
 	}
 }
