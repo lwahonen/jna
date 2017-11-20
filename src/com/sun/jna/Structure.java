@@ -890,17 +890,6 @@ public abstract class Structure {
      */
     protected abstract List<String> getFieldOrder();
 
-    /**
-     * Force a compile-time error on the old method of field definition
-     * @param fields ordered array of field names
-     * @deprecated Use the required method getFieldOrder() instead to
-     * indicate the order of fields in this structure.
-     */
-    @Deprecated
-    protected final void setFieldOrder(String[] fields) {
-        throw new Error("This method is obsolete, use getFieldOrder() instead");
-    }
-
     /** Sort the structure fields according to the given array of names.
      * @param fields list of fields to be sorted
      * @param names list of names representing the desired sort order
@@ -1411,11 +1400,11 @@ public abstract class Structure {
                  || Callback.class.isAssignableFrom(type)
                  || WString.class == type
                  || String.class == type) {
-            alignment = Pointer.SIZE;
+            alignment = Native.POINTER_SIZE;
         }
         else if (Structure.class.isAssignableFrom(type)) {
             if (ByReference.class.isAssignableFrom(type)) {
-                alignment = Pointer.SIZE;
+                alignment = Native.POINTER_SIZE;
             }
             else {
                 if (value == null)
@@ -1499,23 +1488,22 @@ public abstract class Structure {
                 type = format(sf.type.getComponentType());
                 index = "[" + Array.getLength(value) + "]";
             }
-            contents += "  " + type + " "
-                + sf.name + index + "@" + Integer.toHexString(sf.offset);
+            contents += String.format("  %s %s%s@0x%X", type, sf.name, index, sf.offset);
             if (value instanceof Structure) {
                 value = ((Structure)value).toString(indent + 1, !(value instanceof Structure.ByReference), dumpMemory);
             }
             contents += "=";
             if (value instanceof Long) {
-                contents += Long.toHexString(((Long)value).longValue());
+                contents += String.format("0x%08X", (Long) value);
             }
             else if (value instanceof Integer) {
-                contents += Integer.toHexString(((Integer)value).intValue());
+                contents += String.format("0x%04X", (Integer) value);
             }
             else if (value instanceof Short) {
-                contents += Integer.toHexString(((Short)value).shortValue());
+                contents += String.format("0x%02X", (Short) value);
             }
             else if (value instanceof Byte) {
-                contents += Integer.toHexString(((Byte)value).byteValue());
+                contents += String.format("0x%01X", (Byte) value);
             }
             else {
                 contents += String.valueOf(value).trim();
@@ -1969,7 +1957,7 @@ public abstract class Structure {
             return Arrays.asList(new String[] { "size", "alignment", "type", "elements" });
         }
         private void init(Pointer[] els) {
-            elements = new Memory(Pointer.SIZE * els.length);
+            elements = new Memory(Native.POINTER_SIZE * els.length);
             elements.write(0, els, 0, els.length);
             write();
         }

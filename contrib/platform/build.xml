@@ -102,7 +102,6 @@
     <target name="-pre-jar">
         <tempfile deleteonexit="true" destdir="${build.dir}" property="tmp.manifest.file"/>
         <manifest file="${tmp.manifest.file}" mode="replace">
-            <attribute name="Main-Class" value="com.sun.jna.Native"/>
             <attribute name="Manifest-Version" value="1.0"/>
             <attribute name="Implementation-Title" value="${impl.title}"/>
             <attribute name="Implementation-Vendor" value="${vendor}"/>
@@ -178,8 +177,6 @@ com.sun.jna.platform.wince
         <env key="${ld.preload.name}" file="${libjsig}"/>
         <!-- Ignore any system install of JNA -->
         <sysproperty key="jna.nosys" value="true"/>
-        <!-- Avoid VM crashes, if possible -->
-        <sysproperty key="jna.protected" value="true"/>
         <sysproperty key="jna.builddir" file="${file.reference.jna.build}"/>
         <jvmarg value="${vmopt.arch}"/>
         <classpath><path path="${run.test.classpath}"/><path path="${file.reference.jna.build}/test-classes"/></classpath>

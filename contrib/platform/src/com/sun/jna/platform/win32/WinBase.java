@@ -50,7 +50,7 @@ public interface WinBase extends WinDef, BaseTSD {
 
     /** Constant value representing an invalid HANDLE. */
     HANDLE INVALID_HANDLE_VALUE =
-        new HANDLE(Pointer.createConstant(Pointer.SIZE == 8
+        new HANDLE(Pointer.createConstant(Native.POINTER_SIZE == 8
                                           ? -1 : 0xFFFFFFFFL));
 
     int WAIT_FAILED = 0xFFFFFFFF;
@@ -933,18 +933,6 @@ public interface WinBase extends WinDef, BaseTSD {
          * since January 1, 1970 (UTC)
          */
         public long toTime() {
-            return toDate().getTime();
-        }
-
-        /**
-         * <p>Converts this filetime into a number of milliseconds which have
-         * passed since January 1, 1970 (UTC).</p>
-         * @return This filetime as a number of milliseconds which have passed
-         * since January 1, 1970 (UTC)
-         * @deprecated Replaced by {@link #toTime()}
-         */
-        @Deprecated
-        public long toLong() {
             return toDate().getTime();
         }
 

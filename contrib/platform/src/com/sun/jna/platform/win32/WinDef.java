@@ -115,7 +115,7 @@ public interface WinDef {
          * @return the value
          */
         public WORD getValue() {
-            return new WORD(getPointer().getInt(0));
+            return new WORD(getPointer().getShort(0));
         }
     }
 
@@ -683,7 +683,7 @@ public interface WinDef {
          * Instantiates a new int ptr.
          */
         public INT_PTR() {
-            super(Pointer.SIZE);
+            super(Native.POINTER_SIZE);
         }
 
         /**
@@ -693,7 +693,7 @@ public interface WinDef {
          *            the value
          */
         public INT_PTR(long value) {
-            super(Pointer.SIZE, value);
+            super(Native.POINTER_SIZE, value);
         }
 
         /**
@@ -715,7 +715,7 @@ public interface WinDef {
          * Instantiates a new uint ptr.
          */
         public UINT_PTR() {
-            super(Pointer.SIZE);
+            super(Native.POINTER_SIZE);
         }
 
         /**
@@ -725,7 +725,7 @@ public interface WinDef {
          *            the value
          */
         public UINT_PTR(long value) {
-            super(Pointer.SIZE, value, true);
+            super(Native.POINTER_SIZE, value, true);
         }
 
         /**
@@ -1067,6 +1067,35 @@ public interface WinDef {
          * The Class ByReference.
          */
         public static class ByReference extends POINT implements Structure.ByReference {
+
+            public ByReference() {
+            }
+
+            public ByReference(Pointer memory) {
+                super(memory);
+            }
+
+            public ByReference(int x, int y) {
+                super(x, y);
+            }
+
+        }
+        
+        /**
+         * The Class ByValue.
+         */
+        public static class ByValue extends POINT implements Structure.ByValue {
+
+            public ByValue() {
+            }
+
+            public ByValue(Pointer memory) {
+                super(memory);
+            }
+
+            public ByValue(int x, int y) {
+                super(x, y);
+            }
 
         }
 
