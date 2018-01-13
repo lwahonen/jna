@@ -513,6 +513,7 @@ public abstract class Advapi32Util {
 	 */
 	public static Account[] getCurrentUserGroups() {
 		HANDLEByReference phToken = new HANDLEByReference();
+		Win32Exception err = null;
 		try {
 			// open thread or process token
 			HANDLE threadHandle = Kernel32.INSTANCE.GetCurrentThread();
@@ -531,10 +532,25 @@ public abstract class Advapi32Util {
 			}
 
 			return getTokenGroups(phToken.getValue());
+		} catch(Win32Exception e) {
+	        err = e;
+		    throw err;    // re-throw in order to invoke finally block
 		} finally {
 		    HANDLE hToken = phToken.getValue();
 			if (!WinBase.INVALID_HANDLE_VALUE.equals(hToken)) {
-				Kernel32Util.closeHandle(hToken);
+				try {
+				    Kernel32Util.closeHandle(hToken);
+				} catch(Win32Exception e) {
+				    if (err == null) {
+				        err = e;
+				    } else {
+				        err.addSuppressed(e);
+				    }
+				}
+			}
+
+			if (err != null) {
+			    throw err;
 			}
 		}
 	}
@@ -2381,6 +2397,7 @@ public abstract class Advapi32Util {
 
         HANDLEByReference openedAccessToken = new HANDLEByReference();
         HANDLEByReference duplicatedToken = new HANDLEByReference();
+        Win32Exception err = null;
         try{
             int desireAccess = TOKEN_IMPERSONATE | TOKEN_QUERY | TOKEN_DUPLICATE | STANDARD_RIGHTS_READ;
             HANDLE hProcess = Kernel32.INSTANCE.GetCurrentProcess();
@@ -2416,11 +2433,26 @@ public abstract class Advapi32Util {
             }
 
            return result.getValue().booleanValue();
+        } catch(Win32Exception e) {
+            err = e;
+            throw err;  // re-throw so finally block executed
         } finally {
-            Kernel32Util.closeHandleRefs(openedAccessToken, duplicatedToken);
+            try {
+                Kernel32Util.closeHandleRefs(openedAccessToken, duplicatedToken);
+            } catch(Win32Exception e) {
+                if (err == null) {
+                    err = e;
+                } else {
+                    err.addSuppressed(e);
+                }
+            }
 
             if (securityDescriptorMemoryPointer != null) {
                 securityDescriptorMemoryPointer.clear();
+            }
+
+            if (err != null) {
+                throw err;
             }
         }
     }

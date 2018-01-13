@@ -102,8 +102,21 @@ public abstract class Kernel32Util implements WinDef {
      * @see #closeHandleRef(WinNT.HANDLEByReference)
      */
     public static void closeHandleRefs(HANDLEByReference... refs) {
+        Win32Exception err = null;
         for (HANDLEByReference r : refs) {
+            try {
                 closeHandleRef(r);
+            } catch(Win32Exception e) {
+                if (err == null) {
+                    err = e;
+                } else {
+                    err.addSuppressed(e);
+                }
+            }
+        }
+
+        if (err != null) {
+            throw err;
         }
     }
     /**
@@ -127,8 +140,21 @@ public abstract class Kernel32Util implements WinDef {
      * @see Throwable#getSuppressed()
      */
     public static void closeHandles(HANDLE... handles) {
+        Win32Exception err = null;
         for (HANDLE h : handles) {
-            closeHandle(h);
+            try {
+                closeHandle(h);
+            } catch(Win32Exception e) {
+                if (err == null) {
+                    err = e;
+                } else {
+                    err.addSuppressed(e);
+                }
+            }
+        }
+
+        if (err != null) {
+            throw err;
         }
     }
 
@@ -279,6 +305,7 @@ public abstract class Kernel32Util implements WinDef {
         }
 
         HANDLE hFile = null;
+        Win32Exception err = null;
         try {
             hFile = Kernel32.INSTANCE.CreateFile(fileName, WinNT.GENERIC_READ,
                     WinNT.FILE_SHARE_READ, new WinBase.SECURITY_ATTRIBUTES(),
@@ -304,8 +331,23 @@ public abstract class Kernel32Util implements WinDef {
             default:
                 return type;
             }
+        } catch(Win32Exception e) {
+            err = e;
+            throw err;  // re-throw so finally block executed
         } finally {
-            closeHandle(hFile);
+            try {
+                closeHandle(hFile);
+            } catch(Win32Exception e) {
+                if (err == null) {
+                    err = e;
+                } else {
+                    err.addSuppressed(e);
+                }
+            }
+
+            if (err != null) {
+                throw err;
+            }
         }
     }
 
@@ -810,6 +852,7 @@ public abstract class Kernel32Util implements WinDef {
             throw new Win32Exception(Kernel32.INSTANCE.GetLastError());
         }
 
+        Win32Exception err = null;
         Pointer start = null;
         int length = 0;
         byte[] results = null;
@@ -854,15 +897,25 @@ public abstract class Kernel32Util implements WinDef {
             }
             // have to capture it into a byte array before you free the library, otherwise bad things happen.
             results = start.getByteArray(0, length);
+        } catch (Win32Exception we) {
+            err = we;
         } finally {
             // from what I can tell on MSDN, the only thing that needs cleanup on this is the HMODULE from LoadLibrary
             if (target != null) {
                 if (!Kernel32.INSTANCE.FreeLibrary(target)) {
                     Win32Exception we = new Win32Exception(Kernel32.INSTANCE.GetLastError());
+                    if (err != null) {
+                        we.addSuppressed(err);
+                    }
                     throw we;
                 }
             }
         }
+
+        if (err != null) {
+            throw err;
+        }
+
         return results;
     }
 
@@ -925,6 +978,7 @@ public abstract class Kernel32Util implements WinDef {
         };
 
 
+        Win32Exception err = null;
         try {
             if (!Kernel32.INSTANCE.EnumResourceTypes(target, ertp, null)) {
                 throw new Win32Exception(Kernel32.INSTANCE.GetLastError());
@@ -950,17 +1004,25 @@ public abstract class Kernel32Util implements WinDef {
                     throw new Win32Exception(Kernel32.INSTANCE.GetLastError());
                 }
             }
+        } catch (Win32Exception e) {
+            err = e;
         } finally {
             // from what I can tell on MSDN, the only thing that needs cleanup
             // on this is the HMODULE from LoadLibrary
             if (target != null) {
                 if (!Kernel32.INSTANCE.FreeLibrary(target)) {
                     Win32Exception we = new Win32Exception(Kernel32.INSTANCE.GetLastError());
+                    if (err != null) {
+                        we.addSuppressed(err);
+                    }
                     throw we;
                 }
             }
         }
 
+        if (err != null) {
+            throw err;
+        }
         return result;
     }
 
@@ -977,6 +1039,7 @@ public abstract class Kernel32Util implements WinDef {
             throw new Win32Exception(Kernel32.INSTANCE.GetLastError());
         }
 
+        Win32Exception we = null;
         try {
             Tlhelp32.MODULEENTRY32W first = new Tlhelp32.MODULEENTRY32W();
 
@@ -1002,8 +1065,23 @@ public abstract class Kernel32Util implements WinDef {
             }
 
             return modules;
+        } catch (Win32Exception e) {
+            we = e;
+            throw we;   // re-throw so finally block is executed
         } finally {
-            closeHandle(snapshot);
+            try {
+                closeHandle(snapshot);
+            } catch(Win32Exception e) {
+                if (we == null) {
+                    we = e;
+                } else {
+                    we.addSuppressed(e);
+                }
+            }
+
+            if (we != null) {
+                throw we;
+            }
         }
     }
 }

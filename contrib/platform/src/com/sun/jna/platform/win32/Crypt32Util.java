@@ -133,22 +133,43 @@ public abstract class Crypt32Util {
         DATA_BLOB pDataUnprotected = new DATA_BLOB();
         DATA_BLOB pEntropy = (entropy == null) ? null : new DATA_BLOB(entropy);
         PointerByReference pDescription = new PointerByReference();
+        Win32Exception err = null;
         byte[] unProtectedData = null;
         try {
             if (! Crypt32.INSTANCE.CryptUnprotectData(pDataIn, pDescription,
                     pEntropy, null, prompt, flags, pDataUnprotected)) {
-                throw  new Win32Exception(Kernel32.INSTANCE.GetLastError());
+                err = new Win32Exception(Kernel32.INSTANCE.GetLastError());
             } else {
                 unProtectedData = pDataUnprotected.getData();
             }
         } finally {
             if (pDataUnprotected.pbData != null) {
-                Kernel32Util.freeLocalMemory(pDataUnprotected.pbData);
+                try {
+                    Kernel32Util.freeLocalMemory(pDataUnprotected.pbData);
+                } catch(Win32Exception e) {
+                    if (err == null) {
+                        err = e;
+                    } else {
+                        err.addSuppressed(e);
+                    }
+                }
             }
 
             if (pDescription.getValue() != null) {
-                Kernel32Util.freeLocalMemory(pDescription.getValue());
+                try {
+                    Kernel32Util.freeLocalMemory(pDescription.getValue());
+                } catch(Win32Exception e) {
+                    if (err == null) {
+                        err = e;
+                    } else {
+                        err.addSuppressed(e);
+                    }
+                }
             }
+        }
+
+        if (err != null) {
+            throw err;
         }
 
         return unProtectedData;

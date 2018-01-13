@@ -50,6 +50,7 @@ public class WininetUtil {
         List<INTERNET_CACHE_ENTRY_INFO> items = new ArrayList<Wininet.INTERNET_CACHE_ENTRY_INFO>();
 
         HANDLE cacheHandle = null;
+        Win32Exception we = null;
         int lastError = 0;
 
         // return
@@ -115,15 +116,22 @@ public class WininetUtil {
                 cacheItems.put(item.lpszSourceUrlName.getWideString(0), item.lpszLocalFileName == null ? "" : item.lpszLocalFileName.getWideString(0));
             }
 
+        } catch (Win32Exception e) {
+            we = e;
         } finally {
             if (cacheHandle != null) {
                 if (!Wininet.INSTANCE.FindCloseUrlCache(cacheHandle)) {
-                    Win32Exception e = new Win32Exception(Native.getLastError());
-                    throw e;
+                    if (we != null) {
+                        Win32Exception e = new Win32Exception(Native.getLastError());
+                        e.addSuppressed(we);
+                        we = e;
+                    }
                 }
             }
         }
-
+        if (we != null) {
+            throw we;
+        }
         return cacheItems;
     }
 }
