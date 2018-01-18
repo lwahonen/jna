@@ -7,6 +7,8 @@ Release 5.0.0 (Next release)
 
 Features
 --------
+* [#822](https://github.com/java-native-access/jna/issues/822): `Native#loadLibrary` requires that the interface class passed in is an instance of Library. The runtime check can be enhanced by using a constraint generic. This breaks binary compatibility (see notes below) - [@d-noll](https://github.com/d-noll).
+* [#889](https://github.com/java-native-access/jna/issues/889): The `Structure#newInstance` receive the target type as a parameter. This adds a limited generic type, so that the return type ist the target type and not a generic structure, removing the necessity to do an explizit cast  - [@matthiasblaesing](https://github.com/matthiasblaesing).
 
 Bug Fixes
 ---------
@@ -15,6 +17,10 @@ Bug Fixes
 * [#863](https://github.com/java-native-access/jna/pull/863): Fix ARM softfloat/hardfloat detection by modifying armSoftFloat condition in ELFAnalyser. Before this fix a softfloat binary could be misdetected as hardfloat. - [@kunkun26](https://github.com/kunkun26).
 * [#867](https://github.com/java-native-access/jna/issues/867): Fix memory leak in `COMLateBindingObject#getStringProperty` - [@matthiasblaesing](https://github.com/matthiasblaesing).
 * [#871](https://github.com/java-native-access/jna/issues/871): Fix mapping of libc function `gethostname`, `sethostname`, `getdomainname` and `setdomainname` and bind `com.sun.jna.platform.win32.Winsock2.gethostname(byte[], int)` - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#876](https://github.com/java-native-access/jna/pull/876): Restore java 6 compatibility - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#882](https://github.com/java-native-access/jna/pull/882): Correctly close file in `ELFAnalyser#runDetection`, fix suggested by [@Sylvyrfysh](https://github.com/Sylvyrfysh) in [#880](https://github.com/java-native-access/jna/pull/880) - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#887](https://github.com/java-native-access/jna/issues/887): MacFileUtils.moveToTrash() doesn't work in a sandboxed app fix suggested by [@sobakasu](https://github.com/sobakasu) - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#894](https://github.com/java-native-access/jna/issues/894): NullPointerException can be caused by calling `com.sun.jna.platform.win32.COM.util.ProxyObject#dispose` multiple times - [@matthiasblaesing](https://github.com/matthiasblaesing).
 
 Breaking Changes
 ----------------
