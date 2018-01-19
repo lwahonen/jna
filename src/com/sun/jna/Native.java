@@ -1122,20 +1122,12 @@ public final class Native implements Version {
                     lib = new File(tempLibName);
                 }while(lib.exists());
                 boolean moveError = !temp.renameTo(lib);
-                lib.deleteOnExit();
                 if (moveError) {
-                    if (lib.exists()) {
-                        if (DEBUG_JNA_LOAD) {
-                            System.out.println("Had a race happen with " + lib + ", using existing");
-                        }
-                    } else {
-                        throw new IOException("Unable to move " + temp + " to " + lib);
-                    }
+                    throw new IOException("Unable to move " + temp + " to " + lib);
                 }
-                else {
-                    if (DEBUG_JNA_LOAD) {
-                        System.out.println("DLL created without problems " + lib);
-                    }
+                lib.deleteOnExit();
+                if (DEBUG_JNA_LOAD) {
+                    System.out.println("DLL created without problems " + lib);
                 }
             }
             catch(IOException e) {
