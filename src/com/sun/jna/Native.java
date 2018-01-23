@@ -1024,7 +1024,8 @@ public final class Native implements Version {
                 try {
                     messageDigest = MessageDigest.getInstance("SHA1");
                     final byte[] buffer = new byte[1024];
-                    for (int read = 0; (read = is.read(buffer)) != -1; ) {
+                    int read=0;
+                    while((read = is.read(buffer)) > 0 ) {
                         messageDigest.update(buffer, 0, read);
                     }
 
