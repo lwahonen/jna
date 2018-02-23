@@ -38,6 +38,7 @@ import java.util.WeakHashMap;
 
 import com.sun.jna.Callback.UncaughtExceptionHandler;
 import com.sun.jna.CallbacksTest.TestLibrary.CbCallback;
+import com.sun.jna.platform.win32.OaIdl;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.PointerByReference;
 import com.sun.jna.win32.W32APIOptions;
@@ -1562,6 +1563,31 @@ public class CallbacksTest extends TestCase implements Paths {
             assertEquals("Option-based calling convention not applied", Function.ALT_CONVENTION, ref.callingConvention);
         } catch(IllegalArgumentException e) {
             // Alt convention not supported
+        }
+    }
+
+    public void testWriteCallback() {
+        vTable vtable=new vTable();
+        vtable.callback=new vTable.functionpointer() {
+            @Override
+            public int callback(OaIdl.SAFEARRAY runtimeId) {
+                return 0;
+            }
+        };
+        vtable.write();
+    }
+
+    public static class vTable extends Structure {
+        public interface functionpointer extends Callback {
+            int callback(OaIdl.SAFEARRAY runtimeId);
+        }
+
+        public functionpointer callback;
+
+        @Override
+        protected List<String> getFieldOrder() {
+            return Arrays.asList(new String[]{"callback"});
+
         }
     }
 
