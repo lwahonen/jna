@@ -38,7 +38,6 @@ import java.util.WeakHashMap;
 
 import com.sun.jna.Callback.UncaughtExceptionHandler;
 import com.sun.jna.CallbacksTest.TestLibrary.CbCallback;
-import com.sun.jna.platform.win32.OaIdl;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.PointerByReference;
 import com.sun.jna.win32.W32APIOptions;
@@ -1570,7 +1569,7 @@ public class CallbacksTest extends TestCase implements Paths {
         vTable vtable=new vTable();
         vtable.callback=new vTable.functionpointer() {
             @Override
-            public int callback(OaIdl.SAFEARRAY runtimeId) {
+            public int callback(Pointer runtimeId) {
                 return 0;
             }
         };
@@ -1579,7 +1578,7 @@ public class CallbacksTest extends TestCase implements Paths {
 
     public static class vTable extends Structure {
         public interface functionpointer extends Callback {
-            int callback(OaIdl.SAFEARRAY runtimeId);
+            int callback(Pointer runtimeId);
         }
 
         public functionpointer callback;
