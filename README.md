@@ -39,11 +39,11 @@ JNA is a mature library with dozens of contributors and hundreds of commercial a
 - [leveldb-jna](https://github.com/protonail/leveldb-jna): Cross-platform JNA based adapter for [LevelDB](https://github.com/google/leveldb) (used in [Keylord](http://protonail.com)).
 - [bolt-jna](https://github.com/protonail/bolt-jna): Cross-platform JNA based adapter for [Bolt](https://github.com/boltdb/bolt) (used in [Keylord](http://protonail.com)). It is show how to use JNA for binding to Go library.
 - [JVM OpenVR Bindings](https://github.com/kotlin-graphics/openvr).
+- [Apache Ignite](https://ignite.apache.org/): Direct IO plugin
 
 *Interesting Investigations/Experiments*
 
 - [Drive Lego Mindstorm NXT](http://epirsch.blogspot.com/2008/02/jna-love-nxt.html) by Emmanuel Pirsch.
-- [A JavaFX Clock](http://sellmic.com/blog/2007/05/22/javafx-clock-update-now-with-transparency) by Augusto Sellhorn.
 - [Detect User Inactivity](http://ochafik.free.fr/blog/?p=98) by Olivier Chafik.
 - [IAXClient Applet](http://callino.cc/jiaxcapplet/) provides VOIP for Java, by Wolfgang Pichler.
 

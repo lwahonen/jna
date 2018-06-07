@@ -42,7 +42,7 @@ public class MacFileUtils extends FileUtils {
 
     public interface FileManager extends Library {
 
-        FileManager INSTANCE = Native.loadLibrary("CoreServices", FileManager.class);
+        FileManager INSTANCE = Native.load("CoreServices", FileManager.class);
 
         int kFSFileOperationDefaultOptions = 0;
         int kFSFileOperationsOverwrite = 0x01;
@@ -53,14 +53,9 @@ public class MacFileUtils extends FileUtils {
         int kFSPathDefaultOptions = 0x0;
         int kFSPathMakeRefDoNotFollowLeafSymlink = 0x01;
 
+        @Structure.FieldOrder({"hidden"})
         class FSRef extends Structure {
-            public static final List<String> FIELDS = createFieldsOrder("hidden");
             public byte[] hidden = new byte[80];
-
-            @Override
-            protected List<String> getFieldOrder() {
-                return FIELDS;
-            }
         }
 
         // Deprecated; use trashItemAtURL instead:

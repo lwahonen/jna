@@ -7,10 +7,18 @@ Release 5.0.0 (Next release)
 
 Features
 --------
+* [#915](https://github.com/java-native-access/jna/pull/915): Adding interfaces to call to Cryptui and Crypt32 windows libraries and adding related structures to Wincrypt. - [@rosh89](https://github.com/rosh89).
 * [#903](https://github.com/java-native-access/jna/pull/903): Carry `HRESULT` in `c.s.j.p.win32.COM.COMException`, introduce `c.s.j.p.win32.COM.COMInvokeException` as subclass of `COMException` for exception as the result of a `IDispatch#Invoke`. The `EXECPINFO` is unwrapped into fields in the `COMInvokeException` and correctly freed. - [@matthiasblaesing](https://github.com/matthiasblaesing).
-* [#822](https://github.com/java-native-access/jna/issues/822): `Native#loadLibrary` requires that the interface class passed in is an instance of Library. The runtime check can be enhanced by using a constraint generic. This breaks binary compatibility (see notes below) - [@d-noll](https://github.com/d-noll).
+* [#822](https://github.com/java-native-access/jna/issues/822): `Native#loadLibrary` requires that the interface class passed in is an instance of Library. The runtime check can be enhanced by using a constraint generic. This breaks binary compatibility (see notes below) - [@d-noll](https://github.com/d-noll).<br /><br />In a followup, the original `loadLibrary` methods were deprecated and `Native#load` methods were introduced, that hold the new generic definitions. So this change is now binary compatible.
 * [#889](https://github.com/java-native-access/jna/issues/889): The `Structure#newInstance` receive the target type as a parameter. This adds a limited generic type, so that the return type ist the target type and not a generic structure, removing the necessity to do an explizit cast - [@matthiasblaesing](https://github.com/matthiasblaesing).
 * [#913](https://github.com/java-native-access/jna/issues/913): Add `@ComInterface` annotation to `com.sun.jna.platform.win32.COM.util.IConnectionPoint` to make it possible to retrieve it via `IUnknown#queryInterface` - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#797](https://github.com/java-native-access/jna/issues/797): Binding `Advapi32#EnumDependendServices`, `Advapi32#EnumServicesStatusEx` and `Advapi32#QueryServiceStatus`. `W32Service#stopService` was modified to be more resilent when stopping service - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* Bind `com.sun.jna.platform.win32.Kernel32.ExpandEnvironmentStrings` and add helper method for it as `Kernel32Util#expandEnvironmentStrings` - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#935](https://github.com/java-native-access/jna/pull/935): Add RegConnectRegistry to Advapi32 mappings. - [@cxcorp](https://github.com/cxcorp).
+* [#947](https://github.com/java-native-access/jna/pull/947):  Allow retrieval of `ACEs` from `com.sun.jna.platform.win32.WinNT.ACL` even if the contained `ACE` is not currently supported - [@jrobhoward](https://github.com/jrobhoward).
+* [#954](https://github.com/java-native-access/jna/pull/954): Add `c.s.j.Structure.FieldOrder` annotation to define the field order of a structures without implementing `Structure#getFieldOrder()` - [@idosu](https://github.com/idosu).
+* [#959](https://github.com/java-native-access/jna/pull/959): Added `GetProcessTimes` and `GetProcessIoCounters` to `com.sun.jna.platform.win32.Kernel32` - [@dbwiddis](https://github.com/dbwiddis).
+* [#952](https://github.com/java-native-access/jna/issues/952): Added `CreateMutex`, `OpenMutex` and `ReleaseMutex` to `com.sun.jna.platform.win32.Kernel32` - [@matthiasblaesing](https://github.com/matthiasblaesing).
 
 Bug Fixes
 ---------
@@ -23,6 +31,21 @@ Bug Fixes
 * [#882](https://github.com/java-native-access/jna/pull/882): Correctly close file in `ELFAnalyser#runDetection`, fix suggested by [@Sylvyrfysh](https://github.com/Sylvyrfysh) in [#880](https://github.com/java-native-access/jna/pull/880) - [@matthiasblaesing](https://github.com/matthiasblaesing).
 * [#887](https://github.com/java-native-access/jna/issues/887): MacFileUtils.moveToTrash() doesn't work in a sandboxed app fix suggested by [@sobakasu](https://github.com/sobakasu) - [@matthiasblaesing](https://github.com/matthiasblaesing).
 * [#894](https://github.com/java-native-access/jna/issues/894): NullPointerException can be caused by calling `com.sun.jna.platform.win32.COM.util.ProxyObject#dispose` multiple times - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#925](https://github.com/java-native-access/jna/issues/925): Optimize `Structure#validate` and prevent `ArrayIndexOutOfBoundsException` in `SAFEARRAY#read` for zero dimensions - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#340](https://github.com/java-native-access/jna/issues/340): Guard registry handling against out-of-bounds reads by ensuring all read strings are NULL terminated - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#902](https://github.com/java-native-access/jna/issues/902): Allow building JNA on JDK 10. `javah` 
+  was removed from the JDK and `javac` is now used to create the necessary headers. 
+  JNA now has JDK 8 as the minimum build version, at runtime Java 6 is the minimum version.<br />
+  Native code for platforms with a JDK version lower than 8 can still be build by (demonstrated for Solaris x86): 
+  <ol>
+      <li>Run `ant -Dbuild.os.name=SunOS -Dbuild.os.arch=x86 native-build-package`</li>
+      <li>Transfer the `build/build-package-sunos-x86-5.2.1.zip` file to the target system. The file holds the native sources, the necessary headers and and a shell script for the build.</li>
+      <li>Expand the zip on the target system.</li>
+      <li>Setup `JAVA_HOME` to point to the JDK sources.</li>
+      <li>Change into the expanded directory and run `bash build.sh`.</li>
+      <li>The resulting `sunos-x86.jar` is copied back to the original build system to `lib/native/sunos-x86.jar`</li>
+  </ol> - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#958](https://github.com/java-native-access/jna/issues/958): Update for PR 863: Old toolchains produce binaries without hard-/softfloat markers. Rasbian is missinng the markers and the oracle JDK is also affected. For hardfloat detection now also the Arm EABI section is also considered - [@matthiasblaesing](https://github.com/matthiasblaesing).
 
 Breaking Changes
 ----------------
@@ -44,10 +67,6 @@ Breaking Changes
 * `com.sun.jna.Native#setPreserveLastError` and `com.sun.jna.Native#getPreserveLastError`
   were removed without replacement. They were turned into NOOPs in the past.
 * `com.sun.jna.Native#getDirectByteBuffer` was replaced by `com.sun.jna.Pointer#getByteBuffer`
-* `com.sun.jna.Native#loadLibrary` methods return a `T` instance and expect
-  a `Class<T>` as parameter. `T` was unconstraint and was modified to
-  extend `com.sun.jna.Library`. This change is source compatible, but not
-  binary compatbile, so bindings need to be recompiled.
 * the parameters of the methods `gethostname`, `sethostname`, `getdomainname` 
    and `setdomainname` in the interface `com.sun.jna.platform.unix.LibCAPI`
   were changed from `(char[] name, int len)` to `(byte[] name, int len)`
@@ -74,6 +93,18 @@ Breaking Changes
 * `com.sun.jna.platform.win32.COM.COMException` was structurally modified. The
   `pExcepInfo` and `puArgErr` members were removed and `hresult` member was added.
   The now missing information in `COMException` was moved to `COMInvokeException`.
+* The third parameter of `com.sun.jna.platform.win32.COM.IShellFolder#GetDisplayNameOf`
+  was changed from `PointerByReference` to `STRRET` and matching this,
+  the first parameter of `com.sun.jna.platform.win32.Shlwapi.StrRetToStr` was
+  changed identically.
+* `ACE_HEADER` replaces `ACEStructure` as the base class for `ACEs`.
+  `com.sun.jna.platform.win32.WinNT.ACL` was modified to support ACLS, that contain
+  `ACEs` other than `ACCESS_ALLOWED_ACE_TYPE` and `ACCESS_DENIED_ACE_TYPE` by
+   widening the return type of `getACEStructures` to `ACE_HEADER[]` and renaming
+   the method to `getACEs`. In
+   consequence `com.sun.jna.platform.win32.Advapi32Util#getFileSecurity` was
+   changed similarly. The SID accessors `getSidString` and `getSID` were moved
+   from `ACEStructure` to `ACCESS_ACEStructure`.
 
 Release 4.5.0
 =============

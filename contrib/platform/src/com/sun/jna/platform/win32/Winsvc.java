@@ -23,12 +23,10 @@
  */
 package com.sun.jna.platform.win32;
 
-
-import java.util.List;
-
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
+import com.sun.jna.Structure.FieldOrder;
 import com.sun.jna.platform.win32.WinNT.HANDLE;
 import com.sun.jna.win32.StdCallLibrary;
 import com.sun.jna.win32.W32APITypeMapper;
@@ -48,10 +46,10 @@ public interface Winsvc {
      *  uses this structure in the SetServiceStatus function to report its current status
      *  to the service control manager.
      */
+    @FieldOrder({"dwServiceType", "dwCurrentState", "dwControlsAccepted",
+        "dwWin32ExitCode", "dwServiceSpecificExitCode", "dwCheckPoint",
+        "dwWaitHint"})
     public static class SERVICE_STATUS extends Structure {
-        public static final List<String> FIELDS = createFieldsOrder(
-                "dwServiceType", "dwCurrentState", "dwControlsAccepted", "dwWin32ExitCode", "dwServiceSpecificExitCode", "dwCheckPoint", "dwWaitHint");
-
         /**
          * dwServiceType - the type of service. This member can be one
          * of the following values:
@@ -117,11 +115,6 @@ public interface Winsvc {
         public SERVICE_STATUS() {
             super();
         }
-
-        @Override
-        protected List<String> getFieldOrder() {
-            return FIELDS;
-        }
     }
 
     /**
@@ -129,12 +122,10 @@ public interface Winsvc {
      * EnumServicesStatusEx, NotifyServiceStatusChange, and QueryServiceStatusEx
      * functions use this structure.
      */
-    public class SERVICE_STATUS_PROCESS extends Structure {
-        public static final List<String> FIELDS = createFieldsOrder(
-                "dwServiceType", "dwCurrentState", "dwControlsAccepted",
+    @FieldOrder({"dwServiceType", "dwCurrentState", "dwControlsAccepted",
                 "dwWin32ExitCode", "dwServiceSpecificExitCode",
-                "dwCheckPoint", "dwWaitHint", "dwProcessId", "dwServiceFlags");
-
+                "dwCheckPoint", "dwWaitHint", "dwProcessId", "dwServiceFlags"})
+    public class SERVICE_STATUS_PROCESS extends Structure {
         /**
          * dwServiceType - the type of service. This member can be one
          * of the following values:
@@ -214,18 +205,13 @@ public interface Winsvc {
         public SERVICE_STATUS_PROCESS(int size) {
             super(new Memory(size));
         }
-
-        @Override
-        protected List<String> getFieldOrder() {
-            return FIELDS;
-        }
     }
-	
+
     public abstract class ChangeServiceConfig2Info extends Structure {
         public ChangeServiceConfig2Info() {
             super(Boolean.getBoolean("w32.ascii") ? W32APITypeMapper.ASCII : W32APITypeMapper.UNICODE);
         }
-        
+
         public ChangeServiceConfig2Info(Pointer p) {
             super(p, ALIGN_DEFAULT, Boolean.getBoolean("w32.ascii") ? W32APITypeMapper.ASCII : W32APITypeMapper.UNICODE);
         }
@@ -238,6 +224,7 @@ public interface Winsvc {
      * To configure additional circumstances under which the failure actions are to be executed, see 
      * SERVICE_FAILURE_ACTIONS_FLAG.
      */
+    @FieldOrder({"dwResetPeriod", "lpRebootMsg", "lpCommand", "cActions", "lpsaActions"})
     public class SERVICE_FAILURE_ACTIONS extends ChangeServiceConfig2Info {
         public static class ByReference extends SERVICE_FAILURE_ACTIONS implements Structure.ByReference {}
 
@@ -278,27 +265,21 @@ public interface Winsvc {
          * If this value is NULL, the cActions and dwResetPeriod members are ignored.
          */
         public SC_ACTION.ByReference lpsaActions;
-        
+
         public SERVICE_FAILURE_ACTIONS() {
             super();
         }
-        
+
         public SERVICE_FAILURE_ACTIONS(Pointer p) {
             super(p);
             read();
-        }
-
-        public static final List<String> FIELDS = createFieldsOrder("dwResetPeriod", "lpRebootMsg", "lpCommand", "cActions", "lpsaActions");
-                                                                    
-        @Override
-        protected List getFieldOrder() {
-            return FIELDS;
         }
     }
 
     /**
      * Represents an action that the service control manager can perform.
      */
+    @FieldOrder({"type", "delay"})
     public class SC_ACTION extends Structure {
         public static class ByReference extends SC_ACTION implements Structure.ByReference {}
         /**
@@ -310,19 +291,13 @@ public interface Winsvc {
          * The time to wait before performing the specified action, in milliseconds.
          */
         public int delay;
-
-        public static final List<String> FIELDS = createFieldsOrder("type", "delay");
-
-        @Override
-        protected List getFieldOrder() {
-            return FIELDS;
-        }
     }
 
     /**
      * Contains the failure actions flag setting of a service. This setting determines when failure 
      * actions are to be executed.
      */
+    @FieldOrder({"fFailureActionsOnNonCrashFailures"})
     public class SERVICE_FAILURE_ACTIONS_FLAG extends ChangeServiceConfig2Info {
         /**
          * If this member is TRUE and the service has configured failure actions, the failure 
@@ -336,18 +311,11 @@ public interface Winsvc {
          * information on configuring failure actions, see ChangeServiceConfig2.
          */
         public int fFailureActionsOnNonCrashFailures;
-        
-        public static final List<String> FIELDS = createFieldsOrder("fFailureActionsOnNonCrashFailures");
 
-        @Override
-        protected List getFieldOrder() {
-            return FIELDS;
-        }
-        
         public SERVICE_FAILURE_ACTIONS_FLAG() {
             super();
         }
-        
+
         public SERVICE_FAILURE_ACTIONS_FLAG(Pointer p) {
             super(p);
             read();
@@ -443,6 +411,13 @@ public interface Winsvc {
         | SERVICE_PAUSE_CONTINUE | SERVICE_INTERROGATE
         | SERVICE_USER_DEFINED_CONTROL;
 
+    //
+    //  Service State -- for Enum Requests (Bit Mask)
+    //
+    int SERVICE_ACTIVE = 0x00000001;
+    int SERVICE_INACTIVE = 0x00000002;
+    int SERVICE_STATE_ALL = SERVICE_ACTIVE | SERVICE_INACTIVE;
+    
     //
     // Controls
     //
@@ -561,6 +536,8 @@ public interface Winsvc {
     int SC_ACTION_REBOOT				= 0x00000002;
     int SC_ACTION_RUN_COMMAND				= 0x00000003;
 	
+    int SC_ENUM_PROCESS_INFO  = 0;
+    
     /**
      * The SC_STATUS_TYPE enumeration type contains values
      */
@@ -765,7 +742,7 @@ public interface Winsvc {
          * request.</li>
          * <li>If your service handles SERVICE_CONTROL_HARDWAREPROFILECHANGE,
          * return NO_ERROR to grant the request and an error code to deny the
-         * request.< </li> <li>If your service handles
+         * request.</li> <li>If your service handles
          * SERVICE_CONTROL_POWEREVENT, return NO_ERROR to grant the request and
          * an error code to deny the request.</li>
          * <li>For all other control codes your service handles, return
@@ -780,9 +757,8 @@ public interface Winsvc {
      * Specifies the ServiceMain function for a service that can run in the
      * calling process. It is used by the StartServiceCtrlDispatcher function.
      */
+    @FieldOrder({"lpServiceName", "lpServiceProc"})
     public static class SERVICE_TABLE_ENTRY extends Structure {
-
-        public static final List<String> FIELDS = createFieldsOrder("lpServiceName", "lpServiceProc");
         /**
          * The name of a service to be run in this service process.
          *
@@ -800,11 +776,6 @@ public interface Winsvc {
 
         public SERVICE_TABLE_ENTRY() {
             super(W32APITypeMapper.DEFAULT);
-        }
-
-        @Override
-        protected List<String> getFieldOrder() {
-            return FIELDS;
         }
     }
     
@@ -832,17 +803,11 @@ public interface Winsvc {
      * are not supported until Windows Vista.</p>
      *
      */
+    @FieldOrder({"lpDescription"})
     public static class SERVICE_DESCRIPTION extends ChangeServiceConfig2Info {
-
-        public static final List<String> FIELDS = createFieldsOrder("lpDescription");
         public String lpDescription;
-        
-        @Override
-        protected List<String> getFieldOrder() {
-            return FIELDS;
-        }
     }
-    
+
     public static class SERVICE_STATUS_HANDLE extends WinNT.HANDLE {
 
         public SERVICE_STATUS_HANDLE() {
@@ -850,6 +815,74 @@ public interface Winsvc {
 
         public SERVICE_STATUS_HANDLE(Pointer p) {
             super(p);
+        }
+    }
+
+    /**
+     * Contains the name of a service in a service control manager database and
+     * information about that service. It is used by the EnumDependentServices
+     * and EnumServicesStatus functions.
+     */
+    @FieldOrder({"lpServiceName", "lpDisplayName", "ServiceStatus"})
+    public static class ENUM_SERVICE_STATUS extends Structure {
+        /**
+         * The name of a service in the service control manager database. The
+         * maximum string length is 256 characters. The service control manager
+         * database preserves the case of the characters, but service name
+         * comparisons are always case insensitive. A slash (/), backslash (\),
+         * comma, and space are invalid service name characters.
+         */
+        public String lpServiceName;
+        /**
+         * A display name that can be used by service control programs, such as
+         * Services in Control Panel, to identify the service. This string has a
+         * maximum length of 256 characters. The name is case-preserved in the
+         * service control manager. Display name comparisons are always
+         * case-insensitive.
+         */
+        public String lpDisplayName;
+        /**
+         * A {@link Winsvc#SERVICE_STATUS} structure that contains status
+         * information for the lpServiceName service.
+         */
+        public SERVICE_STATUS ServiceStatus;
+
+        public ENUM_SERVICE_STATUS() {
+            super(W32APITypeMapper.DEFAULT);
+        }
+    }
+
+    /**
+     * Contains the name of a service in a service control manager database and
+     * information about the service. It is used by the EnumServicesStatusEx
+     * function.
+     */
+    @FieldOrder({"lpServiceName", "lpDisplayName", "ServiceStatusProcess"})
+    public static class ENUM_SERVICE_STATUS_PROCESS extends Structure {
+        /**
+         * The name of a service in the service control manager database. The
+         * maximum string length is 256 characters. The service control manager
+         * database preserves the case of the characters, but service name
+         * comparisons are always case insensitive. A slash (/), backslash (\),
+         * comma, and space are invalid service name characters.
+         */
+        public String lpServiceName;
+        /**
+         * A display name that can be used by service control programs, such as
+         * Services in Control Panel, to identify the service. This string has a
+         * maximum length of 256 characters. The name is case-preserved in the
+         * service control manager. Display name comparisons are always
+         * case-insensitive.
+         */
+        public String lpDisplayName;
+        /**
+         * A {@link SERVICE_STATUS_PROCESS} structure that contains status information
+         * for the lpServiceName service.
+         */
+        public SERVICE_STATUS_PROCESS ServiceStatusProcess;
+
+        public ENUM_SERVICE_STATUS_PROCESS() {
+            super(W32APITypeMapper.DEFAULT);
         }
     }
 }

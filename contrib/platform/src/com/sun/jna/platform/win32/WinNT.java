@@ -34,6 +34,7 @@ import com.sun.jna.NativeLong;
 import com.sun.jna.Pointer;
 import com.sun.jna.PointerType;
 import com.sun.jna.Structure;
+import com.sun.jna.Structure.FieldOrder;
 import com.sun.jna.Union;
 import com.sun.jna.ptr.ByReference;
 import com.sun.jna.win32.StdCallLibrary.StdCallCallback;
@@ -75,6 +76,10 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
     int STANDARD_RIGHTS_ALL = 0x001F0000;
 
     int SPECIFIC_RIGHTS_ALL = 0x0000FFFF;
+
+    int MUTANT_QUERY_STATE = 0x0001;
+    int MUTANT_ALL_ACCESS = STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE
+            | MUTANT_QUERY_STATE;
 
     //
     // Token Specific Access Rights.
@@ -257,8 +262,8 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
      * The LUID_AND_ATTRIBUTES structure represents a locally unique identifier
      * (LUID) and its attributes.
      */
+    @FieldOrder({"Luid", "Attributes"})
     public static class LUID_AND_ATTRIBUTES extends Structure {
-        public static final List<String> FIELDS = createFieldsOrder("Luid", "Attributes");
         /**
          * Specifies an LUID value.
          */
@@ -279,19 +284,14 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
             this.Luid = luid;
             this.Attributes = attributes;
         }
-
-        @Override
-        protected List<String> getFieldOrder() {
-            return FIELDS;
-        }
     }
 
     /**
      * The SID_AND_ATTRIBUTES structure represents a security identifier (SID)
      * and its attributes. SIDs are used to uniquely identify users or groups.
      */
+    @FieldOrder({"Sid", "Attributes"})
     public static class SID_AND_ATTRIBUTES extends Structure {
-        public static final List<String> FIELDS = createFieldsOrder("Sid", "Attributes");
         /**
          * Pointer to a SID structure.
          */
@@ -310,19 +310,14 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
         public SID_AND_ATTRIBUTES(Pointer memory) {
             super(memory);
         }
-
-        @Override
-        protected List<String> getFieldOrder() {
-            return FIELDS;
-        }
     }
 
     /**
      * The TOKEN_OWNER structure contains the default owner security identifier
      * (SID) that will be applied to newly created objects.
      */
+    @FieldOrder({"Owner"})
     public static class TOKEN_OWNER extends Structure {
-        public static final List<String> FIELDS = createFieldsOrder("Owner");
         /**
          * Pointer to a SID structure representing a user who will become the
          * owner of any objects created by a process using this access token.
@@ -342,16 +337,11 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
             super(memory);
             read();
         }
-
-        @Override
-        protected List<String> getFieldOrder() {
-            return FIELDS;
-        }
     }
 
+    @FieldOrder({"sid"})
     public static class PSID extends Structure {
         public static class ByReference extends PSID implements Structure.ByReference { }
-        public static final List<String> FIELDS = createFieldsOrder("sid");
         public Pointer sid;
 
         public PSID() {
@@ -380,11 +370,6 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
 
         public String getSidString() {
             return Advapi32Util.convertSidToStringSid(this);
-        }
-
-        @Override
-        protected List<String> getFieldOrder() {
-            return FIELDS;
         }
     }
 
@@ -417,8 +402,8 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
      * The TOKEN_USER structure identifies the user associated with an access
      * token.
      */
+    @FieldOrder({"User"})
     public static class TOKEN_USER extends Structure {
-        public static final List<String> FIELDS = createFieldsOrder("User");
         /**
          * Specifies a SID_AND_ATTRIBUTES structure representing the user
          * associated with the access token. There are currently no attributes
@@ -438,19 +423,14 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
         public TOKEN_USER(int size) {
             super(new Memory(size));
         }
-
-        @Override
-        protected List<String> getFieldOrder() {
-            return FIELDS;
-        }
     }
 
     /**
      * The TOKEN_GROUPS structure contains information about the group security
      * identifiers (SIDs) in an access token.
      */
+    @FieldOrder({"GroupCount", "Group0"})
     public static class TOKEN_GROUPS extends Structure {
-        public static final List<String> FIELDS = createFieldsOrder("GroupCount", "Group0");
         /**
          * Specifies the number of groups in the access token.
          */
@@ -478,18 +458,14 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
         public SID_AND_ATTRIBUTES[] getGroups() {
             return (SID_AND_ATTRIBUTES[]) Group0.toArray(GroupCount);
         }
-        @Override
-        protected List<String> getFieldOrder() {
-            return FIELDS;
-        }
     }
 
     /**
      * Specifies a set of privileges. <br>
      * It is also used to indicate which, if any, privileges are held by a user or group requesting access to an object.
      */
+    @FieldOrder({"PrivilegeCount", "Control", "Privileges"})
     public static class PRIVILEGE_SET extends Structure {
-        public static final List<String> FIELDS = createFieldsOrder("PrivilegeCount", "Control", "Privileges");
         public DWORD PrivilegeCount;
         public DWORD Control;
         public LUID_AND_ATTRIBUTES Privileges[];
@@ -520,19 +496,14 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
             }
             read();
         }
-
-        @Override
-        protected List<String> getFieldOrder() {
-            return FIELDS;
-        }
     }
 
     /**
      * The TOKEN_PRIVILEGES structure contains information about a set of
      * privileges for an access token.
      */
+    @FieldOrder({"PrivilegeCount", "Privileges"})
     public static class TOKEN_PRIVILEGES extends Structure {
-        public static final List<String> FIELDS = createFieldsOrder("PrivilegeCount", "Privileges");
         /**
          * This must be set to the number of entries in the Privileges array.
          */
@@ -566,11 +537,6 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
             PrivilegeCount = new DWORD(count);
             Privileges = new LUID_AND_ATTRIBUTES[count];
             read();
-        }
-
-        @Override
-        protected List<String> getFieldOrder() {
-            return FIELDS;
         }
     }
 
@@ -882,8 +848,8 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
      * block of result memory rather than something that stands alone or is used
      * for input.
      */
+    @FieldOrder({"NextEntryOffset", "Action", "FileNameLength", "FileName"})
     public static class FILE_NOTIFY_INFORMATION extends Structure {
-        public static final List<String> FIELDS = createFieldsOrder("NextEntryOffset", "Action", "FileNameLength", "FileName");
         public int NextEntryOffset;
         public int Action;
         public int FileNameLength;
@@ -909,11 +875,6 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
          */
         public String getFilename() {
             return new String(FileName, 0, FileNameLength / 2);
-        }
-
-        @Override
-        protected List<String> getFieldOrder() {
-            return FIELDS;
         }
 
         @Override
@@ -1167,27 +1128,23 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
      * A 64-bit value that is guaranteed to be unique on the operating system
      * that generated it until the system is restarted.
      */
+    @FieldOrder({"LowPart", "HighPart"})
     public static class LUID extends Structure {
-        public static final List<String> FIELDS = createFieldsOrder("LowPart", "HighPart");
         public int LowPart;
         public int HighPart;
-
-        @Override
-        protected List<String> getFieldOrder() {
-            return FIELDS;
-        }
     }
 
     /**
      * A 64-bit integer;
      */
+    @FieldOrder({"u"})
     public static class LARGE_INTEGER extends Structure implements Comparable<LARGE_INTEGER> {
         public static class ByReference extends LARGE_INTEGER implements
                 Structure.ByReference {
         }
 
+        @FieldOrder({"LowPart", "HighPart"})
         public static class LowHigh extends Structure {
-            public static final List<String> FIELDS = createFieldsOrder("LowPart", "HighPart");
             public DWORD LowPart;
             public DWORD HighPart;
 
@@ -1202,11 +1159,6 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
             public LowHigh(DWORD low, DWORD high) {
                 LowPart = low;
                 HighPart = high;
-            }
-
-            @Override
-            protected List<String> getFieldOrder() {
-                return FIELDS;
             }
 
             public long longValue() {
@@ -1249,11 +1201,6 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
         }
 
         public UNION u;
-
-        @Override
-        protected List<String> getFieldOrder() {
-            return Collections.singletonList("u");
-        }
 
         public LARGE_INTEGER() {
             super();
@@ -1861,10 +1808,8 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
      * build number, a platform identifier, and descriptive text about the
      * operating system. This structure is used with the GetVersionEx function.
      */
+    @FieldOrder({"dwOSVersionInfoSize", "dwMajorVersion", "dwMinorVersion", "dwBuildNumber", "dwPlatformId", "szCSDVersion"})
     public static class OSVERSIONINFO extends Structure {
-        public static final List<String> FIELDS = createFieldsOrder(
-                "dwOSVersionInfoSize", "dwMajorVersion", "dwMinorVersion", "dwBuildNumber", "dwPlatformId", "szCSDVersion");
-
         /**
          * Size of this data structure, in bytes. Set this member to
          * sizeof(OSVERSIONINFO) before calling the GetVersionEx function.
@@ -1906,11 +1851,6 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
             super(memory);
             read();
         }
-
-        @Override
-        protected List<String> getFieldOrder() {
-            return FIELDS;
-        }
     }
 
     /**
@@ -1919,15 +1859,13 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
      * and information about product suites and the latest Service Pack
      * installed on the system.
      */
-    public static class OSVERSIONINFOEX extends Structure {
-        public static final List<String> FIELDS = createFieldsOrder(
-                "dwOSVersionInfoSize",
+    @FieldOrder({"dwOSVersionInfoSize",
                 "dwMajorVersion", "dwMinorVersion", "dwBuildNumber",
                 "dwPlatformId",
                 "szCSDVersion",
                 "wServicePackMajor", "wServicePackMinor",
-                "wSuiteMask", "wProductType", "wReserved");
-
+                "wSuiteMask", "wProductType", "wReserved"})
+    public static class OSVERSIONINFOEX extends Structure {
         /**
          * The size of this data structure, in bytes.
          */
@@ -1999,11 +1937,6 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
         public OSVERSIONINFOEX(Pointer memory) {
             super(memory);
             read();
-        }
-
-        @Override
-        protected List<String> getFieldOrder() {
-            return FIELDS;
         }
 
         /**
@@ -2145,13 +2078,11 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
      * The EVENTLOGRECORD structure contains information about an event record
      * returned by the ReadEventLog function.
      */
-    public static class EVENTLOGRECORD extends Structure {
-        public static final List<String> FIELDS = createFieldsOrder(
-                "Length", "Reserved", "RecordNumber", "TimeGenerated", "TimeWritten",
+    @FieldOrder({"Length", "Reserved", "RecordNumber", "TimeGenerated", "TimeWritten",
                 "EventID", "EventType", "NumStrings", "EventCategory", "ReservedFlags",
                 "ClosingRecordNumber", "StringOffset", "UserSidLength", "UserSidOffset",
-                "DataLength", "DataOffset");
-
+                "DataLength", "DataOffset"})
+    public static class EVENTLOGRECORD extends Structure {
         /**
          * Size of this event record, in bytes. Note that this value is stored
          * at both ends of the entry to ease moving forward or backward through
@@ -2261,11 +2192,6 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
         public EVENTLOGRECORD(Pointer p) {
             super(p);
             read();
-        }
-
-        @Override
-        protected List<String> getFieldOrder() {
-            return FIELDS;
         }
     }
 
@@ -2491,12 +2417,12 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
 
     int SECURITY_DESCRIPTOR_REVISION = 0x00000001;
 
+    @FieldOrder({"data"})
     public static class SECURITY_DESCRIPTOR extends Structure {
         public static class ByReference extends SECURITY_DESCRIPTOR implements
                 Structure.ByReference {
         }
 
-        public static final List<String> FIELDS = createFieldsOrder("data");
         public byte[] data;
 
         public SECURITY_DESCRIPTOR() {
@@ -2519,11 +2445,6 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
             super(memory);
             read();
         }
-
-        @Override
-        protected List<String> getFieldOrder() {
-            return FIELDS;
-        }
     }
 
     int ACL_REVISION        = 2;
@@ -2538,9 +2459,8 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
     int MIN_ACL_REVISION    = ACL_REVISION2;
     int MAX_ACL_REVISION    = ACL_REVISION4;
 
+    @FieldOrder({"AclRevision", "Sbz1", "AclSize", "AceCount", "Sbz2"})
     public static class ACL extends Structure {
-        public static final List<String> FIELDS = createFieldsOrder("AclRevision", "Sbz1", "AclSize", "AceCount", "Sbz2");
-
         /*
          * Maximum size chosen based on technet article:
          * https://technet.microsoft.com/en-us/library/cc781716.aspx
@@ -2552,8 +2472,6 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
         public short AclSize;
         public short AceCount;
         public short Sbz2;
-
-        private ACCESS_ACEStructure[] ACEs;
 
         public ACL() {
             super();
@@ -2567,35 +2485,38 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
         public ACL(Pointer pointer) {
             super(pointer);
             read();
-            ACEs = new ACCESS_ACEStructure[AceCount];
+        }
+
+        /**
+         * Extract the contained ACEs from the ACL.
+         * 
+         * <p>ACE types as decoded to their native JNA counterparts. ACE types,
+         * that are currently unsupported by JNA are returned as 
+         * {@link WinNT.ACE_HEADER} objects.</p>
+         * 
+         * @return array holding the contained ACEs
+         */
+        public ACE_HEADER[] getACEs() {
+            ACE_HEADER[] ACEs = new ACE_HEADER[AceCount];
+            final Pointer pointer = this.getPointer();
             int offset = size();
             for (int i = 0; i < AceCount; i++) {
-                Pointer share = pointer.share(offset);
-                // ACE_HEADER.AceType
-                final byte aceType = share.getByte(0);
-                ACCESS_ACEStructure ace;
+                final Pointer share = pointer.share(offset);
+                final byte aceType = share.getByte(0); // ACE_HEADER.AceType
                 switch (aceType) {
                     case ACCESS_ALLOWED_ACE_TYPE:
-                        ace = new ACCESS_ALLOWED_ACE(share);
+                        ACEs[i] = new ACCESS_ALLOWED_ACE(share);
                         break;
                     case ACCESS_DENIED_ACE_TYPE:
-                        ace = new ACCESS_DENIED_ACE(share);
+                        ACEs[i] = new ACCESS_DENIED_ACE(share);
                         break;
                     default:
-                        throw new IllegalArgumentException("Unknown ACE type " + aceType);
+                        ACEs[i] = new ACE_HEADER(share);
+                        break;
                 }
-                ACEs[i] = ace;
-                offset += ace.AceSize;
+                offset += ACEs[i].AceSize;
             }
-        }
-
-        public ACCESS_ACEStructure[] getACEStructures() {
             return ACEs;
-        }
-
-        @Override
-        protected List<String> getFieldOrder() {
-            return FIELDS;
         }
     }
 
@@ -2624,12 +2545,11 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
         }
     }
 
+    @FieldOrder({"Revision", "Sbz1", "Control", "Owner", "Group", "Sacl", "Dacl"})
     public static class SECURITY_DESCRIPTOR_RELATIVE extends Structure {
         public static class ByReference extends SECURITY_DESCRIPTOR_RELATIVE
                 implements Structure.ByReference {
         }
-
-        public static final List<String> FIELDS = createFieldsOrder("Revision", "Sbz1", "Control", "Owner", "Group", "Sacl", "Dacl");
 
         public byte Revision;
         public byte Sbz1;
@@ -2694,55 +2614,14 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
         		OWNER =  new PSID(getPointer().share(Owner));
         	}
         }
-
-        @Override
-        protected List<String> getFieldOrder() {
-            return FIELDS;
-        }
     }
 
-    public static abstract class ACEStructure extends Structure {
-        public static final List<String> FIELDS = createFieldsOrder("AceType", "AceFlags", "AceSize");
-
+    @FieldOrder({"AceType", "AceFlags", "AceSize"})
+    public static class ACE_HEADER extends Structure {
         public byte AceType;
         public byte AceFlags;
         public short AceSize;
 
-        PSID psid;
-
-        public ACEStructure() {
-            super();
-        }
-
-        public ACEStructure(Pointer p) {
-            super(p);
-        }
-
-        public ACEStructure(byte AceType, byte AceFlags, short AceSize, PSID psid) {
-            super();
-            this.AceType = AceType;
-            this.AceFlags = AceFlags;
-            this.AceSize = AceSize;
-            this.psid = psid;
-            write();
-        }
-
-        public String getSidString() {
-            return Advapi32Util.convertSidToStringSid(psid);
-        }
-
-        public PSID getSID() {
-            return psid;
-        }
-
-        @Override
-        protected List<String> getFieldOrder() {
-            return FIELDS;
-        }
-    }
-
-    /* ACE header */
-    public static class ACE_HEADER extends ACEStructure {
         public ACE_HEADER() {
             super();
         }
@@ -2751,20 +2630,29 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
             super(p);
             read();
         }
+
+        public ACE_HEADER(byte AceType, byte AceFlags, short AceSize) {
+            super();
+            this.AceType = AceType;
+            this.AceFlags = AceFlags;
+            this.AceSize = AceSize;
+            write();
+        }
     }
 
     /**
      * ACCESS_ALLOWED_ACE and ACCESS_DENIED_ACE have the same structure layout
      */
-    public static abstract class ACCESS_ACEStructure extends ACEStructure {
-        public static final List<String> FIELDS = createFieldsOrder(ACEStructure.FIELDS, "Mask", "SidStart");
-
+    @FieldOrder({"Mask", "SidStart"})
+    public static abstract class ACCESS_ACEStructure extends ACE_HEADER {
         public int Mask;
         /**
          * First 4 bytes of the SID
          * Only used to have a valid field defined - use sid!
          */
         public byte[] SidStart = new byte[4];
+
+        PSID psid;
 
         public ACCESS_ACEStructure() {
             super();
@@ -2788,6 +2676,14 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
             read();
         }
 
+        public String getSidString() {
+            return Advapi32Util.convertSidToStringSid(psid);
+        }
+
+        public PSID getSID() {
+            return psid;
+        }
+
         /**
          * Write override due to psid not being a managed field
          */
@@ -2807,6 +2703,9 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
 
         @Override
         public void read() {
+            if(SidStart == null) {
+                SidStart = new byte[4];
+            }
             super.read();
             int offsetOfSID = super.fieldOffset("SidStart");
             int sizeOfSID = super.AceSize - super.fieldOffset("SidStart");
@@ -2815,11 +2714,6 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
             } else {
                 psid = new PSID();
             }
-        }
-
-        @Override
-        protected List<String> getFieldOrder() {
-            return FIELDS;
         }
     }
 
@@ -2891,31 +2785,23 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
     /**
      * Defines the mapping of generic access rights to specific and standard access rights for an object
      */
+    @FieldOrder({"genericRead", "genericWrite", "genericExecute", "genericAll"})
     public static class GENERIC_MAPPING extends Structure {
         public static class ByReference extends GENERIC_MAPPING implements Structure.ByReference {
         }
-
-        public static final List<String> FIELDS = createFieldsOrder(
-                "genericRead", "genericWrite", "genericExecute", "genericAll");
 
         public DWORD genericRead;
         public DWORD genericWrite;
         public DWORD genericExecute;
         public DWORD genericAll;
-
-        @Override
-        protected List<String> getFieldOrder() {
-            return FIELDS;
-        }
     }
 
     /**
      * Describes the relationship between the specified processor set. This structure is used with the
      * {@link Kernel32#GetLogicalProcessorInformation} function.
      */
+    @FieldOrder({"processorMask", "relationship", "payload"})
     public static class SYSTEM_LOGICAL_PROCESSOR_INFORMATION extends Structure {
-        public static final List<String> FIELDS = createFieldsOrder("processorMask", "relationship", "payload");
-
         /**
          * The processor mask identifying the processors described by this structure. A processor mask is a bit
          * vector in which each set bit represents an active processor in the relationship.
@@ -2948,11 +2834,6 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
             read();
         }
 
-        @Override
-        protected List<String> getFieldOrder() {
-            return FIELDS;
-        }
-
         public static class AnonymousUnionPayload extends Union {
             /**
              * Contains valid data only if {@link #relationship} is {@link LOGICAL_PROCESSOR_RELATIONSHIP#RelationProcessorCore}.
@@ -2983,8 +2864,8 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
             public ULONGLONG[] reserved = new ULONGLONG[2];
         }
 
+        @FieldOrder({"flags"})
         public static class AnonymousStructProcessorCore extends Structure {
-            public static final List<String> FIELDS = createFieldsOrder("flags");
             /**
              * <p>If the value of this mmeber is {@code 1}, the logical processors identified by the value of the
              *    {@link #processorMask} member share functional units, as in Hyperthreading or SMT. Otherwise, the
@@ -2994,25 +2875,15 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
              *    package.</p>
              */
             public BYTE flags;
-
-            @Override
-            protected List<String> getFieldOrder() {
-                return FIELDS;
-            }
         }
 
+        @FieldOrder({"nodeNumber"})
         public static class AnonymousStructNumaNode extends Structure {
-            public static final List<String> FIELDS = createFieldsOrder("nodeNumber");
             /**
              * Identifies the NUMA node. Valid values are {@code 0} to the highest NUMA node number inclusive.
              * A non-NUMA multiprocessor system will report that all processors belong to one NUMA node.
              */
             public DWORD nodeNumber;
-
-            @Override
-            protected List<String> getFieldOrder() {
-                return FIELDS;
-            }
         }
     }
 
@@ -3067,8 +2938,9 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
     /**
      * Describes the cache attributes.
      */
+    @FieldOrder({"level", "associativity", "lineSize", "size", "type"})
     public static class CACHE_DESCRIPTOR extends Structure {
-        public static final List<String> FIELDS = createFieldsOrder("level", "associativity", "lineSize", "size", "type");
+        public static final List<String> FIELDS = createFieldsOrder();
         /**
          * The cache level. This member can be 1, 2 or 3, corresponding to L1, L2 or L3 cache, respectively (other
          * values may be supported in the future.)
@@ -3097,11 +2969,6 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
          * @see PROCESSOR_CACHE_TYPE
          */
         public int /* PROCESSOR_CACHE_TYPE */ type;
-
-        @Override
-        protected List<String> getFieldOrder() {
-            return FIELDS;
-        }
     }
 
     /**
@@ -3161,10 +3028,9 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
      */
     int MEM_PRIVATE = 0x20000;
 
+    @FieldOrder({"baseAddress", "allocationBase", "allocationProtect",
+                "regionSize", "state", "protect", "type"})
     public static class MEMORY_BASIC_INFORMATION extends Structure {
-        public static final List<String> FIELDS = createFieldsOrder("baseAddress", "allocationBase", "allocationProtect",
-                "regionSize", "state", "protect", "type");
-
         /**
          * A pointer to the base address of the region of pages.
          */
@@ -3212,19 +3078,10 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
          * MEM_PRIVATE
          */
         public DWORD type;
-
-        @Override
-        protected List<String> getFieldOrder() {
-            return FIELDS;
-        }
     }
-    
+
+    @FieldOrder({"Length", "ImpersonationLevel", "ContextTrackingMode", "EffectiveOnly"})
     public class SECURITY_QUALITY_OF_SERVICE extends Structure {
-
-        public static final List<String> FIELDS = createFieldsOrder(
-                "Length", "ImpersonationLevel", "ContextTrackingMode", "EffectiveOnly"
-        );
-
         /** Specifies the size, in bytes, of this structure.
          */
         public int Length;
@@ -3261,13 +3118,8 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
             this.Length = size();
             super.write();
         }
-        
-        @Override
-        protected List<String> getFieldOrder() {
-            return FIELDS;
-        }
     }
-    
+
     byte SECURITY_DYNAMIC_TRACKING = (byte) 1;
     byte SECURITY_STATIC_TRACKING = (byte) 0;
     byte BOOLEAN_TRUE = (byte) 1;
@@ -3496,7 +3348,7 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
      *        15                   10 9                       0   bit
      *  </pre>
      * 
-     *  <p>WARNING:  This pattern isn't always follows, Serbina, Bosnian & Croation for example.</p>
+     *  <p>WARNING:  This pattern isn't always follows, Serbina, Bosnian &amp; Croation for example.</p>
      *
      *  <p>It is recommended that applications test for locale names or actual LCIDs.</p>
      *
@@ -3619,4 +3471,55 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
     public static final LCID LOCALE_NEUTRAL        = LocaleMacros.MAKELCID(LocaleMacros.MAKELANGID(LANG_NEUTRAL, SUBLANG_NEUTRAL), SORT_DEFAULT);
 
     public static final LCID LOCALE_INVARIANT      = LocaleMacros.MAKELCID(LocaleMacros.MAKELANGID(LANG_INVARIANT, SUBLANG_NEUTRAL), SORT_DEFAULT);
+
+    /**
+     * The IO_COUNTERS structure contains I/O accounting information for a
+     * process or a job object. For a job object, the counters include all
+     * operations performed by all processes that have ever been associated with
+     * the job, in addition to all processes currently associated with the job.
+     */
+    @FieldOrder({"ReadOperationCount", "WriteOperationCount",
+        "OtherOperationCount", "ReadTransferCount", "WriteTransferCount",
+        "OtherTransferCount"})
+    public static class IO_COUNTERS extends Structure {
+        /**
+         * The number of read operations performed.
+         */
+        public long ReadOperationCount;
+
+        /**
+         * The number of write operations performed.
+         */
+        public long WriteOperationCount;
+
+        /**
+         * The number of I/O operations performed, other than read and write
+         * operations.
+         */
+        public long OtherOperationCount;
+
+        /**
+         * The number of bytes read.
+         */
+        public long ReadTransferCount;
+
+        /**
+         * The number of bytes written.
+         */
+        public long WriteTransferCount;
+
+        /**
+         * The number of bytes transferred during operations other than read and
+         * write operations.
+         */
+        public long OtherTransferCount;
+
+        public IO_COUNTERS() {
+            super();
+        }
+
+        public IO_COUNTERS(Pointer memory) {
+            super(memory);
+        }
+    }
 }

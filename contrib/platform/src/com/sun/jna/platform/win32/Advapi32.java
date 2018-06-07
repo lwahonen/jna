@@ -67,7 +67,7 @@ import com.sun.jna.win32.W32APIOptions;
  * @author dblock[at]dblock.org
  */
 public interface Advapi32 extends StdCallLibrary {
-    Advapi32 INSTANCE = Native.loadLibrary("Advapi32", Advapi32.class, W32APIOptions.DEFAULT_OPTIONS);
+    Advapi32 INSTANCE = Native.load("Advapi32", Advapi32.class, W32APIOptions.DEFAULT_OPTIONS);
 
     int MAX_KEY_LENGTH = 255;
     int MAX_VALUE_NAME = 16383;
@@ -855,6 +855,46 @@ public interface Advapi32 extends StdCallLibrary {
                      int samDesired, HKEYByReference phkResult);
 
     /**
+     * Establishes a connection to a predefined registry key on another
+     * computer.
+     * @param lpMachineName
+     *            The name of the remote computer. The string has
+     *            the following form:<br />
+     *            <pre><code>\\computername</code></pre>
+     *            The caller must have access to the remote computer or the
+     *            function fails.<br />
+     *            If this parameter is <c>null</c>, the local computer name
+     *            is used.
+     * @param hKey
+     *            A predefined registry handle. This parameter can be one of
+     *            the following predefined keys on the remote computer.<br />
+     *            <ul>
+     *                <li>{@link WinReg#HKEY_LOCAL_MACHINE}</li>
+     *                <li>{@link WinReg#HKEY_PERFORMANCE_DATA}</li>
+     *                <li>{@link WinReg#HKEY_USERS}</li>
+     *            </ul>
+     * @param phkResult
+     *            A pointer to a variable that receives a key handle
+     *            identifying the predefined handle on the remote computer.
+     * @return If the function succeeds, the return value is
+     *         {@link WinError#ERROR_SUCCESS}.<br />
+     *         If the remote computer cannot be found or if its Remote Registry
+     *         service is disabled, the function fails and returns 
+     *         {@link WinError#ERROR_BAD_NETPATH}.<br />
+     *         If attempting to use a registry handle other than one of the
+     *         three predefined handles, the function fails and returns
+     *         {@link WinError#ERROR_INVALID_HANDLE}.<br />
+     *         If access to the registry is denied, the function fails and
+     *         returns {@link WinError#ERROR_ACCESS_DENIED}. <br />
+     *         If the function fails for some other reason, you can use the
+     *         {@link Native#getLastError} method to get a generic description
+     *         of the error.
+     * @see <a href="https://msdn.microsoft.com/en-us/library/windows/desktop/ms724840.aspx">RegConnectRegistry function (Windows)</a>
+     * @see <a href="https://msdn.microsoft.com/en-us/library/windows/desktop/ms724836.aspx">Predefined Keys (Windows)</a>
+     */
+    int RegConnectRegistry(String lpMachineName, HKEY hKey, HKEYByReference phkResult);
+
+    /**
      * The RegQueryValueEx function retrieves the type and data for a specified
      * value name associated with an open registry key.
      *
@@ -976,11 +1016,20 @@ public interface Advapi32 extends StdCallLibrary {
      *         defined in Winerror.h.
      */
     int RegSetValueEx(HKEY hKey, String lpValueName, int Reserved,
+                  int dwType, Pointer lpData, int cbData);
+
+    /**
+     * See {@link #RegSetValueEx(com.sun.jna.platform.win32.WinReg.HKEY, java.lang.String, int, int, com.sun.jna.Pointer, int) }
+     */
+    int RegSetValueEx(HKEY hKey, String lpValueName, int Reserved,
                       int dwType, char[] lpData, int cbData);
 
+    /**
+     * See {@link #RegSetValueEx(com.sun.jna.platform.win32.WinReg.HKEY, java.lang.String, int, int, com.sun.jna.Pointer, int) }
+     */
     int RegSetValueEx(HKEY hKey, String lpValueName, int Reserved,
                       int dwType, byte[] lpData, int cbData);
-
+    
     /**
      *
      * @param hKey registry key
@@ -1100,6 +1149,13 @@ public interface Advapi32 extends StdCallLibrary {
      * @return If the function succeeds, the return value is ERROR_SUCCESS. If
      *         the function fails, the return value is a nonzero error code
      *         defined in Winerror.h.
+     */
+    int RegEnumValue(HKEY hKey, int dwIndex, char[] lpValueName,
+                     IntByReference lpcchValueName, IntByReference reserved,
+                     IntByReference lpType, Pointer lpData, IntByReference lpcbData);
+    
+    /**
+     * See {@link #RegEnumValue(com.sun.jna.platform.win32.WinReg.HKEY, int, char[], com.sun.jna.ptr.IntByReference, com.sun.jna.ptr.IntByReference, com.sun.jna.ptr.IntByReference, com.sun.jna.Pointer, com.sun.jna.ptr.IntByReference)}.
      */
     int RegEnumValue(HKEY hKey, int dwIndex, char[] lpValueName,
                      IntByReference lpcchValueName, IntByReference reserved,
@@ -1295,9 +1351,16 @@ public interface Advapi32 extends StdCallLibrary {
      * @return status
      */
     int RegGetValue(HKEY hkey, String lpSubKey, String lpValue,
+                    int dwFlags, IntByReference pdwType, Pointer pvData,
+                    IntByReference pcbData);
+    
+    /**
+     * See {@link #RegGetValue(com.sun.jna.platform.win32.WinReg.HKEY, java.lang.String, java.lang.String, int, com.sun.jna.ptr.IntByReference, com.sun.jna.Pointer, com.sun.jna.ptr.IntByReference)}.
+     */
+    int RegGetValue(HKEY hkey, String lpSubKey, String lpValue,
                     int dwFlags, IntByReference pdwType, byte[] pvData,
                     IntByReference pcbData);
-
+    
     /**
      * Retrieves a registered handle to the specified event log.
      *
@@ -1624,6 +1687,25 @@ public interface Advapi32 extends StdCallLibrary {
                                  IntByReference pcbBytesNeeded);
 
     /**
+     * Retrieves the current status of the specified service based on the
+     * specified information level.
+     *
+     * @param hService
+     *            A handle to the service. This handle is returned by the
+     *            OpenService(SC_HANDLE, String, int) or CreateService()
+     *            function, and it must have the SERVICE_QUERY_STATUS access
+     *            right. For more information, see <a
+     *            href="http://msdn.microsoft.com/en-us/library/ms685981.aspx"
+     *            >Service Security and Access Rights</a>.
+     * @param lpServiceStatus
+     *            A pointer to a SERVICE_STATUS structure that receives the status information.
+     * @return If the function succeeds, the return value is true. If the
+     *         function fails, the return value is false. To get extended error
+     *         information, call GetLastError.
+     */
+    boolean QueryServiceStatus(SC_HANDLE hService, SERVICE_STATUS lpServiceStatus);
+    
+    /**
      * Sends a control code to a service. To specify additional information when
      * stopping a service, use the ControlServiceEx function.
      *
@@ -1767,6 +1849,205 @@ public interface Advapi32 extends StdCallLibrary {
      */
     SC_HANDLE OpenSCManager(String lpMachineName, String lpDatabaseName, int dwDesiredAccess);
 
+    /**
+     * Retrieves the name and status of each service that depends on the
+     * specified service; that is, the specified service must be running before
+     * the dependent services can run.
+     *
+     * @param hService           A handle to the service. This handle is
+     *                           returned by the OpenService or CreateService
+     *                           function, and it must have the
+     *                           SERVICE_ENUMERATE_DEPENDENTS access right. For
+     *                           more information, see Service Security and
+     *                           Access Rights.
+     * @param dwServiceState     The state of the services to be enumerated.
+     *                           This parameter can be one of the following
+     *                           values.
+     * <table>
+     * <tr><th>Value</th><th>Meaning</th></tr>
+     * <tr><td>{@link Winsvc#SERVICE_ACTIVE}</td><td>Enumerates services that
+     * are in the following states:
+     * {@link Winsvc#SERVICE_START_PENDING}, {@link Winsvc#SERVICE_STOP_PENDING}, {@link Winsvc#SERVICE_RUNNING}, {@link Winsvc#SERVICE_CONTINUE_PENDING}, {@link Winsvc#SERVICE_PAUSE_PENDING},
+     * and {@link Winsvc#SERVICE_PAUSED}.</td></tr>
+     * <tr><td>{@link Winsvc#SERVICE_INACTIVE}</td><td>Enumerates services that
+     * are in the {@link Winsvc#SERVICE_STOPPED} state.</td></tr>
+     * <tr><td>{@link Winsvc#SERVICE_STATE_ALL}</td><td>Combines the following
+     * states: {@link Winsvc#SERVICE_ACTIVE} and
+     * {@link Winsvc#SERVICE_INACTIVE}.</td></tr>
+     * </table>
+     * @param lpService          A pointer to an array of ENUM_SERVICE_STATUS
+     *                           structures that receives the name and service
+     *                           status information for each dependent service
+     *                           in the database. The buffer must be large
+     *                           enough to hold the structures, plus the strings
+     *                           to which their members point.
+     * <p>
+     * The order of the services in this array is the reverse of the start order
+     * of the services. In other words, the first service in the array is the
+     * one that would be started last, and the last service in the array is the
+     * one that would be started first.</p>
+     * <p>
+     * The maximum size of this array is 64,000 bytes. To determine the required
+     * size, specify NULL for this parameter and 0 for the cbBufSize parameter.
+     * The function will fail and GetLastError will return ERROR_MORE_DATA. The
+     * pcbBytesNeeded parameter will receive the required size.</p>
+     * @param cbBufSize          The size of the buffer pointed to by the
+     *                           lpServices parameter, in bytes.
+     * @param pcbBytesNeeded     A pointer to a variable that receives the
+     *                           number of bytes needed to store the array of
+     *                           service entries. The variable only receives
+     *                           this value if the buffer pointed to by
+     *                           lpServices is too small, indicated by function
+     *                           failure and the ERROR_MORE_DATA error;
+     *                           otherwise, the contents of pcbBytesNeeded are
+     *                           undefined.
+     * @param lpServicesReturned A pointer to a variable that receives the
+     *                           number of service entries returned.
+     *
+     * @return If the function succeeds, the return value is nonzero.
+     *
+     * <p>If the function fails, the return value is zero. To get extended error
+     * information, call GetLastError.</p>
+     *
+     * <p>The following error codes may be set by the service control manager.
+     * Other error codes may be set by the registry functions that are called by
+     * the service control manager.</p>
+     * 
+     * <table>
+     * <tr><th>Return code</th><th>Description</th></tr>
+     * <tr><td>{@link WinError#ERROR_ACCESS_DENIED}</td><td>The handle does not have the {@link Winsvc#SERVICE_ENUMERATE_DEPENDENTS} access right.</td></tr>
+     * <tr><td>{@link WinError#ERROR_INVALID_HANDLE}</td><td>The specified handle is invalid.</td></tr>
+     * <tr><td>{@link WinError#ERROR_INVALID_PARAMETER}</td><td>A parameter that was specified is invalid.</td></tr>
+     * <tr><td>{@link WinError#ERROR_MORE_DATA}</td><td>The buffer pointed to by lpServices is not large enough. The function sets the variable pointed to by lpServicesReturned to the actual number of service entries stored into the buffer. The function sets the variable pointed to by pcbBytesNeeded to the number of bytes required to store all of the service entries.</td></tr>
+     * </table>
+     */
+    boolean EnumDependentServices(SC_HANDLE hService, int dwServiceState,
+            Pointer lpService, int cbBufSize, IntByReference pcbBytesNeeded, 
+            IntByReference lpServicesReturned);
+    
+    /**
+     * Enumerates services in the specified service control manager database.
+     * The name and status of each service are provided, along with additional
+     * data based on the specified information level.
+     *
+     * @param hSCManager         A handle to the service control manager
+     *                           database. This handle is returned by the
+     *                           {@link OpenSCManager} function, and must have
+     *                           the {@link Winsvc#SC_MANAGER_ENUMERATE_SERVICE}
+     *                           access right. For more information, see Service
+     *                           Security and Access Rights.
+     * @param InfoLevel          The service attributes that are to be returned.
+     *                           Use {@link Winsvc#SC_ENUM_PROCESS_INFO} to
+     *                           retrieve the name and service status
+     *                           information for each service in the database.
+     *                           The lpServices parameter is a pointer to a
+     *                           buffer that receives an array of
+     *                           {@link Winsvc.ENUM_SERVICE_STATUS_PROCESS}
+     *                           structures. The buffer must be large enough to
+     *                           hold the structures as well as the strings to
+     *                           which their members point.
+     *
+     * <p>Currently, no other information levels are defined.</p>
+     * @param dwServiceType      The type of services to be enumerated. This
+     *                           parameter can be one or more of the following
+     *                           values.
+     * 
+     * <table>
+     * <tr><th>Value</th><th>Meaning</th></tr>
+     * <tr><td>{@link WinNT#SERVICE_DRIVER}</td><td>Services of type {@link WinNT#SERVICE_KERNEL_DRIVER} and {@link WinNT#SERVICE_FILE_SYSTEM_DRIVER}.</td></tr>
+     * <tr><td>{@link WinNT#SERVICE_FILE_SYSTEM_DRIVER}</td><td>File system driver services.</td></tr>
+     * <tr><td>{@link WinNT#SERVICE_KERNEL_DRIVER}</td><td>Driver services.</td></tr>
+     * <tr><td>{@link WinNT#SERVICE_WIN32}</td><td>Services of type {@link WinNT#SERVICE_WIN32_OWN_PROCESS} and {@link WinNT#SERVICE_WIN32_SHARE_PROCESS}.</td></tr>
+     * <tr><td>{@link WinNT#SERVICE_WIN32_OWN_PROCESS}</td><td>Services that run in their own processes.</td></tr>
+     * <tr><td>{@link WinNT#SERVICE_WIN32_SHARE_PROCESS}</td><td>Services that share a process with one or more other services. For more information, see Service Programs.</td></tr>
+     * </table>
+     * 
+     * @param dwServiceState     The state of the services to be enumerated.
+     *                           This parameter can be one of the following
+     *                           values.
+     * <table>
+     * <tr><th>Value</th><th>Meaning</th></tr>
+     * <tr><td>{@link Winsvc#SERVICE_ACTIVE}</td><td>Enumerates services that
+     * are in the following states:
+     * {@link Winsvc#SERVICE_START_PENDING}, {@link Winsvc#SERVICE_STOP_PENDING}, {@link Winsvc#SERVICE_RUNNING}, {@link Winsvc#SERVICE_CONTINUE_PENDING}, {@link Winsvc#SERVICE_PAUSE_PENDING},
+     * and {@link Winsvc#SERVICE_PAUSED}.</td></tr>
+     * <tr><td>{@link Winsvc#SERVICE_INACTIVE}</td><td>Enumerates services that
+     * are in the {@link Winsvc#SERVICE_STOPPED} state.</td></tr>
+     * <tr><td>{@link Winsvc#SERVICE_STATE_ALL}</td><td>Combines the following
+     * states: {@link Winsvc#SERVICE_ACTIVE} and
+     * {@link Winsvc#SERVICE_INACTIVE}.</td></tr>
+     * </table>
+     * @param lpServices          A pointer to the buffer that receives the
+     *                           status information. The format of this data
+     *                           depends on the value of the InfoLevel
+     *                           parameter.
+     *
+     * <p>The maximum size of this array is 256K bytes. To determine the required
+     * size, specify NULL for this parameter and 0 for the cbBufSize parameter.
+     * The function will fail and GetLastError will return ERROR_MORE_DATA. The
+     * pcbBytesNeeded parameter will receive the required size.</p>
+     *
+     * <p><b>Windows Server 2003 and Windows XP:</b> The maximum size of this array is 64K
+     * bytes. This limit was increased as of Windows Server 2003 with SP1 and
+     * Windows XP with SP2.</p>
+
+     * @param cbBufSize          The size of the buffer pointed to by the
+     *                           lpServices parameter, in bytes.
+     * @param pcbBytesNeeded     A pointer to a variable that receives the
+     *                           number of bytes needed to store the array of
+     *                           service entries. The variable only receives
+     *                           this value if the buffer pointed to by
+     *                           lpServices is too small, indicated by function
+     *                           failure and the ERROR_MORE_DATA error;
+     *                           otherwise, the contents of pcbBytesNeeded are
+     *                           undefined.
+     * @param lpServicesReturned A pointer to a variable that receives the
+     *                           number of service entries returned.
+     * @param lpResumeHandle     A pointer to a variable that, on input,
+     *                           specifies the starting point of enumeration.
+     *                           You must set this value to zero the first time
+     *                           the {@link EnumServicesStatusEx} function is
+     *                           called. On output, this value is zero if the
+     *                           function succeeds. However, if the function
+     *                           returns zero and the
+     *                           {@link Kernel32#GetLastError} function returns
+     *                           {@link WinError#ERROR_MORE_DATA}, this value
+     *                           indicates the next service entry to be read
+     *                           when the {@link EnumServicesStatusEx} function
+     *                           is called to retrieve the additional data.
+     * @param pszGroupName       The load-order group name. If this parameter is
+     *                           a string, the only services enumerated are
+     *                           those that belong to the group that has the
+     *                           name specified by the string. If this parameter
+     *                           is an empty string, only services that do not
+     *                           belong to any group are enumerated. If this
+     *                           parameter is NULL, group membership is ignored
+     *                           and all services are enumerated.
+     * 
+     * @return If the function succeeds, the return value is nonzero.
+     *
+     * <p>
+     * If the function succeeds, the return value is nonzero.</p>
+     * <p>
+     * If the function fails, the return value is zero. To get extended error
+     * information, call GetLastError. The following errors may be returned.</p>
+     *
+     * <table>
+     * <tr><th>Return code</th><th>Description</th></tr>
+     * <tr><td>{@link WinError#ERROR_ACCESS_DENIED}</td><td>The handle does not have the {@link Winsvc#SERVICE_ENUMERATE_DEPENDENTS} access right.</td></tr>
+     * <tr><td>{@link WinError#ERROR_MORE_DATA}</td><td>The buffer pointed to by lpServices is not large enough. The function sets the variable pointed to by lpServicesReturned to the actual number of service entries stored into the buffer. The function sets the variable pointed to by pcbBytesNeeded to the number of bytes required to store all of the service entries.</td></tr>
+     * <tr><td>{@link WinError#ERROR_INVALID_HANDLE}</td><td>The specified handle is invalid.</td></tr>
+     * <tr><td>{@link WinError#ERROR_INVALID_PARAMETER}</td><td>A parameter that was specified is invalid.</td></tr>
+     * <tr><td>{@link WinError#ERROR_INVALID_LEVEL}</td><td>The InfoLevel parameter contains an unsupported value.</td></tr>
+     * <tr><td>{@link WinError#ERROR_SHUTDOWN_IN_PROGRESS}</td><td>The system is shutting down; this function cannot be called.</td></tr>
+     * </table>
+     */
+    boolean EnumServicesStatusEx(SC_HANDLE hSCManager, int InfoLevel, 
+            int dwServiceType, int dwServiceState, Pointer lpServices, 
+            int cbBufSize, IntByReference pcbBytesNeeded, 
+            IntByReference lpServicesReturned, IntByReference lpResumeHandle,
+            String pszGroupName);
+    
     /**
      * Creates a new process and its primary thread. The new process runs in the
      * security context of the user represented by the specified token.

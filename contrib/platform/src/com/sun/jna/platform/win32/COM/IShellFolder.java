@@ -30,6 +30,7 @@ import com.sun.jna.Function;
 import com.sun.jna.Pointer;
 import com.sun.jna.platform.win32.Guid.IID;
 import com.sun.jna.platform.win32.Guid.REFIID;
+import com.sun.jna.platform.win32.ShTypes.STRRET;
 import com.sun.jna.platform.win32.WinDef;
 import com.sun.jna.platform.win32.WinNT;
 import com.sun.jna.platform.win32.WinNT.HRESULT;
@@ -294,13 +295,13 @@ public interface IShellFolder {
      *            If this method is successful, the CODE field of the HRESULT contains one of the following values. For information regarding the extraction of
      *            the CODE field from the returned HRESULT, see Remarks. If this method is unsuccessful, it returns a COM error code.
      *            Negative
-     *            A negative return value indicates that the first item should precede the second (pidl1 < pidl2).
+     *            A negative return value indicates that the first item should precede the second (pidl1 &lt; pidl2).
      *            Positive
-     *            A positive return value indicates that the first item should follow the second (pidl1 > pidl2).
+     *            A positive return value indicates that the first item should follow the second (pidl1 &gt; pidl2).
      *            Zero
      *            A return value of zero indicates that the two items are the same (pidl1 = pidl2).
      *            Use the HRESULT_CODE macro to extract the CODE field from the HRESULT, then cast the result as a short.
-     *            #define HRESULT_CODE(hr)    ((hr) & 0xFFFF)
+     *            #define HRESULT_CODE(hr)    ((hr) &amp; 0xFFFF)
      *
      */
     HRESULT CompareIDs(
@@ -408,7 +409,7 @@ public interface IShellFolder {
     HRESULT GetDisplayNameOf(
             Pointer pidl,
             int flags,
-            PointerByReference pName);
+            STRRET pName);
 
     /**
      * Sets the display name of a file object or subfolder, changing the item identifier in the process.
@@ -523,7 +524,7 @@ public interface IShellFolder {
                     return new WinNT.HRESULT( f.invokeInt(new Object[]{interfacePointer, hwndOwner, cidl, apidl, riid, rgfReserved, ppv}));
                 }
 
-                public WinNT.HRESULT GetDisplayNameOf(Pointer pidl, int flags, PointerByReference pName){
+                public WinNT.HRESULT GetDisplayNameOf(Pointer pidl, int flags, STRRET pName){
                     Function f = Function.getFunction(vTable[11], Function.ALT_CONVENTION);
                     return new WinNT.HRESULT( f.invokeInt(new Object[]{interfacePointer, pidl, flags, pName}));
                 }

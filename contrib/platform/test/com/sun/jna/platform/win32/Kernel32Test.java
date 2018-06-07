@@ -37,10 +37,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
 
-import com.sun.jna.Function;
 import com.sun.jna.Memory;
 import com.sun.jna.Native;
-import com.sun.jna.NativeLibrary;
 import com.sun.jna.NativeMappedConverter;
 import com.sun.jna.Platform;
 import com.sun.jna.Pointer;
@@ -69,6 +67,8 @@ import com.sun.jna.platform.win32.WinNT.OSVERSIONINFO;
 import com.sun.jna.platform.win32.WinNT.OSVERSIONINFOEX;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.ShortByReference;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import junit.framework.TestCase;
 
@@ -378,6 +378,51 @@ public class Kernel32Test extends TestCase {
             boolean b = Kernel32.INSTANCE.QueryFullProcessImageName(h, 0, path, lpdwSize);
             assertTrue("Failed (" + Kernel32.INSTANCE.GetLastError() + ") to query process image name", b);
             assertTrue("Failed to query process image name, empty path returned", lpdwSize.getValue() > 0);
+        } finally {
+            Kernel32Util.closeHandle(h);
+        }
+    }
+
+    public void testGetProcessTimes() {
+        int pid = Kernel32.INSTANCE.GetCurrentProcessId();
+        HANDLE h = Kernel32.INSTANCE.OpenProcess(WinNT.PROCESS_QUERY_INFORMATION, false, pid);
+        assertNotNull("Failed (" + Kernel32.INSTANCE.GetLastError() + ") to get process ID=" + pid + " handle", h);
+
+        try {
+            FILETIME lpCreationTime = new FILETIME();
+            FILETIME lpExitTime = new FILETIME();
+            FILETIME lpKernelTime = new FILETIME();
+            FILETIME lpUserTime = new FILETIME();
+            boolean b = Kernel32.INSTANCE.GetProcessTimes(h, lpCreationTime, lpExitTime, lpKernelTime, lpUserTime);
+            assertTrue("Failed (" + Kernel32.INSTANCE.GetLastError() + ") to get process times", b);
+            // Process must have started before now.
+            long upTimeMillis = System.currentTimeMillis() - lpCreationTime.toTime();
+            assertTrue(upTimeMillis >= 0);
+            // lpExitTime is undefined for a running process, do not test
+            // Kernel and User time must be < up time (in 100ns ticks)
+            assertTrue(lpKernelTime.toDWordLong().longValue()
+                    + lpUserTime.toDWordLong().longValue() < (upTimeMillis + 1L) * 10000L);
+        } finally {
+            Kernel32Util.closeHandle(h);
+        }
+    }
+
+    public void testGetProcessIoCounters() {
+        int pid = Kernel32.INSTANCE.GetCurrentProcessId();
+        HANDLE h = Kernel32.INSTANCE.OpenProcess(WinNT.PROCESS_QUERY_INFORMATION, false, pid);
+        assertNotNull("Failed (" + Kernel32.INSTANCE.GetLastError() + ") to get process ID=" + pid + " handle", h);
+
+        try {
+            WinNT.IO_COUNTERS lpIoCounters = new WinNT.IO_COUNTERS();
+            boolean b = Kernel32.INSTANCE.GetProcessIoCounters(h, lpIoCounters);
+            assertTrue("Failed (" + Kernel32.INSTANCE.GetLastError() + ") to get process IO counters", b);
+            // IO must be nonzero
+            assertTrue(lpIoCounters.ReadOperationCount >= 0);
+            assertTrue(lpIoCounters.WriteOperationCount >= 0);
+            assertTrue(lpIoCounters.OtherOperationCount >= 0);
+            assertTrue(lpIoCounters.ReadTransferCount >= 0);
+            assertTrue(lpIoCounters.WriteTransferCount >= 0);
+            assertTrue(lpIoCounters.OtherTransferCount >= 0);
         } finally {
             Kernel32Util.closeHandle(h);
         }
@@ -1652,5 +1697,56 @@ public class Kernel32Test extends TestCase {
         assertEquals(WinBase.ES_CONTINUOUS | WinBase.ES_SYSTEM_REQUIRED | WinBase.ES_AWAYMODE_REQUIRED, intermediateExecutionState);
         
         Kernel32.INSTANCE.SetThreadExecutionState(originalExecutionState);
+    }
+
+    public void testMutex() throws InterruptedException {
+       HANDLE mutexHandle = Kernel32.INSTANCE.CreateMutex(null, true, "JNA-Test-Mutex");
+
+        assertNotNull(mutexHandle);
+
+        final CountDownLatch preWait = new CountDownLatch(1);
+        final CountDownLatch postWait = new CountDownLatch(1);
+        final CountDownLatch postRelease = new CountDownLatch(1);
+
+        final Exception[] exceptions = new Exception[1];
+        Thread t = new Thread() {
+            @Override
+            public void run() {
+                try {
+                    HANDLE mutexHandle2 = Kernel32.INSTANCE.OpenMutex(WinNT.SYNCHRONIZE, false, "JNA-Test-Mutex");
+                    try {
+                        assertNotNull(mutexHandle2);
+                        preWait.countDown();
+                        int result = Kernel32.INSTANCE.WaitForSingleObject(mutexHandle2, WinBase.INFINITE);
+                        assertEquals(result, WinBase.WAIT_OBJECT_0);
+                        postWait.countDown();
+                    } finally {
+                        Kernel32.INSTANCE.ReleaseMutex(mutexHandle2);
+                        Kernel32.INSTANCE.CloseHandle(mutexHandle2);
+                        postRelease.countDown();
+                    }
+                } catch (Exception ex) {
+                    exceptions[0] = ex;
+                }
+            }
+        };
+
+        t.start();
+
+        assertTrue(preWait.await(2, TimeUnit.SECONDS));
+
+        Kernel32.INSTANCE.ReleaseMutex(mutexHandle);
+
+        assertTrue(postWait.await(2, TimeUnit.SECONDS));
+
+        Kernel32.INSTANCE.CloseHandle(mutexHandle);
+
+        assertTrue(postRelease.await(2, TimeUnit.SECONDS));
+
+        assertNull(exceptions[0]);
+
+        mutexHandle = Kernel32.INSTANCE.OpenMutex(WinNT.SYNCHRONIZE, false, "JNA-Test-Mutex");
+
+        assertNull(mutexHandle);
     }
 }

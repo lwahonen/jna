@@ -27,6 +27,7 @@ import java.util.List;
 
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
+import com.sun.jna.Structure.FieldOrder;
 import com.sun.jna.Union;
 import com.sun.jna.platform.win32.OaIdl.CURRENCY;
 import com.sun.jna.platform.win32.OaIdl.DATE;
@@ -36,7 +37,6 @@ import com.sun.jna.platform.win32.OaIdl.VARIANT_BOOL;
 import com.sun.jna.platform.win32.OaIdl.VARIANT_BOOLByReference;
 import com.sun.jna.platform.win32.OaIdl._VARIANT_BOOLByReference;
 import com.sun.jna.platform.win32.WTypes.BSTR;
-import com.sun.jna.platform.win32.WTypes.BSTRByReference;
 import com.sun.jna.platform.win32.WTypes.VARTYPE;
 import com.sun.jna.platform.win32.WinDef.BOOL;
 import com.sun.jna.platform.win32.WinDef.BYTE;
@@ -61,6 +61,8 @@ import com.sun.jna.platform.win32.WinDef.USHORTByReference;
 import com.sun.jna.platform.win32.COM.Dispatch;
 import com.sun.jna.platform.win32.COM.IDispatch;
 import com.sun.jna.platform.win32.COM.Unknown;
+import com.sun.jna.platform.win32.OaIdl.SAFEARRAYByReference;
+import com.sun.jna.platform.win32.WTypes.BSTRByReference;
 import com.sun.jna.ptr.ByteByReference;
 import com.sun.jna.ptr.DoubleByReference;
 import com.sun.jna.ptr.FloatByReference;
@@ -186,7 +188,7 @@ public interface Variant {
 
         public VARIANT(BSTRByReference value) {
             this();
-            this.setValue(VT_BYREF | VT_BSTR, value);
+            this.setValue(VT_BSTR | VT_BYREF, value);
         }
 
         public VARIANT(VARIANT_BOOL value) {
@@ -226,7 +228,7 @@ public interface Variant {
             this();
             this.setValue(VT_UI2, new USHORT(value));
         }
-        
+
         public VARIANT(CHAR value) {
             this();
             this.setValue(Variant.VT_I1, value);
@@ -236,10 +238,15 @@ public interface Variant {
             this();
             this.setValue(VT_I2, new SHORT(value));
         }
-        
+
         public VARIANT(int value) {
             this();
             this.setValue(VT_I4, new LONG(value));
+        }
+
+        public VARIANT(IntByReference value) {
+            this();
+            this.setValue(VT_INT | VT_BYREF, value);
         }
 
         public VARIANT(long value) {
@@ -292,7 +299,12 @@ public interface Variant {
             this();
             this.setValue(array);
         }
-        
+
+        public VARIANT(SAFEARRAYByReference array) {
+            this();
+            this.setValue(array);
+        }
+
         public VARTYPE getVarType() {
             this.read();
             return _variant.vt;
@@ -305,9 +317,13 @@ public interface Variant {
         public void setValue(int vt, Object value) {
             this.setValue(new VARTYPE(vt), value);
         }
-        
+
         public void setValue(SAFEARRAY array) {
             this.setValue(array.getVarType().intValue() | VT_ARRAY, array);
+        }
+
+        public void setValue(SAFEARRAYByReference array) {
+            this.setValue(array.pSAFEARRAY.getVarType().intValue() | VT_ARRAY | VT_BYREF, array);
         }
 
         public void setValue(VARTYPE vt, Object value) {
@@ -556,7 +572,7 @@ public interface Variant {
         public byte byteValue() {
             return ((Number) this.getValue()).byteValue();
         }
-        
+
         public short shortValue() {
             return ((Number) this.getValue()).shortValue();
         }
@@ -600,17 +616,14 @@ public interface Variant {
             }
         }
 
+        @FieldOrder({"vt", "wReserved1", "wReserved2", "wReserved3", "__variant"})
         public static class _VARIANT extends Structure {
-            public static final List<String> FIELDS = createFieldsOrder("vt",
-                    "wReserved1", "wReserved2", "wReserved3", "__variant");
-
             public static class __VARIANT extends Union {
+                @FieldOrder({"pvRecord", "pRecInfo"})
                 public static class BRECORD extends Structure {
                     public static class ByReference extends BRECORD implements
                             Structure.ByReference {
                     }
-
-                    public static final List<String> FIELDS = createFieldsOrder("pvRecord", "pRecInfo");
 
                     public PVOID pvRecord;
                     public Pointer pRecInfo;
@@ -621,11 +634,6 @@ public interface Variant {
 
                     public BRECORD(Pointer pointer) {
                         super(pointer);
-                    }
-
-                    @Override
-                    protected List<String> getFieldOrder() {
-                        return FIELDS;
                     }
                 }
 
@@ -680,13 +688,13 @@ public interface Variant {
                 // DATE * VT_BYREF|VT_DATE
                 public DATE.ByReference pdate;
                 // BSTR * VT_BYREF|VT_BSTR
-                public BSTR.ByReference pbstrVal;
+                public BSTRByReference pbstrVal;
                 // IUnknown ** VT_BYREF|VT_UNKNOWN
                 public Unknown.ByReference ppunkVal;
                 // IDispatch ** VT_BYREF|VT_DISPATCH
                 public Dispatch.ByReference ppdispVal;
                 // SAFEARRAY ** VT_BYREF|VT_ARRAY
-                public SAFEARRAY.ByReference pparray;
+                public SAFEARRAYByReference pparray;
                 // VARIANT * VT_BYREF|VT_VARIANT
                 public VARIANT.ByReference pvarVal;
                 // PVOID VT_BYREF (Generic ByRef)
@@ -745,14 +753,10 @@ public interface Variant {
                 super(pointer);
                 this.read();
             }
-
-            @Override
-            protected List<String> getFieldOrder() {
-                return FIELDS;
-            }
         }
     }
 
+    @FieldOrder({"variantArg"})
     public static class VariantArg extends Structure {
         public static class ByReference extends VariantArg implements
                 Structure.ByReference {
@@ -765,7 +769,6 @@ public interface Variant {
             }
         }
 
-        public static final List<String> FIELDS = createFieldsOrder("variantArg");
         public VARIANT[] variantArg = new VARIANT[1];
 
         public VariantArg() {
@@ -784,16 +787,9 @@ public interface Variant {
             this.variantArg = variantArg;
         }
 
-        @Override
-        protected List<String> getFieldOrder() {
-            return FIELDS;
-        }
-
         public void setArraySize(int size) {
         	this.variantArg = new VARIANT[size];
         	this.read();
         }
-
-
     }
 }

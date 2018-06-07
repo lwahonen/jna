@@ -33,6 +33,7 @@ import com.sun.jna.Callback;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
+import com.sun.jna.Structure.FieldOrder;
 import com.sun.jna.ptr.PointerByReference;
 
 /**
@@ -40,7 +41,7 @@ import com.sun.jna.ptr.PointerByReference;
  * Date: 7/25/11
  */
 public interface Carbon extends Library {
-    Carbon INSTANCE = Native.loadLibrary("Carbon", Carbon.class);
+    Carbon INSTANCE = Native.load("Carbon", Carbon.class);
 
     int cmdKey = 0x0100;
     int shiftKey = 0x0200;
@@ -78,30 +79,18 @@ public interface Carbon extends Library {
      */
     int UnregisterEventHotKey(Pointer inHotKey);
 
+    @FieldOrder({"eventClass", "eventKind"})
     public class EventTypeSpec extends Structure {
-        public static final List<String> FIELDS = createFieldsOrder("eventClass", "eventKind");
-
         public int eventClass;
         public int eventKind;
-
-        @Override
-        protected List<String> getFieldOrder() {
-            return FIELDS;
-        }
     }
 
+    @FieldOrder({"signature", "id"})
     public static class EventHotKeyID extends Structure {
-        public static final List<String> FIELDS = createFieldsOrder("signature", "id");
-
         public int signature;
         public int id;
 
         public static class ByValue extends EventHotKeyID implements Structure.ByValue { }
-
-        @Override
-        protected List<String> getFieldOrder() {
-            return FIELDS;
-        }
     }
 
     public static interface EventHandlerProcPtr extends Callback {

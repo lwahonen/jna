@@ -23,11 +23,11 @@
  */
 package com.sun.jna.platform.win32;
 
-import java.util.List;
 
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
+import com.sun.jna.Structure.FieldOrder;
 import com.sun.jna.Union;
 import com.sun.jna.platform.win32.WinNT.HANDLE;
 import com.sun.jna.ptr.IntByReference;
@@ -41,7 +41,7 @@ public interface Wininet extends StdCallLibrary {
     /**
      * A usable instance of this interface
      */
-    Wininet INSTANCE = Native.loadLibrary("wininet", Wininet.class, W32APIOptions.DEFAULT_OPTIONS);
+    Wininet INSTANCE = Native.load("wininet", Wininet.class, W32APIOptions.DEFAULT_OPTIONS);
 
     /**
      * Normal cache entry; can be deleted to recover space for new entries.
@@ -211,13 +211,11 @@ public interface Wininet extends StdCallLibrary {
      *
      * @see <a href="https://msdn.microsoft.com/en-us/library/windows/desktop/aa385134(v=vs.85).aspx">MSDN</a>
      */
+    @FieldOrder({"dwStructSize", "lpszSourceUrlName", "lpszLocalFileName",
+        "CacheEntryType", "dwUseCount", "dwHitRate", "dwSizeLow", "dwSizeHigh", "LastModifiedTime",
+        "ExpireTime", "LastAccessTime", "LastSyncTime", "lpHeaderInfo", "dwHeaderInfoSize",
+        "lpszFileExtension", "u", "additional"})
     static class INTERNET_CACHE_ENTRY_INFO extends Structure {
-        public static final List<String> FIELDS = createFieldsOrder(
-                "dwStructSize", "lpszSourceUrlName", "lpszLocalFileName",
-                "CacheEntryType", "dwUseCount", "dwHitRate", "dwSizeLow", "dwSizeHigh", "LastModifiedTime",
-                "ExpireTime", "LastAccessTime", "LastSyncTime", "lpHeaderInfo", "dwHeaderInfoSize",
-                "lpszFileExtension", "u", "additional");
-
         /**
          * Size of this structure, in bytes. This value can be used to help
          * determine the version of the cache system.
@@ -364,11 +362,6 @@ public interface Wininet extends StdCallLibrary {
              * Exemption time from the last accessed time, in seconds.
              */
             public int dwExemptDelta;
-        }
-
-        @Override
-        protected List<String> getFieldOrder() {
-            return FIELDS;
         }
 
         @Override

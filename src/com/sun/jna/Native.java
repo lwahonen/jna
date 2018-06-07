@@ -48,6 +48,8 @@ import java.net.URLClassLoader;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.nio.charset.IllegalCharsetNameException;
+import java.nio.charset.UnsupportedCharsetException;
 import java.security.AccessController;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -94,7 +96,7 @@ import com.sun.jna.Structure.FFIType;
  * resources in a finalizer).</p>
  * <a name=native_library_loading></a>
  * <h2>Native Library Loading</h2>
- * Native libraries loaded via {@link #loadLibrary(Class)} may be found in
+ * Native libraries loaded via {@link #load(Class)} may be found in
  * <a href="NativeLibrary.html#library_search_paths">several locations</a>.
  * @see Library
  * @author Todd Fast, todd.fast@sun.com
@@ -102,7 +104,8 @@ import com.sun.jna.Structure.FFIType;
  */
 public final class Native implements Version {
 
-    public static final String DEFAULT_ENCODING = Charset.defaultCharset().name();
+    public static final Charset DEFAULT_CHARSET = Charset.defaultCharset();
+    public static final String DEFAULT_ENCODING = Native.DEFAULT_CHARSET.name();
     public static boolean DEBUG_LOAD = Boolean.getBoolean("jna.debug_load");
     public static boolean DEBUG_JNA_LOAD = Boolean.getBoolean("jna.debug_load.jna");
 
@@ -342,6 +345,35 @@ public final class Native implements Version {
     private static native long _getDirectBufferPointer(Buffer b);
 
     /**
+     * Gets the charset belonging to the given {@code encoding}.
+     * @param encoding The encoding - if {@code null} then the default platform
+     * encoding is used.
+     * @return The charset belonging to the given {@code encoding} or the platform default.
+     * Never {@code null}.
+     */
+    private static Charset getCharset(String encoding) {
+        Charset charset = null;
+        if (encoding != null) {
+            try {
+                charset = Charset.forName(encoding);
+            }
+            catch(IllegalCharsetNameException e) {
+                System.err.println("JNA Warning: Encoding '"
+                                   + encoding + "' is unsupported (" + e.getMessage() + ")");
+            }
+            catch(UnsupportedCharsetException  e) {
+                System.err.println("JNA Warning: Encoding '"
+                                   + encoding + "' is unsupported (" + e.getMessage() + ")");
+            }
+        }
+        if (charset == null) {
+            System.err.println("JNA Warning: Using fallback encoding " + System.getProperty("file.encoding"));
+            charset = Native.DEFAULT_CHARSET;
+        }
+        return charset;
+    }
+
+    /**
      * Obtain a Java String from the given native byte array.  If there is
      * no NUL terminator, the String will comprise the entire array.  The
      * encoding is obtained from {@link #getDefaultStringEncoding()}.
@@ -362,11 +394,27 @@ public final class Native implements Version {
      * holds a {@code char} array. This means only single-byte encodings are
      * supported.</p>
      * 
-     * @param buf The buffer containing the encoded bytes
+     * @param buf The buffer containing the encoded bytes.  Must not be {@code null}.
      * @param encoding The encoding name - if {@code null} then the platform
      * default encoding will be used
      */
     public static String toString(byte[] buf, String encoding) {
+        return Native.toString(buf, Native.getCharset(encoding));
+    }
+
+    /**
+     * Obtain a Java String from the given native byte array, using the given
+     * encoding.  If there is no NUL terminator, the String will comprise the
+     * entire array.
+     *
+     * <p><strong>Usage note</strong>: This function assumes, that {@code buf}
+     * holds a {@code char} array. This means only single-byte encodings are
+     * supported.</p>
+     * 
+     * @param buf The buffer containing the encoded bytes. Must not be {@code null}.
+     * @param charset The charset to decode {@code buf}. Must not be {@code null}.
+     */
+    public static String toString(byte[] buf, Charset charset) {
         int len = buf.length;
         // find out the effective length
         for (int index = 0; index < len; index++) {
@@ -380,18 +428,7 @@ public final class Native implements Version {
             return "";
         }
 
-        if (encoding != null) {
-            try {
-                return new String(buf, 0, len, encoding);
-            }
-            catch(UnsupportedEncodingException e) {
-                System.err.println("JNA Warning: Encoding '"
-                                   + encoding + "' is unsupported");
-            }
-        }
-
-        System.err.println("JNA Warning: Decoding with fallback " + System.getProperty("file.encoding"));
-        return new String(buf, 0, len);
+        return new String(buf, 0, len, charset);
     }
 
     /**
@@ -478,8 +515,8 @@ public final class Native implements Version {
      * @throws UnsatisfiedLinkError if the library cannot be found or
      * dependent libraries are missing.
      */
-    public static <T extends Library> T loadLibrary(Class<T> interfaceClass) {
-        return loadLibrary(null, interfaceClass);
+    public static <T extends Library> T load(Class<T> interfaceClass) {
+        return load(null, interfaceClass);
     }
 
     /** Map a library interface to the current process, providing
@@ -495,10 +532,10 @@ public final class Native implements Version {
      * process.
      * @throws UnsatisfiedLinkError if the library cannot be found or
      * dependent libraries are missing.
-     * @see #loadLibrary(String, Class, Map)
+     * @see #load(String, Class, Map)
      */
-    public static <T extends Library> T loadLibrary(Class<T> interfaceClass, Map<String, ?> options) {
-        return loadLibrary(null, interfaceClass, options);
+    public static <T extends Library> T load(Class<T> interfaceClass, Map<String, ?> options) {
+        return load(null, interfaceClass, options);
     }
 
     /** Map a library interface to the given shared library, providing
@@ -513,10 +550,10 @@ public final class Native implements Version {
      * native library.
      * @throws UnsatisfiedLinkError if the library cannot be found or
      * dependent libraries are missing.
-     * @see #loadLibrary(String, Class, Map)
+     * @see #load(String, Class, Map)
      */
-    public static <T extends Library> T loadLibrary(String name, Class<T> interfaceClass) {
-        return loadLibrary(name, interfaceClass, Collections.<String, Object>emptyMap());
+    public static <T extends Library> T load(String name, Class<T> interfaceClass) {
+        return load(name, interfaceClass, Collections.<String, Object>emptyMap());
     }
 
     /** Load a library interface from the given shared library, providing
@@ -535,7 +572,57 @@ public final class Native implements Version {
      * @throws UnsatisfiedLinkError if the library cannot be found or
      * dependent libraries are missing.
      */
-    public static <T extends Library> T loadLibrary(String name, Class<T> interfaceClass, Map<String, ?> options) {
+    public static <T extends Library> T load(String name, Class<T> interfaceClass, Map<String, ?> options) {
+        if (!Library.class.isAssignableFrom(interfaceClass)) {
+            // Maybe still possible if the caller is not using generics?
+            throw new IllegalArgumentException("Interface (" + interfaceClass.getSimpleName() + ")"
+                    + " of library=" + name + " does not extend " + Library.class.getSimpleName());
+        }
+
+        Library.Handler handler = new Library.Handler(name, interfaceClass, options);
+        ClassLoader loader = interfaceClass.getClassLoader();
+        Object proxy = Proxy.newProxyInstance(loader, new Class[] {interfaceClass}, handler);
+        cacheOptions(interfaceClass, options, proxy);
+        return interfaceClass.cast(proxy);
+    }
+
+    /**
+     * Provided for improved compatibility between JNA 4.X and 5.X
+     *
+     * @see Native#load(java.lang.Class)
+     */
+    @Deprecated
+    public static <T> T loadLibrary(Class<T> interfaceClass) {
+        return loadLibrary(null, interfaceClass);
+    }
+
+    /**
+     * Provided for improved compatibility between JNA 4.X and 5.X
+     *
+     * @see Native#load(java.lang.Class, java.util.Map)
+     */
+    @Deprecated
+    public static <T> T loadLibrary(Class<T> interfaceClass, Map<String, ?> options) {
+        return loadLibrary(null, interfaceClass, options);
+    }
+
+    /**
+     * Provided for improved compatibility between JNA 4.X and 5.X
+     *
+     * @see Native#load(java.lang.String, java.lang.Class) 
+     */
+    @Deprecated
+    public static <T> T loadLibrary(String name, Class<T> interfaceClass) {
+        return loadLibrary(name, interfaceClass, Collections.<String, Object>emptyMap());
+    }
+
+    /**
+     * Provided for improved compatibility between JNA 4.X and 5.X
+     *
+     * @see Native#load(java.lang.String, java.lang.Class, java.util.Map)
+     */
+    @Deprecated
+    public static <T> T loadLibrary(String name, Class<T> interfaceClass, Map<String, ?> options) {
         if (!Library.class.isAssignableFrom(interfaceClass)) {
             // Maybe still possible if the caller is not using generics?
             throw new IllegalArgumentException("Interface (" + interfaceClass.getSimpleName() + ")"
@@ -739,7 +826,7 @@ public final class Native implements Version {
     }
 
     /**
-     * @param s The string
+     * @param s The string. Must not be {@code null}.
      * @param encoding The encoding - if {@code null} then the default platform
      * encoding is used
      * @return A byte array corresponding to the given String, using the given
@@ -747,18 +834,17 @@ public final class Native implements Version {
      * encoding.
     */
     static byte[] getBytes(String s, String encoding) {
-        if (encoding != null) {
-            try {
-                return s.getBytes(encoding);
-            }
-            catch(UnsupportedEncodingException e) {
-                System.err.println("JNA Warning: Encoding '"
-                                   + encoding + "' is unsupported");
-            }
-        }
-        System.err.println("JNA Warning: Encoding with fallback "
-                           + System.getProperty("file.encoding"));
-        return s.getBytes();
+        return Native.getBytes(s, Native.getCharset(encoding));
+    }
+
+    /**
+     * @param s The string. Must not be {@code null}.
+     * @param charset The charset used to encode {@code s}. Must not be {@code null}.
+     * @return A byte array corresponding to the given String, using the given
+     * charset.
+    */
+    static byte[] getBytes(String s, Charset charset) {
+        return s.getBytes(charset);
     }
 
     /**
@@ -772,13 +858,26 @@ public final class Native implements Version {
     }
 
     /**
-     * @param s The string
+     * @param s The string. Must not be {@code null}.
+     * @param encoding The encoding - if {@code null} then the default platform
+     * encoding is used
      * @return A NUL-terminated byte buffer equivalent to the given String,
      * using the given encoding.
      * @see #getBytes(String, String)
      */
     public static byte[] toByteArray(String s, String encoding) {
-        byte[] bytes = getBytes(s, encoding);
+        return Native.toByteArray(s, Native.getCharset(encoding));
+    }
+
+    /**
+     * @param s The string. Must not be {@code null}.
+     * @param charset The charset used to encode {@code s}. Must not be {@code null}.
+     * @return A NUL-terminated byte buffer equivalent to the given String,
+     * using the given charset.
+     * @see #getBytes(String, String)
+     */
+    public static byte[] toByteArray(String s, Charset charset) {
+        byte[] bytes = Native.getBytes(s, charset);
         byte[] buf = new byte[bytes.length+1];
         System.arraycopy(bytes, 0, buf, 0, bytes.length);
         return buf;

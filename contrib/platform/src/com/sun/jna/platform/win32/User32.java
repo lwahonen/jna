@@ -45,7 +45,7 @@ import com.sun.jna.win32.W32APIOptions;
 public interface User32 extends StdCallLibrary, WinUser, WinNT {
 
     /** The instance. */
-    User32 INSTANCE = Native.loadLibrary("user32", User32.class, W32APIOptions.DEFAULT_OPTIONS);
+    User32 INSTANCE = Native.load("user32", User32.class, W32APIOptions.DEFAULT_OPTIONS);
 
     /**
      * Handle for message-only window.
@@ -2391,7 +2391,7 @@ public interface User32 extends StdCallLibrary, WinUser, WinNT {
      *            for example, if you specified 12 or more bytes of extra class
      *            memory, a value of 8 would be an index to the third integer.
      *            To retrieve any other value from the WNDCLASSEX structure,
-     *            specify one of the following values.<br? GCW_ATOM: -32<br>
+     *            specify one of the following values.<br> GCW_ATOM: -32<br>
      *            Retrieves an ATOM value that uniquely identifies the window
      *            class. This is the same atom that the RegisterClassEx function
      *            returns.<br>
