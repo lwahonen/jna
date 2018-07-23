@@ -7,6 +7,7 @@ Release 5.0.0 (Next release)
 
 Features
 --------
+* [#975](https://github.com/java-native-access/jna/pull/982): Add package versions to OSGi metadata. - [@io7m](https://github.com/io7m).
 * [#915](https://github.com/java-native-access/jna/pull/915): Adding interfaces to call to Cryptui and Crypt32 windows libraries and adding related structures to Wincrypt. - [@rosh89](https://github.com/rosh89).
 * [#903](https://github.com/java-native-access/jna/pull/903): Carry `HRESULT` in `c.s.j.p.win32.COM.COMException`, introduce `c.s.j.p.win32.COM.COMInvokeException` as subclass of `COMException` for exception as the result of a `IDispatch#Invoke`. The `EXECPINFO` is unwrapped into fields in the `COMInvokeException` and correctly freed. - [@matthiasblaesing](https://github.com/matthiasblaesing).
 * [#822](https://github.com/java-native-access/jna/issues/822): `Native#loadLibrary` requires that the interface class passed in is an instance of Library. The runtime check can be enhanced by using a constraint generic. This breaks binary compatibility (see notes below) - [@d-noll](https://github.com/d-noll).<br /><br />In a followup, the original `loadLibrary` methods were deprecated and `Native#load` methods were introduced, that hold the new generic definitions. So this change is now binary compatible.
@@ -19,6 +20,12 @@ Features
 * [#954](https://github.com/java-native-access/jna/pull/954): Add `c.s.j.Structure.FieldOrder` annotation to define the field order of a structures without implementing `Structure#getFieldOrder()` - [@idosu](https://github.com/idosu).
 * [#959](https://github.com/java-native-access/jna/pull/959): Added `GetProcessTimes` and `GetProcessIoCounters` to `com.sun.jna.platform.win32.Kernel32` - [@dbwiddis](https://github.com/dbwiddis).
 * [#952](https://github.com/java-native-access/jna/issues/952): Added `CreateMutex`, `OpenMutex` and `ReleaseMutex` to `com.sun.jna.platform.win32.Kernel32` - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#973](https://github.com/java-native-access/jna/issues/973): Added `PdhLookupPerfNameByIndex`, `PdhLookupPerfIndexByName`, and `PdhEnumObjectItems` to `c.s.j.platform.win32.Pdh` and a `c.s.j.platform.win32.PdhUtil` class to access them - [@dbwiddis](https://github.com/dbwiddis).
+* [#980](https://github.com/java-native-access/jna/issues/980): Added `PERF_OBJECT_TYPE`, `PERF_COUNTER_BLOCK`, and `PERF_COUNTER_DEFINITION` to `c.s.j.platform.win32.WinPerf` and added `Pointer` constructors to ``PERF_INSTANCE_DEFINITION` and `PERF_DATA_BLOCK` - [@dbwiddis](https://github.com/dbwiddis).
+* [#981](https://github.com/java-native-access/jna/issues/981): Added `WTS_PROCESS_INFO_EX`, `WTSEnumerateProcessesEx`, and `WTSFreeMemoryEx` to `c.s.j.platform.win32.Wtsapi32` - [@dbwiddis](https://github.com/dbwiddis).
+* [#983](https://github.com/java-native-access/jna/issues/983): Added `GetIfEntry`, `GetIfEntry2`, and `GetNetworkParams` and supporting structures `MIB_IFROW`, `MIB_IF_ROW2`, and `FIXED_INFO` to `c.s.j.platform.win32.IPHlpAPI.java` - [@dbwiddis](https://github.com/dbwiddis).
+* [#984](https://github.com/java-native-access/jna/issues/984): Added `CM_Locate_DevNode`, `CM_Get_Parent`, `CM_Get_Child`, `CM_Get_Sibling`, `CM_Get_Device_ID`, and `CM_Get_Device_ID_Size` to `c.s.j.platform.win32.Cfgmgr32.java` and a `c.s.j.platform.win32.Cfgmgr32Util` class for `CM_Get_Device_ID` - [@dbwiddis](https://github.com/dbwiddis).
+* [#988](https://github.com/java-native-access/jna/issues/988): Added `PdhLookupPerfIndexByEnglishName` to `c.s.j.platform.win32.PdhUtil` - [@dbwiddis](https://github.com/dbwiddis).
 
 Bug Fixes
 ---------
@@ -46,6 +53,7 @@ Bug Fixes
       <li>The resulting `sunos-x86.jar` is copied back to the original build system to `lib/native/sunos-x86.jar`</li>
   </ol> - [@matthiasblaesing](https://github.com/matthiasblaesing).
 * [#958](https://github.com/java-native-access/jna/issues/958): Update for PR 863: Old toolchains produce binaries without hard-/softfloat markers. Rasbian is missinng the markers and the oracle JDK is also affected. For hardfloat detection now also the Arm EABI section is also considered - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#974](https://github.com/java-native-access/jna/issues/974): If the callback code failed to attach to the JVM, this lead to a segfault. The success of attaching to the JVM was checked to late and an invalid `JNIEnv` pointer was used to access the JVM - [@matthiasblaesing](https://github.com/matthiasblaesing).
 
 Breaking Changes
 ----------------
@@ -70,6 +78,7 @@ Breaking Changes
 * the parameters of the methods `gethostname`, `sethostname`, `getdomainname` 
    and `setdomainname` in the interface `com.sun.jna.platform.unix.LibCAPI`
   were changed from `(char[] name, int len)` to `(byte[] name, int len)`
+* `com.sun.jna.Platform#isAix` was replaced by `com.sun.jna.Platform#isAIX`
 * `com.sun.jna.platform.win32.Sspi.SecBufferDesc` was incompatibly changed to 
   match the correct native semantics. SecBufferDesc describing more than one
   buffer were broken. For most usecases 
@@ -105,6 +114,10 @@ Breaking Changes
    consequence `com.sun.jna.platform.win32.Advapi32Util#getFileSecurity` was
    changed similarly. The SID accessors `getSidString` and `getSID` were moved
    from `ACEStructure` to `ACCESS_ACEStructure`.
+* `com.sun.jna.platform.win32.Ole32#CoCreateGuid(GUID.ByReference pguid)` was replaced by
+  `com.sun.jna.platform.win32.Ole32#CoCreateGuid(GUID pguid)` and 
+  `com.sun.jna.platform.win32.Ole32#CLSIDFromString(WString lpsz, CLSID.ByReference pclsid)` was replaced by
+  `com.sun.jna.platform.win32.Ole32#CLSIDFromString(String lpsz, CLSID.ByReference pclsid)`
 
 Release 4.5.0
 =============
