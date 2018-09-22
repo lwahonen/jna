@@ -1,6 +1,7 @@
 ![Java Native Access - JNA](https://github.com/java-native-access/jna/raw/master/www/images/jnalogo.jpg "Java Native Access - JNA")
 
 [![Build Status](https://travis-ci.org/java-native-access/jna.svg?branch=master)](https://travis-ci.org/java-native-access/jna)
+[![Build status](https://ci.appveyor.com/api/projects/status/j6vmpjrw5iktb8iu/branch/master?svg=true)](https://ci.appveyor.com/project/dblock/jna-gsxuq/branch/master)
 
 Java Native Access (JNA)
 ========================
@@ -63,15 +64,15 @@ Version 4.5.2
 JNA
 ---
 
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/net.java.dev.jna/jna/badge.svg)](https://maven-badges.herokuapp.com/maven-central/net.java.dev.jna/jna)&nbsp;[jna.jar](http://repo1.maven.org/maven2/net/java/dev/jna/jna/4.5.2/jna-4.5.2.jar)
-  
+[![Maven Central](https://img.shields.io/maven-central/v/net.java.dev.jna/jna.svg?label=Maven%20Central)](https://search.maven.org/artifact/net.java.dev.jna/jna/4.5.2/jar)&nbsp;[jna-4.5.2.jar](http://repo1.maven.org/maven2/net/java/dev/jna/jna/4.5.2/jna-4.5.2.jar)
+
 This is the core artifact of JNA and contains only the binding library and the
 core helper classes.
 
 JNA Platform
 ------------
 
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/net.java.dev.jna/jna-platform/badge.svg)](https://maven-badges.herokuapp.com/maven-central/net.java.dev.jna/jna-platform) &nbsp; [jna-platform.jar](http://repo1.maven.org/maven2/net/java/dev/jna/jna-platform/4.5.2/jna-platform-4.5.2.jar)
+[![Maven Central](https://img.shields.io/maven-central/v/net.java.dev.jna/jna-platform.svg?label=Maven%20Central)](https://search.maven.org/artifact/net.java.dev.jna/jna-platform/4.5.2/jar)&nbsp;[jna-platform-4.5.2.jar](http://repo1.maven.org/maven2/net/java/dev/jna/jna-platform/4.5.2/jna-platform-4.5.2.jar)
 
 This artifact holds cross-platform mappings and mappings for a number of commonly used platform 
 functions, including a large number of Win32 mappings as well as a set of utility classes 

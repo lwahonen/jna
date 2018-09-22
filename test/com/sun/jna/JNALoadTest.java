@@ -124,6 +124,7 @@ public class JNALoadTest extends TestCase implements Paths {
         field.setAccessible(true);
         String path = (String)field.get(null);
         assertNotNull("Native library path unavailable", path);
+<<<<<<< HEAD
         boolean foundNormally = path.startsWith(System.getProperty("java.io.tmpdir"));
         if(!foundNormally) {
             if (path.startsWith("/private/")) {
@@ -132,6 +133,10 @@ public class JNALoadTest extends TestCase implements Paths {
         }
         assertTrue("Native library not unpacked from jar: " + path+", should have been in "+System.getProperty("java.io.tmpdir"),
                 path.startsWith(System.getProperty("java.io.tmpdir")));
+=======
+        assertTrue("Native library not unpacked from jar: " + path,
+                path.startsWith(Native.getTempDir().getAbsolutePath()));
+>>>>>>> upstream/master
 
         Reference<Class<?>> ref = new WeakReference<Class<?>>(cls);
         Reference<ClassLoader> clref = new WeakReference<ClassLoader>(loader);

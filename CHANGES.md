@@ -26,6 +26,16 @@ Features
 * [#983](https://github.com/java-native-access/jna/issues/983): Added `GetIfEntry`, `GetIfEntry2`, and `GetNetworkParams` and supporting structures `MIB_IFROW`, `MIB_IF_ROW2`, and `FIXED_INFO` to `c.s.j.platform.win32.IPHlpAPI.java` - [@dbwiddis](https://github.com/dbwiddis).
 * [#984](https://github.com/java-native-access/jna/issues/984): Added `CM_Locate_DevNode`, `CM_Get_Parent`, `CM_Get_Child`, `CM_Get_Sibling`, `CM_Get_Device_ID`, and `CM_Get_Device_ID_Size` to `c.s.j.platform.win32.Cfgmgr32.java` and a `c.s.j.platform.win32.Cfgmgr32Util` class for `CM_Get_Device_ID` - [@dbwiddis](https://github.com/dbwiddis).
 * [#988](https://github.com/java-native-access/jna/issues/988): Added `PdhLookupPerfIndexByEnglishName` to `c.s.j.platform.win32.PdhUtil` - [@dbwiddis](https://github.com/dbwiddis).
+* [#992](https://github.com/java-native-access/jna/pull/992): Improve stability of windows tests and add appveyor configuration for windows CI builds - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#995](https://github.com/java-native-access/jna/pull/995): Added structures and methods to `c.s.j.platform.mac.SystemB` for Process, Network interface, Swapfile, Time, and Filesystem info - [@dbwiddis](https://github.com/dbwiddis).
+* [#997](https://github.com/java-native-access/jna/issues/997): Added `Sysinfo` structure and function to `c.s.j.platform.linux.LibC` - [@dbwiddis](https://github.com/dbwiddis).
+* [#1001](https://github.com/java-native-access/jna/pull/1001): Added overloads to `c.s.j.platform.win32.Advapi32Util` methods which allow the caller to specify `samDesiredExtra` to request additional registry key security and access rights - [@camw](https://github.com/camw).
+* [#1007](https://github.com/java-native-access/jna/pull/1007): Added OSGi export of Solaris package - [@swimmesberger](https://github.com/swimmesberger).
+* [#1003](https://github.com/java-native-access/jna/pull/1003): Allow `NativeMapped` to be used with enums - [@koraktor](https://github.com/koraktor).
+* [#994](https://github.com/java-native-access/jna/issues/994): Added `CoInitializeSecurity` and `CoSetProxyBlanket` to `c.s.j.platform.win32.Ole32`, added new `c.s.j.platform.win32.Wbemcli` classes needed to query WMI, and added a `WbemcliUtil` class implementing WMI queries. - [@dbwiddis](https://github.com/dbwiddis).
+* [#1013](https://github.com/java-native-access/jna/pull/1013): Add automatic module name entries to manifest of jna and jna-platform - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#985](https://github.com/java-native-access/jna/issues/985): Improve handling of dynamicaly extracted native library. On Mac OS X systems `~/Library/Application Support/JNA/temp` and on other Unix like systems `$XDG_CACHE_DIR/JNA/temp` (Default value is: `~/.cache/JNA/temp`) is used - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* Bind `com.sun.jna.platform.win32.Kernel32#ExitProcess` - [@Groostav](https://github.com/Groostav).
 
 Bug Fixes
 ---------
@@ -54,6 +64,8 @@ Bug Fixes
   </ol> - [@matthiasblaesing](https://github.com/matthiasblaesing).
 * [#958](https://github.com/java-native-access/jna/issues/958): Update for PR 863: Old toolchains produce binaries without hard-/softfloat markers. Rasbian is missinng the markers and the oracle JDK is also affected. For hardfloat detection now also the Arm EABI section is also considered - [@matthiasblaesing](https://github.com/matthiasblaesing).
 * [#974](https://github.com/java-native-access/jna/issues/974): If the callback code failed to attach to the JVM, this lead to a segfault. The success of attaching to the JVM was checked to late and an invalid `JNIEnv` pointer was used to access the JVM - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1010](https://github.com/java-native-access/jna/issues/1010): Fix binding of `lpAccessName` parameter of `com.sun.jna.platform.win32.Mpr#WNetUseConnection` - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#384](https://github.com/java-native-access/jna/issues/384): Switch default value for `jna.nosys` to `true`. By default then the embedded native library is used - [@matthiasblaesing](https://github.com/matthiasblaesing).
 
 Breaking Changes
 ----------------
@@ -463,7 +475,7 @@ Release 3.5.0
 
 Features
 --------
-* [#62](https://github.com/java-native-access/jna/issues/62) If a callback is required to reside in a DLL, use [`DLLCallback`](http://twall.github.com/jna/3.5.1/javadoc/com/sun/jna/win32/DLLCallback.html) to tag your Callback object - [@twall](https://github.com/twall).
+* [#62](https://github.com/java-native-access/jna/issues/62) If a callback is required to reside in a DLL, use [`DLLCallback`](https://java-native-access.github.io/jna/3.5.1/javadoc/com/sun/jna/win32/DLLCallback.html) to tag your Callback object - [@twall](https://github.com/twall).
 * `Structure.getFieldOrder()` supersedes `Structure.setFieldOrder()` and is now required - [@twall](https://github.com/twall).
 * Search `~/Library/Frameworks` and `/Library/Frameworks` on OSX - [@shaneholloway](https://github.com/shaneholloway).
 * Automatic cleanup of native threads (based on suggestions from neil smith) - [@twall](https://github.com/twall).

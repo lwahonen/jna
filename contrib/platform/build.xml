@@ -109,6 +109,7 @@
             <attribute name="Specification-Title" value="${spec.title}"/>
             <attribute name="Specification-Vendor" value="${spec.vendor}"/>
             <attribute name="Specification-Version" value="${spec.version}"/>
+            <attribute name="Automatic-Module-Name" value="com.sun.jna.platform"/>
             <!--
                OSGi Bundle attributes
                See http://www.osgi.org/Specifications/Reference
@@ -128,6 +129,7 @@ com.sun.jna.platform;version=${osgi.version},
 com.sun.jna.platform.dnd;version=${osgi.version},
 com.sun.jna.platform.mac;version=${osgi.version},
 com.sun.jna.platform.unix;version=${osgi.version},
+com.sun.jna.platform.unix.solaris;version=${osgi.version},
 com.sun.jna.platform.win32;version=${osgi.version},
 com.sun.jna.platform.win32.COM;version=${osgi.version},
 com.sun.jna.platform.win32.COM.tlb;version=${osgi.version},
@@ -176,7 +178,6 @@ com.sun.jna.platform.wince;version=${osgi.version}
         <!-- avoid VM conflicts with JNA protected mode -->
         <env key="${ld.preload.name}" file="${libjsig}"/>
         <!-- Ignore any system install of JNA -->
-        <sysproperty key="jna.nosys" value="true"/>
         <sysproperty key="jna.builddir" file="${file.reference.jna.build}"/>
         <jvmarg value="${vmopt.arch}"/>
         <classpath><path path="${run.test.classpath}"/><path path="${file.reference.jna.build}/test-classes"/></classpath>
@@ -204,7 +205,6 @@ com.sun.jna.platform.wince;version=${osgi.version}
 
     <!-- One-off test to check field order definitions -->
     <target name="test-field-order" depends="-pre-test-run-single" >
-        <!-- @todo How to ensure sys prop: jna.nosys=true is seen in tests? -->
         <!--<property name="test.includes" value="com/sun/jna/platform/**/*.java"/>-->
         <property name="test.includes" value="com/sun/jna/platform/StructureFieldOrderTest.java"/>
         <property name="javac.includes" value="**/*"/>
