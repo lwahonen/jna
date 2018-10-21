@@ -561,6 +561,16 @@ public interface OaIdl {
 
         public static class ByReference extends SAFEARRAY implements
                 Structure.ByReference {
+
+            public ByReference() {
+                super();
+            }
+
+            public ByReference(Pointer pointer) {
+                super(pointer);
+                this.read();
+            }
+
         }
 
         public USHORT cDims;
