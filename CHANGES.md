@@ -2,8 +2,19 @@ NOTE: as of JNA 4.0, JNA is now dual-licensed under LGPL and AL 2.0 (see LICENSE
 
 NOTE: JNI native support is typically incompatible between minor versions, and almost always incompatible between major versions.
 
-Release 5.0.0 (Next release)
+Release 5.0.1 (Next release)
 ============================
+
+Features
+--------
+
+Bug Fixes
+---------
+* [#1025](https://github.com/java-native-access/jna/issues/1025): Restore java 6 compatibility and introduce animal-sniffer to prevent regressions - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1027](https://github.com/java-native-access/jna/issues/1027): Fix Linux LibC.Sysinfo FieldOrder - [@dbwiddis](https://github.com/dbwiddis).
+
+Release 5.0.0
+=============
 
 Features
 --------
