@@ -2,18 +2,34 @@ NOTE: as of JNA 4.0, JNA is now dual-licensed under LGPL and AL 2.0 (see LICENSE
 
 NOTE: JNI native support is typically incompatible between minor versions, and almost always incompatible between major versions.
 
-Release 5.1.0 (Next release)
+Release 5.2.0 (Next release)
 ============================
+
+Features
+--------
+* [#1038](https://github.com/java-native-access/jna/pull/1038): Improve exception when native library loading fails by preserving the original exceptions and messages - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1039](https://github.com/java-native-access/jna/pull/1039): Remove use of `System.out` and `System.err` in favor of regular logging - [@matthiasblaesing](https://github.com/matthiasblaesing).
+
+Bug Fixes
+---------
+* [#1036](https://github.com/java-native-access/jna/issues/1036): `Advapi32Util.registryValueExists` called on non existing key raises exception instead of returning `false` - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#384](https://github.com/java-native-access/jna/issues/384): Android only supports loading libraries through the JVM `System#loadLibrary` mechanism, defaulting `jna.nosys` to `true` disabled that code path - [@matthiasblaesing](https://github.com/matthiasblaesing).
+
+Release 5.1.0
+=============
 
 Features
 --------
 * [#1029](https://github.com/java-native-access/jna/issues/1029): Add `statvfs` to `c.s.j.platform.linux.LibC` - [@dbwiddis](https://github.com/dbwiddis).
 * [#1032](https://github.com/java-native-access/jna/pull/1032): Deprecate `c.s.j.platform.win32.COM.util.annotation.ComEventCallback` in favour of `c.s.j.platform.win32.COM.util.annotation.ComMethod` - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1021](https://github.com/java-native-access/jna/pull/1021): Added `com.sun.jna.platform.linux.XAttr` and `com.sun.jna.platform.linux.XAttrUtil` JNA wrapper for `<sys/xattr.h>` for Linux - [@wilx](https://github.com/wilx).
+* [#381](https://github.com/java-native-access/jna/issues/381): Bind `c.s.j.p.win32.Secur32#CompleteAuthToken` - [@matthiasblaesing](https://github.com/matthiasblaesing).
 
 Bug Fixes
 ---------
 * [#1025](https://github.com/java-native-access/jna/issues/1025): Restore java 6 compatibility and introduce animal-sniffer to prevent regressions - [@matthiasblaesing](https://github.com/matthiasblaesing).
 * [#1027](https://github.com/java-native-access/jna/issues/1027): Fix Linux LibC.Sysinfo FieldOrder - [@dbwiddis](https://github.com/dbwiddis).
+* [#1033](https://github.com/java-native-access/jna/pull/1033): Replace deprecated Class#newInstance calls - [@matthiasblaesing](https://github.com/matthiasblaesing).
 
 Release 5.0.0
 =============
