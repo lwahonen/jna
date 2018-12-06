@@ -110,8 +110,8 @@ public final class Native implements Version {
 
     public static final Charset DEFAULT_CHARSET = Charset.defaultCharset();
     public static final String DEFAULT_ENCODING = Native.DEFAULT_CHARSET.name();
-    public static final boolean DEBUG_LOAD = Boolean.getBoolean("jna.debug_load");
-    public static final boolean DEBUG_JNA_LOAD = Boolean.getBoolean("jna.debug_load.jna");
+    public static boolean DEBUG_LOAD = Boolean.getBoolean("jna.debug_load");
+    public static boolean DEBUG_JNA_LOAD = Boolean.getBoolean("jna.debug_load.jna");
     private final static Level DEBUG_JNA_LOAD_LEVEL = DEBUG_JNA_LOAD ? Level.INFO : Level.FINE;
 
     // Used by tests, do not remove
@@ -1208,7 +1208,7 @@ public final class Native implements Version {
                     lib.deleteOnExit();
                 }
                 if (DEBUG_JNA_LOAD) {
-                    System.out.println("DLL created without problems " + lib);
+                    LOG.log(DEBUG_JNA_LOAD_LEVEL, "DLL created without problems "+lib.getAbsolutePath());
                 }
             }
             catch(IOException e) {
