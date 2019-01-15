@@ -2,18 +2,33 @@ NOTE: as of JNA 4.0, JNA is now dual-licensed under LGPL and AL 2.0 (see LICENSE
 
 NOTE: JNI native support is typically incompatible between minor versions, and almost always incompatible between major versions.
 
-Release 5.2.0 (Next release)
-============================
+Next release (5.3.0)
+====================
+
+Features
+--------
+* [#1050](https://github.com/java-native-access/jna/pull/1050): Add `c.s.j.p.win32.VersionHelpers` and supporting functions - [@dbwiddis](https://github.com/dbwiddis).
+
+Bug Fixes
+---------
+* [#1052](https://github.com/java-native-access/jna/issues/1052), [#1053](https://github.com/java-native-access/jna/issues/1053): WinXP compatibility for `c.s.j.p.win32.PdhUtil` - [@dbwiddis](https://github.com/dbwiddis).
+
+Release 5.2.0
+=============
 
 Features
 --------
 * [#1038](https://github.com/java-native-access/jna/pull/1038): Improve exception when native library loading fails by preserving the original exceptions and messages - [@matthiasblaesing](https://github.com/matthiasblaesing).
 * [#1039](https://github.com/java-native-access/jna/pull/1039): Remove use of `System.out` and `System.err` in favor of regular logging - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1048](https://github.com/java-native-access/jna/pull/1048): Bind `c.s.j.p.win32.Kernel32#OpenEvent` - [@matthiasblaesing](https://github.com/matthiasblaesing).
 
 Bug Fixes
 ---------
 * [#1036](https://github.com/java-native-access/jna/issues/1036): `Advapi32Util.registryValueExists` called on non existing key raises exception instead of returning `false` - [@matthiasblaesing](https://github.com/matthiasblaesing).
 * [#384](https://github.com/java-native-access/jna/issues/384): Android only supports loading libraries through the JVM `System#loadLibrary` mechanism, defaulting `jna.nosys` to `true` disabled that code path - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1041](https://github.com/java-native-access/jna/pull/1041): Avoid IllegalArgumentException when reading xattrs with zero length - [@jrobhoward](https://github.com/jrobhoward).
+* [#1042](https://github.com/java-native-access/jna/issues/1042): `c.s.j.p.WindowUtils.W32WindowUtils.getProcessFilePath(HWND)` does not close process handle - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1044](https://github.com/java-native-access/jna/issues/1044): Fix field order for `c.s.j.p.unix.X11.XResizeRequestEvent` - [@matthiasblaesing](https://github.com/matthiasblaesing).
 
 Release 5.1.0
 =============

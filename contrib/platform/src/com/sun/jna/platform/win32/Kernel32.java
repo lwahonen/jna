@@ -933,6 +933,43 @@ public interface Kernel32 extends StdCallLibrary, WinNT, Wincon {
             boolean bManualReset, boolean bInitialState, String lpName);
 
     /**
+     * Opens an existing named event object.
+     *
+     * @param dwDesiredAccess The access to the event object. The function fails
+     *                        if the security descriptor of the specified object
+     *                        does not permit the requested access for the
+     *                        calling process. For a list of access rights, see
+     *                        Synchronization Object Security and Access Rights.
+     * @param bInheritHandle  If this value is TRUE, processes created by this
+     *                        process will inherit the handle. Otherwise, the
+     *                        processes do not inherit this handle.
+     * @param lpName          The name of the event to be opened. Name
+     *                        comparisons are case sensitive.
+     * <p>
+     * This function can open objects in a private namespace. For more
+     * information, see Object Namespaces.
+     * <p>
+     * <strong>Terminal Services:</strong> The name can have a "Global" or
+     * "Local" prefix to explicitly open an object in the global or session
+     * namespace. The remainder of the name can contain any character except the
+     * backslash character (). For more information, see Kernel Object
+     * Namespaces.
+     * <p>
+     * <strong>Note</strong> Fast user switching is implemented using Terminal Services
+     * sessions. The first user to log on uses session 0, the next user to log
+     * on uses session 1, and so on. Kernel object names must follow the
+     * guidelines outlined for Terminal Services so that applications can
+     * support multiple users.
+     *
+     * @return If the function succeeds, the return value is a handle to the
+     *         event object.
+     * <p>
+     * If the function fails, the return value is {@code NULL}. To get extended
+     * error information, call {@link #GetLastError()}.
+     */
+    HANDLE OpenEvent(int dwDesiredAccess, boolean bInheritHandle, String lpName);
+
+    /**
      * Sets the specified event object to the signaled state.
      *
      * @param hEvent
@@ -1375,6 +1412,73 @@ public interface Kernel32 extends StdCallLibrary, WinNT, Wincon {
      *         the OSVERSIONINFO or OSVERSIONINFOEX structure.
      */
     boolean GetVersionEx(OSVERSIONINFOEX lpVersionInfo);
+
+    /**
+     * Compares a set of operating system version requirements to the
+     * corresponding values for the currently running version of the system.
+     * This function is subject to manifest-based behavior.
+     * 
+     * @param lpVersionInformation
+     *            A pointer to an {@link WinNT#OSVERSIONINFOEX} structure
+     *            containing the operating system version requirements to
+     *            compare. The {@code dwTypeMask} parameter indicates the
+     *            members of this structure that contain information to compare.
+     *            <p>
+     *            You must set the {@code dwOSVersionInfoSize} member of this
+     *            structure to {@code sizeof(OSVERSIONINFOEX)}. You must also
+     *            specify valid data for the members indicated by
+     *            {@code dwTypeMask}. The function ignores structure members for
+     *            which the corresponding {@code dwTypeMask} bit is not set.
+     * @param dwTypeMask
+     *            A mask that indicates the members of the
+     *            {@link WinNT#OSVERSIONINFOEX} structure to be tested.
+     * @param dwlConditionMask
+     *            The type of comparison to be used for each
+     *            {@code lpVersionInfo} member being compared. To build this
+     *            value, call the {@link #VerSetConditionMask} function once for
+     *            each {@link WinNT#OSVERSIONINFOEX} member being compared.
+     * @return If the currently running operating system satisfies the specified
+     *         requirements, the return value is a nonzero value.
+     *         <p>
+     *         If the current system does not satisfy the requirements, the
+     *         return value is zero and {@link #GetLastError()} returns
+     *         {@link WinError#ERROR_OLD_WIN_VERSION}.
+     *         <p>
+     *         If the function fails, the return value is zero and
+     *         {@link #GetLastError()} returns an error code other than
+     *         {@link WinError#ERROR_OLD_WIN_VERSION}.
+     */
+    boolean VerifyVersionInfoW(OSVERSIONINFOEX lpVersionInformation, int dwTypeMask, long dwlConditionMask);
+
+    /**
+     * Sets the bits of a 64-bit value to indicate the comparison operator to
+     * use for a specified operating system version attribute. This function is
+     * used to build the {@code dwlConditionMask} parameter of the
+     * {@link #VerifyVersionInfo} function.
+     * 
+     * @param conditionMask
+     *            A value to be passed as the {@code dwlConditionMask} parameter
+     *            of the {@link #VerifyVersionInfo} function. The function
+     *            stores the comparison information in the bits of this
+     *            variable.
+     *            <p>
+     *            Before the first call to {@link #VerSetConditionMask},
+     *            initialize this variable to zero. For subsequent calls, pass
+     *            in the variable used in the previous call.
+     * @param typeMask
+     *            A mask that indicates the member of the
+     *            {@link WinNT#OSVERSIONINFOEX} structure whose comparison
+     *            operator is being set. This value corresponds to one of the
+     *            bits specified in the {@code dwTypeMask} parameter for the
+     *            {@link #VerifyVersionInfo} function.
+     * @param condition
+     *            The operator to be used for the comparison. The
+     *            {@link #VerifyVersionInfo} function uses this operator to
+     *            compare a specified attribute value to the corresponding value
+     *            for the currently running system.
+     * @return The function returns the condition mask value.
+     */
+    long VerSetConditionMask(long conditionMask, int typeMask, byte condition);
 
     /**
      * The GetSystemInfo function returns information about the current system.

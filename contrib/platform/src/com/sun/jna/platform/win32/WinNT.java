@@ -23,9 +23,6 @@
  */
 package com.sun.jna.platform.win32;
 
-import java.util.Collections;
-import java.util.List;
-
 import com.sun.jna.FromNativeContext;
 import com.sun.jna.IntegerType;
 import com.sun.jna.Memory;
@@ -2019,6 +2016,23 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
     int VER_PLATFORM_WIN32_WINDOWS = 1;
     int VER_PLATFORM_WIN32_NT = 2;
 
+    /*
+     * WIN32_WINNT version constants
+     */
+    short WIN32_WINNT_NT4 = 0x0400; // Windows NT 4.0
+    short WIN32_WINNT_WIN2K = 0x0500; // Windows 2000
+    short WIN32_WINNT_WINXP = 0x0501; // Windows XP
+    short WIN32_WINNT_WS03 = 0x0502; // Windows Server 2003
+    short WIN32_WINNT_WIN6 = 0x0600; // Windows Vista
+    short WIN32_WINNT_VISTA = 0x0600; // Windows Vista
+    short WIN32_WINNT_WS08 = 0x0600; // Windows Server 2008
+    short WIN32_WINNT_LONGHORN = 0x0600; // Windows Vista
+    short WIN32_WINNT_WIN7 = 0x0601; // Windows 7
+    short WIN32_WINNT_WIN8 = 0x0602; // Windows 8
+    short WIN32_WINNT_WINBLUE = 0x0603; // Windows 8.1
+    short WIN32_WINNT_WINTHRESHOLD = 0x0A00; // Windows 10
+    short WIN32_WINNT_WIN10 = 0x0A00; // Windows 10
+
     /**
      * Read the records sequentially. If this is the first read operation, the
      * EVENTLOG_FORWARDS_READ EVENTLOG_BACKWARDS_READ flags determines which
@@ -2940,7 +2954,6 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
      */
     @FieldOrder({"level", "associativity", "lineSize", "size", "type"})
     public static class CACHE_DESCRIPTOR extends Structure {
-        public static final List<String> FIELDS = createFieldsOrder();
         /**
          * The cache level. This member can be 1, 2 or 3, corresponding to L1, L2 or L3 cache, respectively (other
          * values may be supported in the future.)
@@ -3522,4 +3535,7 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
             super(memory);
         }
     }
+
+    public int EVENT_MODIFY_STATE = 0x0002;
+    public int EVENT_ALL_ACCESS = (STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0x3);
 }
