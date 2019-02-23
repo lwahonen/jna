@@ -27,12 +27,7 @@ import java.awt.Component;
 import java.awt.GraphicsEnvironment;
 import java.awt.HeadlessException;
 import java.awt.Window;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FilenameFilter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Array;
@@ -1027,21 +1022,6 @@ public final class Native implements Version {
         return file.getName().startsWith(JNA_TMPLIB_PREFIX);
     }
 
-    /** Attempt to extract a native library from the current resource path,
-     * using the current thread context class loader.
-     * @param name Base name of native library to extract.  May also be an
-     * absolute resource path (i.e. starts with "/"), in which case the
-     * no transformations of the library name are performed.  If only the base
-     * name is given, the resource path is attempted both with and without
-     * {@link Platform#RESOURCE_PREFIX}, after mapping the library name via
-     * {@link NativeLibrary#mapSharedLibraryName(String)}.
-     * @return File indicating extracted resource on disk
-     * @throws IOException if resource not found
-     */
-    public static File extractFromResourcePath(String name) throws IOException {
-        return extractFromResourcePath(name, null);
-    }
-
     /** Attempt to extract a native library from the resource path using the
      * given class loader.
      * @param name Base name of native library to extract.  May also be an
@@ -1105,7 +1085,7 @@ public final class Native implements Version {
                 throw new IOException("Can't obtain InputStream for " + resourcePath);
             }
 
-            else if (Boolean.getBoolean("jna.permanentextract")) {
+            if (Boolean.getBoolean("jna.permanentextract")) {
                 try {
                     LOG.log(DEBUG_JNA_LOAD_LEVEL, "Starting permanent extract of "+resourcePath);
                     String libSHA1=getHashForFile(loader.getResourceAsStream(resourcePath));
@@ -1219,6 +1199,88 @@ public final class Native implements Version {
                 if (fos != null) {
                     try { fos.close(); } catch(IOException e) { }
                 }
+            }
+        }
+        return lib;
+    }
+
+    public static Object loadFromResourcePath(String name, ClassLoader loader) throws IOException {
+
+        final Level DEBUG = (DEBUG_LOAD
+                || (DEBUG_JNA_LOAD && name.contains("jnidispatch"))) ? Level.INFO : Level.FINE;
+        if (loader == null) {
+            loader = Thread.currentThread().getContextClassLoader();
+            // Context class loader is not guaranteed to be set
+            if (loader == null) {
+                loader = Native.class.getClassLoader();
+            }
+        }
+        LOG.log(DEBUG, "Looking in classpath from {0} for {1}", new Object[]{loader, name});
+        String libname = name.startsWith("/") ? name : NativeLibrary.mapSharedLibraryName(name);
+        String resourcePath = name.startsWith("/") ? name : Platform.RESOURCE_PREFIX + "/" + libname;
+        if (resourcePath.startsWith("/")) {
+            resourcePath = resourcePath.substring(1);
+        }
+        URL url = loader.getResource(resourcePath);
+        if (url == null && resourcePath.startsWith(Platform.RESOURCE_PREFIX)) {
+            // If not found with the standard resource prefix, try without it
+            url = loader.getResource(libname);
+        }
+        if (url == null) {
+            String path = System.getProperty("java.class.path");
+            if (loader instanceof URLClassLoader) {
+                path = Arrays.asList(((URLClassLoader)loader).getURLs()).toString();
+            }
+            throw new IOException("Native library (" + resourcePath + ") not found in resource path (" + path + ")");
+        }
+        LOG.log(DEBUG, "Found library resource at {0}", url);
+
+        File lib = null;
+        if (url.getProtocol().toLowerCase().equals("file")) {
+            try {
+                lib = new File(new URI(url.toString()));
+            }
+            catch(URISyntaxException e) {
+                lib = new File(url.getPath());
+            }
+            LOG.log(DEBUG, "Looking in {0}", lib.getAbsolutePath());
+            if (!lib.exists()) {
+                throw new IOException("File URL " + url + " could not be properly decoded");
+            }
+        }
+        else if (!Boolean.getBoolean("jna.nounpack"))
+        {
+            InputStream is=loader.getResourceAsStream(resourcePath);
+            if(is == null)
+            {
+                throw new IOException("Can't obtain InputStream for " + resourcePath);
+            }
+
+            try {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                // Suffix is required on windows, or library fails to load
+                // Let Java pick the suffix, except on windows, to avoid
+                // problems with Web Start.
+                LOG.log(DEBUG, "Extracting library to temp buffer");
+
+                int count;
+                byte[] buf = new byte[1024];
+                while ((count = is.read(buf, 0, buf.length)) > 0) {
+                    baos.write(buf, 0, count);
+                }
+                byte[] ret=baos.toByteArray();
+                baos.close();
+
+                if (DEBUG_JNA_LOAD) {
+                    LOG.log(DEBUG_JNA_LOAD_LEVEL, "DLL streamed to byte array without problems, byte count "+ret.length);
+                }
+                return ret;
+            }
+            catch(IOException e) {
+                throw new IOException("Failed to create temporary file for " + name + " library: " + e.getMessage());
+            }
+            finally {
+                try { is.close(); } catch(IOException e) { }
             }
         }
         return lib;
@@ -2232,6 +2294,8 @@ public final class Native implements Version {
      * otions.
      */
     static native long open(String name, int flags);
+
+    //static native long open(byte[] name, int flags);
 
     /** Close the given native library. */
     static native void close(long handle);
