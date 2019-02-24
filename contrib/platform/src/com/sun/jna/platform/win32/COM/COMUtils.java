@@ -74,7 +74,10 @@ public abstract class COMUtils {
      * @return true, if successful
      */
     public static boolean SUCCEEDED(int hr) {
-        return hr >= 0;
+        boolean b=hr >= 0;
+        if(!b)
+            System.out.println("Error here");
+        return b;
     }
 
     /**
