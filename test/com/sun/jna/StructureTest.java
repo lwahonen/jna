@@ -1,23 +1,23 @@
 /* Copyright (c) 2007-2009 Timothy Wall, All Rights Reserved
  *
- * The contents of this file is dual-licensed under 2 
- * alternative Open Source/Free licenses: LGPL 2.1 or later and 
+ * The contents of this file is dual-licensed under 2
+ * alternative Open Source/Free licenses: LGPL 2.1 or later and
  * Apache License 2.0. (starting with JNA version 4.0.0).
- * 
- * You can freely decide which license you want to apply to 
+ *
+ * You can freely decide which license you want to apply to
  * the project.
- * 
+ *
  * You may obtain a copy of the LGPL License at:
- * 
+ *
  * http://www.gnu.org/licenses/licenses.html
- * 
+ *
  * A copy is also included in the downloadable source code package
  * containing JNA, in file "LGPL2.1".
- * 
+ *
  * You may obtain a copy of the Apache License at:
- * 
+ *
  * http://www.apache.org/licenses/
- * 
+ *
  * A copy is also included in the downloadable source code package
  * containing JNA, in file "AL2.0".
  */
@@ -31,13 +31,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
-import junit.framework.TestCase;
-
 import com.sun.jna.Structure.FieldOrder;
 import com.sun.jna.Structure.StructureSet;
 import com.sun.jna.ptr.ByteByReference;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
+
+import junit.framework.TestCase;
 
 /** TODO: need more alignment tests, especially platform-specific behavior
  * @author twall@users.sf.net
@@ -1388,7 +1388,7 @@ public class StructureTest extends TestCase {
         assertEquals("Wrong type information for 'inner' field",
                      inner, els.getPointer(0));
         assertEquals("Wrong type information for integer field",
-                     Structure.getTypeInfo(Integer.valueOf(0)),
+                     Structure.getTypeInfo(0).getPointer(),
                      els.getPointer(Native.POINTER_SIZE));
         assertNull("Type element list should be null-terminated",
                    els.getPointer(Native.POINTER_SIZE*2));
@@ -1453,32 +1453,32 @@ public class StructureTest extends TestCase {
     }
 
     public void testNativeMappedWrite() {
-    	class TestStructure extends Structure {
+        class TestStructure extends Structure {
             public ByteByReference ref;
             @Override
             protected List<String> getFieldOrder() {
                 return Arrays.asList("ref");
             }
-    	}
-    	TestStructure s = new TestStructure();
+        }
+        TestStructure s = new TestStructure();
         ByteByReference ref = s.ref = new ByteByReference();
         s.write();
         assertEquals("Value not properly written", ref.getPointer(), s.getPointer().getPointer(0));
 
-    	s.ref = null;
-    	s.write();
+        s.ref = null;
+        s.write();
         assertNull("Non-null value was written: " + s.getPointer().getPointer(0), s.getPointer().getPointer(0));
     }
 
     public void testNativeMappedRead() {
-    	class TestStructure extends Structure {
+        class TestStructure extends Structure {
             public ByteByReference ref;
             @Override
             protected List<String> getFieldOrder() {
                 return Arrays.asList("ref");
             }
-    	}
-    	TestStructure s = new TestStructure();
+        }
+        TestStructure s = new TestStructure();
         s.read();
         assertNull("Should read null for initial field value", s.ref);
 
@@ -1659,10 +1659,10 @@ public class StructureTest extends TestCase {
     public static class XTestStructure extends Structure {
         public static final List<String> FIELDS = createFieldsOrder("first");
         public int first = 1;
-    	@Override
+        @Override
         protected List<String> getFieldOrder() {
-    	    return FIELDS;
-	    }
+            return FIELDS;
+        }
     }
 
     public static class XTestStructureSub extends XTestStructure {
@@ -1680,12 +1680,12 @@ public class StructureTest extends TestCase {
 
             return fields;
         }
-    	public int second = 2;
+        public int second = 2;
 
-    	@Override
+        @Override
         protected List<String> getFieldOrder() {
-    	    return resolveEffectiveFields(super.getFieldOrder());
-    	}
+            return resolveEffectiveFields(super.getFieldOrder());
+        }
     }
 
     public void testInheritedStructureFieldOrder() {
@@ -1785,6 +1785,7 @@ public class StructureTest extends TestCase {
         assertNotNull("Field should not be null after read", s.field);
     }
 
+    @SuppressWarnings("unlikely-arg-type")
     public void testStructureEquals() {
         class OtherStructure extends Structure {
             public int first;
@@ -2162,7 +2163,7 @@ public class StructureTest extends TestCase {
         Structure s = new TestStructure();
         assertEquals("Wrong type mapper for structure", mapper, s.getTypeMapper());
 
-        TestFFIType ffi_type = new TestFFIType(Structure.getTypeInfo(s));
+        TestFFIType ffi_type = new TestFFIType(Structure.getTypeInfo(s).getPointer());
         assertEquals("Java Structure size does not match FFIType size",
                      s.size(), ffi_type.size.intValue());
     }
@@ -2212,7 +2213,7 @@ public class StructureTest extends TestCase {
     }
 
     public void testThreadLocalSetReleasesReferences() {
-    	class TestStructure extends Structure {
+        class TestStructure extends Structure {
             public String field;
             @Override
             protected List<String> getFieldOrder() {
@@ -2220,15 +2221,15 @@ public class StructureTest extends TestCase {
             }
         }
 
-    	TestStructure ts1 = new TestStructure();
-    	TestStructure ts2 = new TestStructure();
+        TestStructure ts1 = new TestStructure();
+        TestStructure ts2 = new TestStructure();
 
-    	StructureSet structureSet = (StructureSet) Structure.busy();
-    	structureSet.add(ts1);
-    	structureSet.add(ts2);
-    	structureSet.remove(ts1);
-    	assertNotNull(structureSet.elements[0]);
-    	structureSet.remove(ts2);
-    	assertNull(structureSet.elements[0]);
+        StructureSet structureSet = (StructureSet) Structure.busy();
+        structureSet.add(ts1);
+        structureSet.add(ts2);
+        structureSet.remove(ts1);
+        assertNotNull(structureSet.elements[0]);
+        structureSet.remove(ts2);
+        assertNull(structureSet.elements[0]);
     }
 }

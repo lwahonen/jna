@@ -1,3 +1,25 @@
+/*
+ * The contents of this file is dual-licensed under 2
+ * alternative Open Source/Free licenses: LGPL 2.1 or later and
+ * Apache License 2.0. (starting with JNA version 4.0.0).
+ *
+ * You can freely decide which license you want to apply to
+ * the project.
+ *
+ * You may obtain a copy of the LGPL License at:
+ *
+ * http://www.gnu.org/licenses/licenses.html
+ *
+ * A copy is also included in the downloadable source code package
+ * containing JNA, in file "LGPL2.1".
+ *
+ * You may obtain a copy of the Apache License at:
+ *
+ * http://www.apache.org/licenses/
+ *
+ * A copy is also included in the downloadable source code package
+ * containing JNA, in file "AL2.0".
+ */
 package com.sun.jna.platform.win32.COM;
 
 /*
@@ -5,18 +27,24 @@ package com.sun.jna.platform.win32.COM;
  */
 
 import com.sun.jna.Pointer;
-import junit.framework.TestCase;
-
-import com.sun.jna.platform.win32.*;
+import com.sun.jna.platform.win32.Guid;
 import com.sun.jna.platform.win32.Guid.REFIID;
+import com.sun.jna.platform.win32.Ole32;
 import com.sun.jna.platform.win32.ShTypes.STRRET;
+import com.sun.jna.platform.win32.Shell32;
+import com.sun.jna.platform.win32.ShlObj;
+import com.sun.jna.platform.win32.Shlwapi;
+import com.sun.jna.platform.win32.WinNT;
+import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.PointerByReference;
+
+import junit.framework.TestCase;
 
 public class IShellFolderTest extends TestCase {
     static {
         ClassLoader.getSystemClassLoader().setDefaultAssertionStatus(true);
     }
-        
+
     private IShellFolder psfMyComputer;
 
     public static WinNT.HRESULT BindToCsidl(int csidl, Guid.REFIID riid, PointerByReference ppv) {
@@ -38,7 +66,7 @@ public class IShellFolderTest extends TestCase {
         Ole32.INSTANCE.CoTaskMemFree(pidl.getValue());
         return hr;
     }
-    
+
     public void setUp() throws Exception {
         WinNT.HRESULT hr = Ole32.INSTANCE.CoInitialize(null);
         assertTrue(COMUtils.SUCCEEDED(hr));
@@ -79,5 +107,21 @@ public class IShellFolderTest extends TestCase {
         }
         peidl.Release();
         assertTrue(sawNames); // We should see at least one item with a name
+    }
+
+    public void testParseDisplayName() throws Exception {
+        String directory = System.getenv("WinDir");
+
+        IntByReference pchEaten = new IntByReference();
+        PointerByReference ppidl = new PointerByReference();
+        IntByReference pdwAttributes = new IntByReference();
+        PointerByReference desktopFolder = new PointerByReference();
+
+        WinNT.HRESULT hResult = Shell32.INSTANCE.SHGetDesktopFolder(desktopFolder);
+        assertEquals(COMUtils.S_OK, hResult.intValue());
+
+        IShellFolder shellFolder = IShellFolder.Converter.PointerToIShellFolder(desktopFolder);
+        hResult = shellFolder.ParseDisplayName(null, null, directory, pchEaten, ppidl, pdwAttributes);
+        assertEquals(COMUtils.S_OK, hResult.intValue());
     }
 }

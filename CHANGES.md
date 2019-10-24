@@ -2,18 +2,85 @@ NOTE: as of JNA 4.0, JNA is now dual-licensed under LGPL and AL 2.0 (see LICENSE
 
 NOTE: JNI native support is typically incompatible between minor versions, and almost always incompatible between major versions.
 
-Release 5.2.0 (Next release)
-============================
+Next Release (5.5.0)
+====================
+
+Features
+--------
+* [#1131](https://github.com/java-native-access/jna/pull/1131): Add CoreFoundation, IOKit, and DiskArbitration mappings in `c.s.j.p.mac`. [@dbwiddis](https://github.com/dbwiddis).
+* [#1143](https://github.com/java-native-access/jna/pull/1143): `c.s.j.p.mac.SystemB` now extends `c.s.j.p.unix.LibCAPI`. [@dbwiddis](https://github.com/dbwiddis).
+
+Bug Fixes
+---------
+* [#1115](https://github.com/java-native-access/jna/issues/1115): Fix signature for `c.s.j.p.win32.Kernel32#CreateRemoteThread` and bind `VirtualAllocEx`, `VirtualFreeEx`, `GetExitCodeThread` in `c.s.j.p.win32.Kernel32` - [@apangin](https://github.com/apangin), [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1127](https://github.com/java-native-access/jna/issues/1127): Windows needs a wide string in `c.s.j.p.win32.COM.IShellFolder#ParseDisplayName` - [@dbwiddis](https://github.com/dbwiddis).
+* [#1128](https://github.com/java-native-access/jna/issues/1128): KEY_ALL_ACCESS value is incorrect in `c.s.j.p.win32.WinNT.java` - [@trevormaggs](https://github.com/trevormaggs).
+* [#1133](https://github.com/java-native-access/jna/issues/1133): Ensure JARs created from the build system don't contain invalid `Info-ZIP Unicode Path` extra info - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1134](https://github.com/java-native-access/jna/issues/1134): Read correct member of `WinBase.SYSTEM_INFO.processorArchitecture` union - [@dbwiddis](https://github.com/dbwiddis).
+* [#1118](https://github.com/java-native-access/jna/issues/1118): Fix passing unions containing integer and floating point members as parameters by value - [@matthiasblaesing](https://github.com/matthiasblaesing).
+
+Release 5.4.0
+=============
+
+Features
+--------
+* [#1105](https://github.com/java-native-access/jna/issues/1105): Deprecate `c.s.j.p.win32.Advapi32Util.EventLogRecord#getEventId` in favor of `#getInstanceId` - [@dbwiddis](https://github.com/dbwiddis).
+* [#1097](https://github.com/java-native-access/jna/issues/1097): Allow `.ocx` as extension of native libraries on windows - [@dmigowski](https://github.com/dmigowski).
+* [#1108](https://github.com/java-native-access/jna/pull/1108): Improve performance of `c.s.j.Structure#newInstance` by iteration available constructors instead of exception handling [@bjorndarri](https://github.com/bjorndarri).
+
+Bug Fixes
+---------
+* [#1095](https://github.com/java-native-access/jna/pull/1095) Align behaviour of com.sun.jna.platform.macXAttrUtil#setXattr and #getXAttr with CLI tool - [@jrobhoward](https://github.com/jrobhoward), [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1091](https://github.com/java-native-access/jna/issues/1091): Check target number to be greater than zero, before calling `Structure#toArray` in `c.s.j.p.win32.Netapi32Util` - [@trevormagg](https://github.com/trevormaggs), [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1103](https://github.com/java-native-access/jna/issues/1103): On big endian architecture IntegerType based values are incorrectly decoded when using direct binding - [@matthiasblaesing](https://github.com/matthiasblaesing).
+
+Release 5.3.1
+=============
+
+Bug Fixes
+---------
+* [#1089](https://github.com/java-native-access/jna/issues/1089): `c.s.j.internal.ReflectionUtils` accesses `java.lang.invoke.MethodType` without reflection, causing `java.lang.NoClassDefFoundError` on android API level < 26 - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1087](https://github.com/java-native-access/jna/pull/1087): Fix wrong calls to Structure#toArray with zero sized arrays - [@matthiasblaesing](https://github.com/matthiasblaesing).
+
+Release 5.3.0
+=============
+
+Features
+--------
+* [#1058](https://github.com/java-native-access/jna/pull/1058): Add selectable timeout to stopService() and improve timeout handling - [@keithharp](https://github.com/keithharp).
+* [#1050](https://github.com/java-native-access/jna/pull/1050): Add `c.s.j.p.win32.VersionHelpers` and supporting functions - [@dbwiddis](https://github.com/dbwiddis).
+* [#1061](https://github.com/java-native-access/jna/pull/1061): replace toArray(new T[size]) with toArray(new T[0]) for better performance - [@hc-codersatlas](https://github.com/hc-codersatlas).
+* [#1064](https://github.com/java-native-access/jna/pull/1064): Add `c.s.j.p.win32.Kernel32.GetLogicalProcessorInformationEx` function, convenience Util method and supporting structures - [@dbwiddis](https://github.com/dbwiddis).
+* [#1065](https://github.com/java-native-access/jna/pull/1065): Add `c.s.j.p.win32.PowrProf#CallNTPowerInformation` and supporting structures - [@dbwiddis](https://github.com/dbwiddis).
+* [#1063](https://github.com/java-native-access/jna/pull/1063): Enhance `c.s.j.p.win32.User32` and associated classes to support keyboard related functionality. - [@kevemueller](https://github.com/kevemueller).
+* [#1068](https://github.com/java-native-access/jna/pull/1068): `c.s.j.p.win32.Advapi32Util.getAccountBySid(String systemName, PSID sid)` ignored parameter instead of passing it to the native function - [@nirud](https://github.com/nirud).
+* [#813](https://github.com/java-native-access/jna/issues/813): Support for default methods on interfaces (experimental) - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1073](https://github.com/java-native-access/jna/issues/1073): Support COM setters with multiple parameters using `c.s.j.p.win32.COM.util.ProxyObject` - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1083](https://github.com/java-native-access/jna/issues/1083): Prevent access to unsupported values in `c.s.j.p.win32.COM.WbemcliUtil#enumerateProperties` and bind `c.s.j.p.win32.COM.Wbemcli.IWbemClassObject.GetNames` - [@matthiasblaesing](https://github.com/matthiasblaesing).
+
+Bug Fixes
+---------
+* [#1052](https://github.com/java-native-access/jna/pull/1052), [#1053](https://github.com/java-native-access/jna/issues/1053): WinXP compatibility for `c.s.j.p.win32.PdhUtil` - [@dbwiddis](https://github.com/dbwiddis).
+* [#1055](https://github.com/java-native-access/jna/pull/1055): Include `c.s.j.p.linux` in OSGi bundle. - [@dbwiddis](https://github.com/dbwiddis).
+* [#1066](https://github.com/java-native-access/jna/issues/1066): On AIX OpenJDK differs from IBM J9 in the mapping of library names. While J9 maps jnidispatch to `libjnidispatch.a`, OpenJDK maps to `libjnidispatch.so`, which causes the native library extractor to fail. AIX is now hard-coded to `libjnidispatch.a` - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1079](https://github.com/java-native-access/jna/issues/1079): Fix maximum structure alignment for Android i386 - [@BugsBeGone](https://github.com/BugsBeGone).
+
+Release 5.2.0
+=============
 
 Features
 --------
 * [#1038](https://github.com/java-native-access/jna/pull/1038): Improve exception when native library loading fails by preserving the original exceptions and messages - [@matthiasblaesing](https://github.com/matthiasblaesing).
 * [#1039](https://github.com/java-native-access/jna/pull/1039): Remove use of `System.out` and `System.err` in favor of regular logging - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1048](https://github.com/java-native-access/jna/pull/1048): Bind `c.s.j.p.win32.Kernel32#OpenEvent` - [@matthiasblaesing](https://github.com/matthiasblaesing).
 
 Bug Fixes
 ---------
 * [#1036](https://github.com/java-native-access/jna/issues/1036): `Advapi32Util.registryValueExists` called on non existing key raises exception instead of returning `false` - [@matthiasblaesing](https://github.com/matthiasblaesing).
 * [#384](https://github.com/java-native-access/jna/issues/384): Android only supports loading libraries through the JVM `System#loadLibrary` mechanism, defaulting `jna.nosys` to `true` disabled that code path - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1041](https://github.com/java-native-access/jna/pull/1041): Avoid IllegalArgumentException when reading xattrs with zero length - [@jrobhoward](https://github.com/jrobhoward).
+* [#1042](https://github.com/java-native-access/jna/issues/1042): `c.s.j.p.WindowUtils.W32WindowUtils.getProcessFilePath(HWND)` does not close process handle - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1044](https://github.com/java-native-access/jna/issues/1044): Fix field order for `c.s.j.p.unix.X11.XResizeRequestEvent` - [@matthiasblaesing](https://github.com/matthiasblaesing).
 
 Release 5.1.0
 =============

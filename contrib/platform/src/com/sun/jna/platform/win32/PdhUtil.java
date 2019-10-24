@@ -1,23 +1,23 @@
 /* Copyright (c) 2018 Daniel Widdis, All Rights Reserved
  *
- * The contents of this file is dual-licensed under 2 
- * alternative Open Source/Free licenses: LGPL 2.1 or later and 
+ * The contents of this file is dual-licensed under 2
+ * alternative Open Source/Free licenses: LGPL 2.1 or later and
  * Apache License 2.0. (starting with JNA version 4.0.0).
- * 
- * You can freely decide which license you want to apply to 
+ *
+ * You can freely decide which license you want to apply to
  * the project.
- * 
+ *
  * You may obtain a copy of the LGPL License at:
- * 
+ *
  * http://www.gnu.org/licenses/licenses.html
- * 
+ *
  * A copy is also included in the downloadable source code package
  * containing JNA, in file "LGPL2.1".
- * 
+ *
  * You may obtain a copy of the Apache License at:
- * 
+ *
  * http://www.apache.org/licenses/
- * 
+ *
  * A copy is also included in the downloadable source code package
  * containing JNA, in file "AL2.0".
  */
@@ -30,11 +30,10 @@ import com.sun.jna.Memory;
 import com.sun.jna.Native;
 import com.sun.jna.platform.win32.WinDef.DWORD;
 import com.sun.jna.platform.win32.WinDef.DWORDByReference;
-import java.util.Collections;
 
 /**
  * Pdh utility API.
- * 
+ *
  * @author widdis[at]gmail[dot]com
  */
 public abstract class PdhUtil {
@@ -49,7 +48,7 @@ public abstract class PdhUtil {
      * Utility method to call Pdh's PdhLookupPerfNameByIndex that allocates the
      * required memory for the szNameBuffer parameter based on the type mapping
      * used, calls to PdhLookupPerfNameByIndex, and returns the received string.
-     * 
+     *
      * @param szMachineName
      *            Null-terminated string that specifies the name of the computer
      *            where the specified performance object or counter is located.
@@ -60,30 +59,44 @@ public abstract class PdhUtil {
      * @return Returns the name of the performance object or counter.
      */
     public static String PdhLookupPerfNameByIndex(String szMachineName, int dwNameIndex) {
-        // Call once to get required buffer size
+        // Call once with null buffer to get required buffer size
         DWORDByReference pcchNameBufferSize = new DWORDByReference(new DWORD(0));
         int result = Pdh.INSTANCE.PdhLookupPerfNameByIndex(szMachineName, dwNameIndex, null, pcchNameBufferSize);
-        if(result != WinError.ERROR_SUCCESS && result != Pdh.PDH_MORE_DATA) {
+        Memory mem = null;
+        // Windows XP requires a non-null buffer and nonzero buffer size and
+        // will return PDH_INVALID_ARGUMENT.
+        if (result != PdhMsg.PDH_INVALID_ARGUMENT) {
+            // Vista+ branch: use returned buffer size for second query
+            if (result != WinError.ERROR_SUCCESS && result != Pdh.PDH_MORE_DATA) {
+                throw new PdhException(result);
+            }
+            // Can't allocate 0 memory
+            if (pcchNameBufferSize.getValue().intValue() < 1) {
+                return "";
+            }
+            // Allocate buffer and call again
+            mem = new Memory(pcchNameBufferSize.getValue().intValue() * CHAR_TO_BYTES);
+            result = Pdh.INSTANCE.PdhLookupPerfNameByIndex(szMachineName, dwNameIndex, mem, pcchNameBufferSize);
+        } else {
+            // XP branch: try increasing buffer sizes until successful
+            for (int bufferSize = 32; bufferSize <= Pdh.PDH_MAX_COUNTER_NAME; bufferSize *= 2) {
+                pcchNameBufferSize = new DWORDByReference(new DWORD(bufferSize));
+                mem = new Memory(bufferSize * CHAR_TO_BYTES);
+                result = Pdh.INSTANCE.PdhLookupPerfNameByIndex(szMachineName, dwNameIndex, mem, pcchNameBufferSize);
+                if (result != PdhMsg.PDH_INVALID_ARGUMENT && result != PdhMsg.PDH_INSUFFICIENT_BUFFER) {
+                    break;
+                }
+            }
+        }
+        if (result != WinError.ERROR_SUCCESS) {
             throw new PdhException(result);
         }
-        
-        // Can't allocate 0 memory
-        if (pcchNameBufferSize.getValue().intValue() < 1) {
-            return "";
-        }
-        // Allocate buffer and call again
-        Memory mem = new Memory(pcchNameBufferSize.getValue().intValue() * CHAR_TO_BYTES);
-        result = Pdh.INSTANCE.PdhLookupPerfNameByIndex(szMachineName, dwNameIndex, mem, pcchNameBufferSize);
 
-        if(result != WinError.ERROR_SUCCESS) {
-            throw new PdhException(result);
-        }
-        
         // Convert buffer to Java String
         if (CHAR_TO_BYTES == 1) {
-            return mem.getString(0);
+            return mem.getString(0); // NOSONAR squid:S2259
         } else {
-            return mem.getWideString(0);
+            return mem.getWideString(0); // NOSONAR squid:S2259
         }
     }
 
@@ -92,7 +105,7 @@ public abstract class PdhUtil {
      * counter index corresponding to the specified counter name in English.
      * Uses the registry on the local machine to find the index in the English
      * locale, regardless of the current language setting on the machine.
-     * 
+     *
      * @param szNameBuffer
      *            The English name of the performance counter
      * @return The counter's index if it exists, or 0 otherwise.
@@ -123,7 +136,7 @@ public abstract class PdhUtil {
      * Utility method to call Pdh's PdhEnumObjectItems that allocates the
      * required memory for the lists parameters based on the type mapping used,
      * calls to PdhEnumObjectItems, and returns the received lists of strings.
-     * 
+     *
      * @param szDataSource
      *            String that specifies the name of the log file used to
      *            enumerate the counter and instance names. If NULL, the
@@ -262,10 +275,10 @@ public abstract class PdhUtil {
             return "PdhEnumObjectItems{" + "counters=" + counters + ", instances=" + instances + '}';
         }
     }
-    
+
     public static final class PdhException extends RuntimeException {
         private final int errorCode;
-        
+
         public PdhException(int errorCode) {
             super(String.format("Pdh call failed with error code 0x%08X", errorCode));
             this.errorCode = errorCode;
