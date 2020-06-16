@@ -27,12 +27,7 @@ import java.awt.Component;
 import java.awt.GraphicsEnvironment;
 import java.awt.HeadlessException;
 import java.awt.Window;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FilenameFilter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Array;
@@ -1136,6 +1131,7 @@ public final class Native implements Version {
                     while ((count = is.read(buf, 0, buf.length)) > 0) {
                         fos.write(buf, 0, count);
                     }
+                    fos.close();
                     LOG.log(DEBUG_JNA_LOAD_LEVEL, "All bytes have been written to temp file " + temp.getAbsolutePath()+", now renaming to "+libMaybe.getAbsolutePath());
 
                     boolean moveError = !temp.renameTo(libMaybe);
@@ -1144,10 +1140,37 @@ public final class Native implements Version {
                         if(libMaybe.exists())
                         {
                             LOG.log(Level.WARNING, "Had a race happen with " + libMaybe.getAbsolutePath() + ", using existing");
-                        } else
-                        {
+                        } else {
                             LOG.log(Level.SEVERE, "Unable to move " + temp.getAbsolutePath() + " to " + libMaybe.getAbsolutePath());
-                            throw new IOException("Unable to move " + temp.getAbsolutePath() + " to " + libMaybe.getAbsolutePath());
+
+                            OutputStream out = null;
+                            InputStream in = null;
+                            try {
+                                in = new BufferedInputStream(new FileInputStream(temp));
+                                out = new BufferedOutputStream(new FileOutputStream(libMaybe));
+
+                                byte[] buffer = new byte[1024];
+                                int lengthRead;
+                                while ((lengthRead = in.read(buffer)) > 0) {
+                                    out.write(buffer, 0, lengthRead);
+                                }
+                                out.flush();
+                                in.close();
+                                out.close();
+                                in=null;
+                                out=null;
+                                LOG.log(Level.SEVERE, "DLL created with problems " + libMaybe.getAbsolutePath());
+                                if (!temp.delete())
+                                    temp.deleteOnExit();
+                                return libMaybe;
+                            } catch (Throwable t) {
+                                throw new IOException("Unable to move or copy " + temp.getAbsolutePath() + " to " + libMaybe.getAbsolutePath());
+                            } finally {
+                                if (in != null)
+                                    in.close();
+                                if (out != null)
+                                    out.close();
+                            }
                         }
                     } else
                     {
