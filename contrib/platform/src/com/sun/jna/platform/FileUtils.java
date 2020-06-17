@@ -1,23 +1,23 @@
 /* Copyright (c) 2007 Timothy Wall, All Rights Reserved
  *
- * The contents of this file is dual-licensed under 2 
- * alternative Open Source/Free licenses: LGPL 2.1 or later and 
+ * The contents of this file is dual-licensed under 2
+ * alternative Open Source/Free licenses: LGPL 2.1 or later and
  * Apache License 2.0. (starting with JNA version 4.0.0).
- * 
- * You can freely decide which license you want to apply to 
+ *
+ * You can freely decide which license you want to apply to
  * the project.
- * 
+ *
  * You may obtain a copy of the LGPL License at:
- * 
+ *
  * http://www.gnu.org/licenses/licenses.html
- * 
+ *
  * A copy is also included in the downloadable source code package
  * containing JNA, in file "LGPL2.1".
- * 
+ *
  * You may obtain a copy of the Apache License at:
- * 
+ *
  * http://www.apache.org/licenses/
- * 
+ *
  * A copy is also included in the downloadable source code package
  * containing JNA, in file "AL2.0".
  */
@@ -42,7 +42,7 @@ public abstract class FileUtils {
      * @param files files to move
      * @throws IOException on failure.
      */
-    public abstract void moveToTrash(File[] files) throws IOException;
+    public abstract void moveToTrash(File... files) throws IOException;
 
     /** Canonical lazy loading of a singleton. */
     private static class Holder {
@@ -60,11 +60,11 @@ public abstract class FileUtils {
             }
         }
     }
-    
+
     public static FileUtils getInstance() {
         return Holder.INSTANCE;
-    }    
-    
+    }
+
     private static class DefaultFileUtils extends FileUtils {
 
         private File getTrashDirectory() {
@@ -90,14 +90,16 @@ public abstract class FileUtils {
             return trash;
         }
 
+        @Override
         public boolean hasTrash() {
             return getTrashDirectory().exists();
         }
 
-        /** The default implementation attempts to move the file to 
+        /** The default implementation attempts to move the file to
          * the desktop "Trash" folder.
          */
-        public void moveToTrash(File[] files) throws IOException {
+        @Override
+        public void moveToTrash(File... files) throws IOException {
             File trash = getTrashDirectory();
             if (!trash.exists()) {
                 throw new IOException("No trash location found (define fileutils.trash to be the path to the trash)");

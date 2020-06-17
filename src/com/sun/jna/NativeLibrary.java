@@ -1,24 +1,24 @@
 /* Copyright (c) 2007 Wayne Meissner, All Rights Reserved
  * Copyright (c) 2007-2013 Timothy Wall, All Rights Reserved
  *
- * The contents of this file is dual-licensed under 2 
- * alternative Open Source/Free licenses: LGPL 2.1 or later and 
+ * The contents of this file is dual-licensed under 2
+ * alternative Open Source/Free licenses: LGPL 2.1 or later and
  * Apache License 2.0. (starting with JNA version 4.0.0).
- * 
- * You can freely decide which license you want to apply to 
+ *
+ * You can freely decide which license you want to apply to
  * the project.
- * 
+ *
  * You may obtain a copy of the LGPL License at:
- * 
+ *
  * http://www.gnu.org/licenses/licenses.html
- * 
+ *
  * A copy is also included in the downloadable source code package
  * containing JNA, in file "LGPL2.1".
- * 
+ *
  * You may obtain a copy of the Apache License at:
- * 
+ *
  * http://www.apache.org/licenses/
- * 
+ *
  * A copy is also included in the downloadable source code package
  * containing JNA, in file "AL2.0".
  */
@@ -96,7 +96,7 @@ public class NativeLibrary {
 
     private static final Map<String, Reference<NativeLibrary>> libraries = new HashMap<String, Reference<NativeLibrary>>();
     private static final Map<String, List<String>> searchPaths = Collections.synchronizedMap(new HashMap<String, List<String>>());
-    private static final List<String> librarySearchPath = new ArrayList<String>();
+    private static final LinkedHashSet<String> librarySearchPath = new LinkedHashSet<String>();
 
     static {
         // Force initialization of native library
@@ -155,16 +155,8 @@ public class NativeLibrary {
 
         List<Throwable> exceptions = new ArrayList<Throwable>();
         boolean isAbsolutePath = new File(libraryName).isAbsolute();
-        List<String> searchPath = new ArrayList<String>();
+        LinkedHashSet<String> searchPath = new LinkedHashSet<String>();
         int openFlags = openFlags(options);
-
-        // Append web start path, if available.  Note that this does not
-        // attempt any library name variations
-        String webstartPath = Native.getWebStartLibraryPath(libraryName);
-        if (webstartPath != null) {
-            LOG.log(DEBUG_LOAD_LEVEL, "Adding web start path " + webstartPath);
-            searchPath.add(webstartPath);
-        }
 
         //
         // Prepend any custom search paths specifically for this library
@@ -172,8 +164,16 @@ public class NativeLibrary {
         List<String> customPaths = searchPaths.get(libraryName);
         if (customPaths != null) {
             synchronized (customPaths) {
-                searchPath.addAll(0, customPaths);
+                searchPath.addAll(customPaths);
             }
+        }
+
+        // Append web start path, if available.  Note that this does not
+        // attempt any library name variations
+        String webstartPath = Native.getWebStartLibraryPath(libraryName);
+        if (webstartPath != null) {
+            LOG.log(DEBUG_LOAD_LEVEL, "Adding web start path " + webstartPath);
+            searchPath.add(webstartPath);
         }
 
         LOG.log(DEBUG_LOAD_LEVEL, "Adding paths from jna.library.path: " + System.getProperty("jna.library.path"));
@@ -718,7 +718,7 @@ public class NativeLibrary {
     }
 
     /** Use standard library search paths to find the library. */
-    private static String findLibraryPath(String libName, List<String> searchPath) {
+    private static String findLibraryPath(String libName, Collection<String> searchPath) {
 
         //
         // If a full path to the library was specified, don't search for it
@@ -789,7 +789,7 @@ public class NativeLibrary {
             }
         }
         else if (Platform.isWindows()) {
-            if (libName.endsWith(".drv") || libName.endsWith(".dll")) {
+            if (libName.endsWith(".drv") || libName.endsWith(".dll") || libName.endsWith(".ocx")) {
                 return libName;
             }
         }
@@ -818,7 +818,7 @@ public class NativeLibrary {
      * where /usr/lib/libc.so does not exist, or it is not a valid symlink to
      * a versioned file (e.g. /lib/libc.so.6).
      */
-    static String matchLibrary(final String libName, List<String> searchPath) {
+    static String matchLibrary(final String libName, Collection<String> searchPath) {
         File lib = new File(libName);
         if (lib.isAbsolute()) {
             searchPath = Arrays.asList(lib.getParent());
@@ -954,7 +954,7 @@ public class NativeLibrary {
                     }
                     ldPaths.add(0, paths[i]);
                 }
-                paths = ldPaths.toArray(new String[ldPaths.size()]);
+                paths = ldPaths.toArray(new String[0]);
             }
 
             for (int i=0;i < paths.length;i++) {
@@ -1000,9 +1000,10 @@ public class NativeLibrary {
      */
     private static ArrayList<String> getLinuxLdPaths() {
         ArrayList<String> ldPaths = new ArrayList<String>();
+        Process process = null;
         BufferedReader reader = null;
         try {
-            Process process = Runtime.getRuntime().exec("/sbin/ldconfig -p");
+            process = Runtime.getRuntime().exec("/sbin/ldconfig -p");
             reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String buffer;
             while ((buffer = reader.readLine()) != null) {
@@ -1021,6 +1022,12 @@ public class NativeLibrary {
                 try {
                     reader.close();
                 } catch (IOException e) {
+                }
+            }
+            if(process != null) {
+                try {
+                    process.waitFor();
+                } catch (InterruptedException e) {
                 }
             }
         }

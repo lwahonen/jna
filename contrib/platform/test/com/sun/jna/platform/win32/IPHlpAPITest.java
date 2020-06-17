@@ -1,23 +1,23 @@
-/* Copyright (c) 2018 Daniel Widdis, All Rights Reserved
+/* Copyright (c) 2018,2020 Daniel Widdis, All Rights Reserved
  *
- * The contents of this file is dual-licensed under 2 
- * alternative Open Source/Free licenses: LGPL 2.1 or later and 
+ * The contents of this file is dual-licensed under 2
+ * alternative Open Source/Free licenses: LGPL 2.1 or later and
  * Apache License 2.0. (starting with JNA version 4.0.0).
- * 
- * You can freely decide which license you want to apply to 
+ *
+ * You can freely decide which license you want to apply to
  * the project.
- * 
+ *
  * You may obtain a copy of the LGPL License at:
- * 
+ *
  * http://www.gnu.org/licenses/licenses.html
- * 
+ *
  * A copy is also included in the downloadable source code package
  * containing JNA, in file "LGPL2.1".
- * 
+ *
  * You may obtain a copy of the Apache License at:
- * 
+ *
  * http://www.apache.org/licenses/
- * 
+ *
  * A copy is also included in the downloadable source code package
  * containing JNA, in file "AL2.0".
  */
@@ -39,6 +39,8 @@ import com.sun.jna.Memory;
 import com.sun.jna.platform.win32.IPHlpAPI.FIXED_INFO;
 import com.sun.jna.platform.win32.IPHlpAPI.MIB_IFROW;
 import com.sun.jna.platform.win32.IPHlpAPI.MIB_IF_ROW2;
+import com.sun.jna.platform.win32.IPHlpAPI.MIB_TCPSTATS;
+import com.sun.jna.platform.win32.IPHlpAPI.MIB_UDPSTATS;
 import com.sun.jna.ptr.IntByReference;
 
 public class IPHlpAPITest {
@@ -134,5 +136,53 @@ public class IPHlpAPITest {
             assertTrue(ValidIP.matcher(addr).matches());
             dns = dns.Next;
         }
+    }
+
+    @Test
+    public void testGetTcpStatistics() {
+        MIB_TCPSTATS stats = new MIB_TCPSTATS();
+        int err = IPHlpAPI.INSTANCE.GetTcpStatistics(stats);
+        assertEquals(String.format("Error %d calling GetTcpStatistics.", err), WinError.NO_ERROR, err);
+        assertTrue("RTO algorithm must be between 1 and 4.", stats.dwRtoAlgorithm >= 1);
+        assertTrue("RTO algorithm must be between 1 and 4.", stats.dwRtoAlgorithm <= 4);
+
+        // Above should roughly match IPv4 stats with Ex version
+        MIB_TCPSTATS stats4 = new MIB_TCPSTATS();
+        err = IPHlpAPI.INSTANCE.GetTcpStatisticsEx(stats4, IPHlpAPI.AF_INET);
+        assertEquals(String.format("Error %d calling GetTcpStatisticsEx.", err), WinError.NO_ERROR, err);
+        assertEquals("RTO algorithm from GetTcpStatistics should match GetTcpStatisticsEx", stats.dwRtoAlgorithm,
+                stats4.dwRtoAlgorithm);
+        assertTrue("Reset connections should not decrease between calls to GetTcpStatistics and GetTcpStatisticsEx",
+                stats.dwEstabResets <= stats4.dwEstabResets);
+        assertTrue(
+                "Active connections opened should not decrease between calls to GetTcpStatistics and GetTcpStatisticsEx",
+                stats.dwActiveOpens <= stats4.dwActiveOpens);
+        assertTrue(
+                "Passive connections opened should not decrease between calls to GetTcpStatistics and GetTcpStatisticsEx",
+                stats.dwPassiveOpens <= stats4.dwPassiveOpens);
+    }
+
+    @Test
+    public void testGetUdpStatistics() {
+        MIB_UDPSTATS stats = new MIB_UDPSTATS();
+        int err = IPHlpAPI.INSTANCE.GetUdpStatistics(stats);
+        assertEquals(String.format("Error %d calling GetUdpStatistics.", err), WinError.NO_ERROR, err);
+        assertTrue("Datagrams received with errors or no port should be less than inbound datagrams.",
+                stats.dwNoPorts + stats.dwInErrors <= stats.dwInDatagrams);
+
+        // Above should roughly match IPv4 stats with Ex version
+        MIB_UDPSTATS stats4 = new MIB_UDPSTATS();
+        err = IPHlpAPI.INSTANCE.GetUdpStatisticsEx(stats4, IPHlpAPI.AF_INET);
+        assertEquals(String.format("Error %d calling GetUdpStatistics.", err), WinError.NO_ERROR, err);
+        assertTrue(
+                "Datagrams received with no port should not decrease between calls to GetUdpStatistics and GetUdpStatisticsEx",
+                stats.dwNoPorts <= stats4.dwNoPorts);
+        assertTrue(
+                "Datagrams received with errors should not decrease between calls to GetUdpStatistics and GetUdpStatisticsEx",
+                stats.dwInErrors <= stats4.dwInErrors);
+        assertTrue("Datagrams received should not decrease between calls to GetUdpStatistics and GetUdpStatisticsEx",
+                stats.dwInDatagrams <= stats4.dwInDatagrams);
+        assertTrue("Datagrams received with errors or no port should be less than inbound datagrams.",
+                stats4.dwNoPorts + stats4.dwInErrors <= stats4.dwInDatagrams);
     }
 }

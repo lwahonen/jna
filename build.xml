@@ -59,8 +59,8 @@
 
   <!-- JNA library release version - android versionCode is derived from mjar/minor/revision -->
   <property name="jna.major" value="5"/>
-  <property name="jna.minor" value="2"/>
-  <property name="jna.revision" value="1"/>
+  <property name="jna.minor" value="6"/>
+  <property name="jna.revision" value="0"/>
   <property name="jna.build" value="0"/> <!--${build.number}-->
   <condition property="version.suffix" value="" else="-SNAPSHOT">
     <or>
@@ -71,7 +71,7 @@
   <property name="jna.version" value="${jna.major}.${jna.minor}.${jna.revision}${version.suffix}"/>
   <!-- jnidispatch library release version -->
   <property name="jni.major" value="6"/>
-  <property name="jni.minor" value="0"/>
+  <property name="jni.minor" value="1"/>
   <property name="jni.revision" value="0"/>
   <property name="jni.build" value="0"/> <!--${build.number}-->
   <property name="jni.version" value="${jni.major}.${jni.minor}.${jni.revision}"/>
@@ -90,17 +90,33 @@
   <condition property="test.compatibility" value="1.4">
     <equals arg1="${os.prefix}" arg2="w32ce-arm"/>
   </condition>
-  <!-- Default compatibility, 1.6, or whatever version is running -->
-  <condition property="compatibility" value="${ant.java.version}" else="1.6">
-    <matches pattern="^1.[345]$" string="${ant.java.version}"/>
+
+  <!--
+    Default compatibility, 1.6, or whatever version is running
+
+    Release builds of JNA target 1.6 and should be build on JDK 8, as JDK 9
+    introduced changes in the ByteBuffer class, which result in classes, that
+    can't be loaded on Java 6.
+
+    JDK 11 is the last JDK, that supports creation of Java 6 compatible class
+    files.
+  -->
+  <condition property="compatibility" value="1.6" else="9">
+    <matches pattern="^1\.\d+$" string="${ant.java.version}"/>
   </condition>
-  <!-- Platform default compatibility, 1.5+ -->
-  <condition property="platform.compatibility" value="1.5" else="${compatibility}">
-    <equals arg1="${compatibility}" arg2="1.4"/>
+
+  <condition property="compatibility-check" value="true">
+    <equals arg1="${compatibility}" arg2="1.6" />
   </condition>
-  <!-- Test default compatibility, 1.5+ -->
-  <condition property="test.compatibility" value="1.5" else="${compatibility}">
-    <equals arg1="${compatibility}" arg2="1.4"/>
+
+  <property name="platform.compatibility" value="${compatibility}" />
+
+  <!-- JNA tests require at least 1.8 compatiblity -->
+  <condition property="test.compatibility" value="1.8" else="${compatibility}">
+    <or>
+        <equals arg1="${compatibility}" arg2="1.6"/>
+        <equals arg1="${compatibility}" arg2="1.7"/>
+    </or>
   </condition>
   <condition property="tests.exclude-patterns" value="**/VarArgsTest.java,**/AnnotatedLibraryTest.java,**/WebStartTest.java,**/PointerBufferTest.java,**/HeadlessLoadLibraryTest.java,**/StructureBufferFieldTest.java,**/PerformanceTest.java,**/*BufferArgumentsMarshalTest.java" else="**/wince/*.java,**/WebStartTest.java">
     <equals arg1="${os.prefix}" arg2="w32ce-arm"/>
@@ -120,9 +136,6 @@
   <property name="platform-javadoc-jar" value="${dist}/platform-${jna.version}-javadoc.jar" />
   <property name="platform-sources-jar" value="${dist}/platform-${jna.version}-sources.jar" />
 
-  <property name="pom" value="pom-jna.xml" />
-  <property name="pom-platform" value="pom-jna-platform.xml" />
-
   <!-- defined maven snapshots and staging repository id and url -->
   <property name="maven-snapshots-repository-id" value="oss.sonatype.org" />
   <property name="maven-snapshots-repository-url" value="https://oss.sonatype.org/content/repositories/snapshots/" />
@@ -132,6 +145,12 @@
   <!-- Miscellaneous -->
   <property name="build" value="build"/>
   <property name="build.compiler.emacs" value="true"/>
+
+  <property name="pom-base" value="pom-jna.xml" />
+  <property name="pom-platform-base" value="pom-jna-platform.xml" />
+
+  <property name="pom" value="${build}/pom-jna.xml" />
+  <property name="pom-platform" value="${build}/pom-jna-platform.xml" />
 
   <target name="default" depends="test" description="Build and Test."/>
 
@@ -156,8 +175,6 @@
       <javac classpath="lib/ant.jar"
              destdir="${build}/ant-tools"
              includeantruntime="false"
-             source="1.6"
-             target="1.6"
              encoding="UTF-8"
       >
           <src path="src" />
@@ -192,6 +209,9 @@
       <isset property="-native"/>
     </condition>
 
+    <copy file="${pom-base}" todir="${build}" />
+    <copy file="${pom-platform-base}" todir="${build}" />
+
     <replaceregexp match="(&lt;version&gt;).*(&lt;/version&gt;)"
                    replace="\1${jna.version}\2"
                    file="${pom}"/>
@@ -200,13 +220,6 @@
                    replace="\1${jna.version}\2"
                    flags="g"
                    file="${pom-platform}"/>
-
-    <replaceregexp match='VERSION = ".*";'
-                   replace='VERSION = "${jna.version}";'
-                   file="src/com/sun/jna/Version.java"/>
-    <replaceregexp match='VERSION_NATIVE = ".*";'
-                   replace='VERSION_NATIVE = "${jni.version}";'
-                   file="src/com/sun/jna/Version.java"/>
 
     <condition property="jar.omitted" value="**/*jnidispatch*" else="jnilib-included">
       <isset property="omit-jnilib"/>
@@ -366,7 +379,30 @@
 
   <target name="compile" depends="-setup"
           description="Compile all Java source">
-    <javac classpathref="compile.path"
+
+    <delete dir="${build}/jna-src" />
+    <mkdir dir="${build}/jna-src/com/sun/jna" />
+
+    <copy file="src/com/sun/jna/Version.java" todir="${build}/jna-src/com/sun/jna" />
+
+    <replaceregexp match='VERSION = ".*";'
+                   replace='VERSION = "${jna.version}";'
+                   file="${build}/jna-src/com/sun/jna/Version.java"/>
+    <replaceregexp match='VERSION_NATIVE = ".*";'
+                   replace='VERSION_NATIVE = "${jni.version}";'
+                   file="${build}/jna-src/com/sun/jna/Version.java"/>
+
+    <javac source="${compatibility}"
+           target="${compatibility}"
+           destdir="${classes}"
+           includeantruntime="false"
+           deprecation="on"
+           debug="${debug}"
+           encoding="UTF-8"
+           nativeheaderdir="${build.headers}">
+      <src location="${build}/jna-src/com/sun/jna" />
+    </javac>
+    <javac classpath="${compatibility}"
            source="${compatibility}"
            target="${compatibility}"
            destdir="${classes}"
@@ -376,6 +412,7 @@
            encoding="UTF-8"
            nativeheaderdir="${build.headers}">
       <src refid="src.path"/>
+      <exclude name="com/sun/jna/Version.java" />
     </javac>
   </target>
 
@@ -394,7 +431,7 @@
     <!-- Bundle native components with primary jar to facilitate
          easy distribution to common platforms.
       -->
-    <jar jarfile="${build}/${jar}" duplicate="preserve">
+    <jar jarfile="${build}/${jar}" duplicate="preserve" createUnicodeExtraFields="never" encoding="UTF-8">
       <manifest>
         <attribute name="Main-Class" value="com.sun.jna.Native"/>
         <attribute name="Manifest-Version" value="1.0"/>
@@ -415,7 +452,7 @@
         <attribute name="Bundle-Description" value="JNA Library"/>
         <attribute name="Bundle-SymbolicName" value="com.sun.jna"/>
         <attribute name="Bundle-Version" value="${jna.major}.${jna.minor}.${jna.revision}"/>
-        <attribute name="Bundle-RequiredExecutionEnvironment" value="J2SE-1.4"/>
+        <attribute name="Bundle-RequiredExecutionEnvironment" value="JavaSE-1.6"/>
         <attribute name="Bundle-Vendor" value="${vendor}"/>
         <attribute name="Bundle-ActivationPolicy" value="lazy"/>
         <attribute name="Export-Package" value="com.sun.jna;version=${jna.major}.${jna.minor}.${jna.revision}, com.sun.jna.ptr;version=${jna.major}.${jna.minor}.${jna.revision}, com.sun.jna.win32;version=${jna.major}.${jna.minor}.${jna.revision}"/>
@@ -461,6 +498,8 @@ com/sun/jna/linux-x86-64/libjnidispatch.so;
 processor=x86-64;osname=linux,
 com/sun/jna/linux-arm/libjnidispatch.so;
 processor=arm;osname=linux,
+com/sun/jna/linux-arm/libjnidispatch.so;
+processor=arm_le;osname=linux,
 com/sun/jna/linux-armel/libjnidispatch.so;
 processor=armel;osname=linux,
 com/sun/jna/linux-aarch64/libjnidispatch.so;
@@ -568,6 +607,9 @@ osname=macosx;processor=x86;processor=x86-64;processor=ppc
       <zipfileset src="${lib.native}/w32ce-arm.jar"
                   includes="*jnidispatch*"
                   prefix="com/sun/jna/w32ce-arm"/>
+      <zipfileset dir="."
+                  includes="LICENSE,LGPL2.1,AL2.0"
+                  prefix="META-INF"/>
     </jar>
     <zip zipfile="${build}/${minjar}">
       <zipfileset src="${build}/${jar}" excludes="**/*jnidispatch*"/>
@@ -657,7 +699,7 @@ osname=macosx;processor=x86;processor=x86-64;processor=ppc
   </target>
 
   <target name="idea-jar" depends="jar" description="Build Intellij Idea convenience jar">
-    <jar destfile="${dist}/idea-dispatch.jar">
+    <jar destfile="${dist}/idea-dispatch.jar" createUnicodeExtraFields="never" encoding="UTF-8">
       <zipfileset src="${dist-jar}" excludes="**/*.class"/>
     </jar>
   </target>
@@ -948,7 +990,7 @@ cd build
 zip ../${os.prefix}.jar libjnidispatch.so jnidispatch.dll
 cd ..
     </echo>
-    <jar jarfile="${build}/${os.prefix}.jar">
+    <jar jarfile="${build}/${os.prefix}.jar" createUnicodeExtraFields="never" encoding="UTF-8">
       <manifest>
         <attribute name="Implementation-Version" value="${jni.version} b${jni.build}"/>
         <attribute name="Specification-Version" value="${jni.version}"/>
@@ -1011,7 +1053,7 @@ cd ..
     </copy>
     <!-- For web start, native libraries may be provided in the root of -->
     <!-- an included jar file -->
-    <jar jarfile="${build}/${native.jar}">
+    <jar jarfile="${build}/${native.jar}" createUnicodeExtraFields="never" encoding="UTF-8">
       <fileset dir="${build.native}" includes="jnidispatch.dll,libjnidispatch.*"/>
       <manifest>
         <attribute name="Implementation-Version" value="${jni.version} b${jni.build}"/>
@@ -1073,7 +1115,7 @@ cd ..
         </fileset>
     </copy>
     <!-- Create a jar for easy movement of tests, and jar load test -->
-    <jar jarfile="${build}/${testjar}">
+    <jar jarfile="${build}/${testjar}" createUnicodeExtraFields="never" encoding="UTF-8">
       <fileset dir="${test.classes}">
         <patternset refid="jar-compiled"/>
         <include name="**/*testlib-jar*"/>
@@ -1094,7 +1136,7 @@ cd ..
     <copy todir="${build}/jws" file="${build}/${testjar}"/>
     <copy todir="${build}/jws" file="lib/junit.jar"/>
     <copy todir="${build}/jws" file="lib/clover.jar"/>
-    <jar jarfile="${build}/jws/jnidispatch.jar">
+    <jar jarfile="${build}/jws/jnidispatch.jar" createUnicodeExtraFields="never" encoding="UTF-8">
       <fileset dir="${build.native}" includes="*jnidispatch.*"/>
     </jar>
     <!-- To allow JNLP tests to run, import the JNA testing certificate as a CA -->
@@ -1120,7 +1162,7 @@ cd ..
          device/simulator storage card. -->
     <property name="shared" value="shared"/>
     <!-- w32ce arm testing -->
-    <jar jarfile="${shared}/test.jar">
+    <jar jarfile="${shared}/test.jar" createUnicodeExtraFields="never" encoding="UTF-8">
       <zipfileset src="${build}/${jar}"/>
       <zipfileset src="${build}/${testjar}"/>
     </jar>
@@ -1138,11 +1180,7 @@ cd ..
     <property name="build-native" value="true"/>
   </target>
 
-  <!-- When running tests from an IDE, be sure to set jna.library.path -->
-  <!-- to where the test library (testlib) is found.                   -->
-  <target name="test" depends="-enable-native,jar,compile-tests" unless="cross-compile"
-          description="Run all unit tests">
-
+  <target name="-check-java6-compatibility" depends="-enable-native,jar,compile-tests" if="compatibility-check">
     <echo>Checking JDK compatibility 1.6</echo>
 
     <echo></echo>
@@ -1152,10 +1190,20 @@ cd ..
     </as:check-signature>
 
     <echo></echo>
+  </target>
+
+  <target name="-warn-java6-compatiblity" depends="-enable-native,jar,compile-tests" unless="compatibility-check">
+    <echo level="warn">Build is not Java 6 compatible and NOT A PRODUCTION BUILD</echo>
+  </target>
+
+  <!-- When running tests from an IDE, be sure to set jna.library.path -->
+  <!-- to where the test library (testlib) is found.                   -->
+  <target name="test" depends="-enable-native,jar,compile-tests,-check-java6-compatibility,-warn-java6-compatiblity" unless="cross-compile"
+          description="Run all unit tests">
 
     <property name="test.fork" value="yes"/>
     <property name="test.forkmode" value="perTest"/>
-    
+
     <condition property="test.jdwp" value="-Xrunjdwp:transport=dt_socket,address=${test.debugport},server=y,suspend=y">
         <isset property="test.debugport" />
     </condition>
@@ -1307,7 +1355,7 @@ cd ..
 
       <arg value="-notimestamp"/>
     </javadoc>
-    <jar jarfile="${platform-javadoc-jar}">
+    <jar jarfile="${platform-javadoc-jar}" createUnicodeExtraFields="never" encoding="UTF-8">
       <fileset dir="${javadoc}" />
     </jar>
   </target>
@@ -1327,7 +1375,7 @@ cd ..
 	<include name="**/build/demo-*.jar" />
       </fileset>
     </copy>
-    <jar jarfile="${maven-javadoc-jar}">
+    <jar jarfile="${maven-javadoc-jar}" createUnicodeExtraFields="never" encoding="UTF-8">
         <fileset dir="${javadoc}" />
     </jar>
 
@@ -1450,5 +1498,13 @@ cd ..
       <arg value="-Dtypes=jar,jar"/>
       <arg value="-Dgpg.useagent=true"/>
     </artifact:mvn>
+  </target>
+
+  <target name="checkstyle">
+      <taskdef resource="com/puppycrawl/tools/checkstyle/ant/checkstyle-ant-task.properties"
+               classpath="lib/checkstyle-8.17-all.jar"/>
+      <checkstyle config="checkstyle.xml">
+          <fileset dir="." includes="**/*.java"/>
+      </checkstyle>
   </target>
 </project>

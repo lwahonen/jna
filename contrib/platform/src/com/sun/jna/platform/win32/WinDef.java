@@ -1,30 +1,29 @@
 /* Copyright (c) 2010 Daniel Doubrovkine, All Rights Reserved
  *
- * The contents of this file is dual-licensed under 2 
- * alternative Open Source/Free licenses: LGPL 2.1 or later and 
+ * The contents of this file is dual-licensed under 2
+ * alternative Open Source/Free licenses: LGPL 2.1 or later and
  * Apache License 2.0. (starting with JNA version 4.0.0).
- * 
- * You can freely decide which license you want to apply to 
+ *
+ * You can freely decide which license you want to apply to
  * the project.
- * 
+ *
  * You may obtain a copy of the LGPL License at:
- * 
+ *
  * http://www.gnu.org/licenses/licenses.html
- * 
+ *
  * A copy is also included in the downloadable source code package
  * containing JNA, in file "LGPL2.1".
- * 
+ *
  * You may obtain a copy of the Apache License at:
- * 
+ *
  * http://www.apache.org/licenses/
- * 
+ *
  * A copy is also included in the downloadable source code package
  * containing JNA, in file "AL2.0".
  */
 package com.sun.jna.platform.win32;
 
 import java.awt.Rectangle;
-import java.util.List;
 
 import com.sun.jna.IntegerType;
 import com.sun.jna.Native;
@@ -632,6 +631,49 @@ public interface WinDef {
     }
 
     /**
+     * Handle to a input locale identifier (formerly called keyboard layout
+     * handle).
+     */
+    public static class HKL extends HANDLE {
+
+        /**
+         * Instantiates a new hkl.
+         */
+        public HKL() {
+
+        }
+
+        /**
+         * Instantiates a new hkl.
+         *
+         * @param p the p
+         */
+        public HKL(Pointer p) {
+            super(p);
+        }
+
+        public HKL(int i) {
+            super(Pointer.createConstant(i));
+        }
+
+        /**
+         * Get the low word (unsigned short).
+         */
+        public int getLanguageIdentifier() {
+            return (int) (Pointer.nativeValue(getPointer()) & 0xFFFF);
+        }
+
+        public int getDeviceHandle() {
+            return (int) (Pointer.nativeValue(getPointer()) >> 16 & 0xFFFF);
+        }
+
+        @Override
+        public String toString() {
+            return String.format("%08x", Pointer.nativeValue(getPointer()));
+        }
+    }
+
+    /**
      * Message parameter.
      */
     public static class LPARAM extends LONG_PTR {
@@ -872,7 +914,7 @@ public interface WinDef {
     public static class ULONGLONG extends IntegerType implements Comparable<ULONGLONG> {
 
         /** The Constant SIZE. */
-        public static final int SIZE = Native.LONG_SIZE *2;
+        public static final int SIZE = 8;
 
         /**
          * Instantiates a new ULONGLONG.
@@ -1077,7 +1119,7 @@ public interface WinDef {
             }
 
         }
-        
+
         /**
          * The Class ByValue.
          */
@@ -1684,32 +1726,31 @@ public interface WinDef {
          * @return the value
          */
         public CHAR getValue() {
-            return new CHAR(getPointer().getChar(0));
+            return new CHAR(getPointer().getByte(0));
         }
     }
 
-	/**
-	 * handle to an OpenGL rendering context
-	 */
-	public static class HGLRC extends HANDLE {
+    /**
+     * handle to an OpenGL rendering context
+     */
+    public static class HGLRC extends HANDLE {
 
-	    /**
-	     * Instantiates a new HGLRC .
-	     */
-	    public HGLRC() {
+        /**
+         * Instantiates a new HGLRC .
+         */
+        public HGLRC() {
 
-	    }
+        }
 
-	    /**
-	     * Instantiates a new HGLRC .
-	     *
-	     * @param p
-	     *            the p
-	     */
-	    public HGLRC(Pointer p) {
-	        super(p);
-	    }
-	}
+        /**
+         * Instantiates a new HGLRC .
+         *
+         * @param p the p
+         */
+        public HGLRC(Pointer p) {
+            super(p);
+        }
+    }
 
     /**
      * handle to an OpenGL rendering context

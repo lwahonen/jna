@@ -1,20 +1,32 @@
-/*
- * Copyright (c) 2015 Daniel Widdis 
+/* Copyright (c) 2015 Daniel Widdis
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * The contents of this file is dual-licensed under 2
+ * alternative Open Source/Free licenses: LGPL 2.1 or later and
+ * Apache License 2.0. (starting with JNA version 4.0.0).
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
+ * You can freely decide which license you want to apply to
+ * the project.
  *
- * You should have received a copy of the GNU Lesser General Public License
- * version 3 along with this work.  If not, see <http://www.gnu.org/licenses/>.
+ * You may obtain a copy of the LGPL License at:
+ *
+ * http://www.gnu.org/licenses/licenses.html
+ *
+ * A copy is also included in the downloadable source code package
+ * containing JNA, in file "LGPL2.1".
+ *
+ * You may obtain a copy of the Apache License at:
+ *
+ * http://www.apache.org/licenses/
+ *
+ * A copy is also included in the downloadable source code package
+ * containing JNA, in file "AL2.0".
  */
 package com.sun.jna.platform.mac;
+
+import static org.junit.Assert.assertNotEquals;
+
+import java.util.Date;
+import java.util.Map;
 
 import com.sun.jna.Memory;
 import com.sun.jna.Native;
@@ -45,143 +57,163 @@ import junit.framework.TestCase;
 
 /**
  * Exercise the {@link SystemB} class.
- *
- * @author widdis@gmail.com
  */
-// @SuppressWarnings("unused")
 public class SystemBTest extends TestCase {
 
-	public void testSysctl() {
-		final String mibName = "hw.logicalcpu";
-		final int nCpu = Runtime.getRuntime().availableProcessors();
+    public void testSysctl() {
+        final String mibName = "hw.logicalcpu";
+        final int nCpu = Runtime.getRuntime().availableProcessors();
 
-		IntByReference size = new IntByReference(SystemB.INT_SIZE);
-		Pointer p = new Memory(size.getValue());
-		int ret = SystemB.INSTANCE.sysctlbyname(mibName, p, size, null, 0);
-		assertEquals(ret, 0);
-		// These values should be equal unless affinity is set, limiting nCpu
-		assertTrue(p.getInt(0) >= nCpu);
+        IntByReference size = new IntByReference(SystemB.INT_SIZE);
+        Pointer p = new Memory(size.getValue());
+        int ret = SystemB.INSTANCE.sysctlbyname(mibName, p, size, null, 0);
+        assertEquals(ret, 0);
+        // These values should be equal unless affinity is set, limiting nCpu
+        assertTrue(p.getInt(0) >= nCpu);
 
-		size = new IntByReference();
-		ret = SystemB.INSTANCE.sysctlnametomib(mibName, null, size);
-		assertEquals(ret, 0);
-		// Size should be 2
-		assertEquals(size.getValue(), 2);
+        size = new IntByReference();
+        ret = SystemB.INSTANCE.sysctlnametomib(mibName, null, size);
+        assertEquals(ret, 0);
+        // Size should be 2
+        assertEquals(size.getValue(), 2);
 
-		Pointer mibp = new Memory(size.getValue() * SystemB.INT_SIZE);
-		ret = SystemB.INSTANCE.sysctlnametomib(mibName, mibp, size);
-		assertEquals(ret, 0);
-		// Size should be 2
-		assertEquals(size.getValue(), 2);
+        Pointer mibp = new Memory(size.getValue() * SystemB.INT_SIZE);
+        ret = SystemB.INSTANCE.sysctlnametomib(mibName, mibp, size);
+        assertEquals(ret, 0);
+        // Size should be 2
+        assertEquals(size.getValue(), 2);
 
-		int[] mib = mibp.getIntArray(0, size.getValue());
-		// mib should be { 6, 103(?) }
-		assertEquals(mib.length, 2);
-		assertEquals(mib[0], 6);
+        int[] mib = mibp.getIntArray(0, size.getValue());
+        // mib should be { 6, 103(?) }
+        assertEquals(mib.length, 2);
+        assertEquals(mib[0], 6);
 
-		size = new IntByReference(SystemB.INT_SIZE);
-		p = new Memory(size.getValue());
-		ret = SystemB.INSTANCE.sysctl(mib, mib.length, p, size, null, 0);
-		assertTrue(p.getInt(0) >= nCpu);
-	};
-
-	public void testHostPageSize() {
-		int machPort = SystemB.INSTANCE.mach_host_self();
-		assertTrue(machPort > 0);
-
-		LongByReference pPageSize = new LongByReference();
-		int ret = SystemB.INSTANCE.host_page_size(machPort, pPageSize);
-		assertEquals(ret, 0);
-		// Probably 4096, definitely a power of 2
-		assertTrue(pPageSize.getValue() > 0);
-		assertEquals(pPageSize.getValue() & (pPageSize.getValue() - 1), 0);
-	}
-
-	public void testVMInfo() {
-		int machPort = SystemB.INSTANCE.mach_host_self();
-		assertTrue(machPort > 0);
-
-		VMStatistics vmStats = new VMStatistics();
-		int ret = SystemB.INSTANCE.host_statistics(machPort,
-				SystemB.HOST_VM_INFO, vmStats,
-				new IntByReference(vmStats.size() / SystemB.INT_SIZE));
-		assertEquals(ret, 0);
-		// Nonnegative
-		assertTrue(vmStats.free_count >= 0);
-
-		if (Platform.is64Bit()) {
-			VMStatistics64 vmStats64 = new VMStatistics64();
-			ret = SystemB.INSTANCE.host_statistics64(machPort,
-					SystemB.HOST_VM_INFO, vmStats64, new IntByReference(
-							vmStats64.size() / SystemB.INT_SIZE));
-			assertEquals(ret, 0);
-			// Nonnegative
-			assertTrue(vmStats64.free_count >= 0);
-		}
-	}
-
-	public void testCpuLoad() {
-		int machPort = SystemB.INSTANCE.mach_host_self();
-		assertTrue(machPort > 0);
-
-		HostCpuLoadInfo cpuLoadInfo = new HostCpuLoadInfo();
-		int ret = SystemB.INSTANCE.host_statistics(machPort,
-				SystemB.HOST_CPU_LOAD_INFO, cpuLoadInfo, new IntByReference(
-						cpuLoadInfo.size()));
-		assertEquals(ret, 0);
-		// Should be int[4]
-		assertEquals(cpuLoadInfo.cpu_ticks.length, SystemB.CPU_STATE_MAX);
-	}
-
-	public void testHostLoad() {
-		int machPort = SystemB.INSTANCE.mach_host_self();
-		assertTrue(machPort > 0);
-
-		HostLoadInfo hostLoadInfo = new HostLoadInfo();
-		int ret = SystemB.INSTANCE.host_statistics(machPort,
-				SystemB.HOST_CPU_LOAD_INFO, hostLoadInfo, new IntByReference(
-						hostLoadInfo.size()));
-		assertEquals(ret, 0);
-		// Should be two int[3]'s
-		assertEquals(hostLoadInfo.avenrun.length, 3);
-		assertEquals(hostLoadInfo.mach_factor.length, 3);
-		// Load factor can't be zero
-		assertTrue(hostLoadInfo.avenrun[0] > 0);
-	}
-
-	public void testHostProcessorInfo() {
-		int machPort = SystemB.INSTANCE.mach_host_self();
-		assertTrue(machPort > 0);
-
-		IntByReference procCount = new IntByReference();
-		PointerByReference procCpuLoadInfo = new PointerByReference();
-		IntByReference procInfoCount = new IntByReference();
-		int ret = SystemB.INSTANCE.host_processor_info(machPort,
-				SystemB.PROCESSOR_CPU_LOAD_INFO, procCount, procCpuLoadInfo,
-        			procInfoCount);
-		assertEquals(ret, 0);
-
-		assertTrue(procCount.getValue() > 0);
-		assertEquals(procCpuLoadInfo.getValue().getIntArray(0,
-				procInfoCount.getValue()).length, procInfoCount.getValue());
-	}
-	
-    public void testMachPorts() {
-      int machPort = SystemB.INSTANCE.mach_host_self();
-      assertTrue(machPort > 0);
-      machPort = SystemB.INSTANCE.mach_task_self();
-      assertTrue(machPort > 0);	  
-      }
-
-    public void testGetLoadAvg() {
-      double[] loadavg = new double[3];
-      int retval = SystemB.INSTANCE.getloadavg(loadavg, 3);
-      assertEquals(retval, 3);
-      assertTrue(loadavg[0] >= 0);
-      assertTrue(loadavg[1] >= 0);
-      assertTrue(loadavg[2] >= 0);
+        size = new IntByReference(SystemB.INT_SIZE);
+        p = new Memory(size.getValue());
+        ret = SystemB.INSTANCE.sysctl(mib, mib.length, p, size, null, 0);
+        assertTrue(p.getInt(0) >= nCpu);
     }
-	
+
+    public void testHostPageSize() {
+        int hostPort = SystemB.INSTANCE.mach_host_self();
+        assertNotEquals(0, hostPort);
+
+        LongByReference pPageSize = new LongByReference();
+        int ret = SystemB.INSTANCE.host_page_size(hostPort, pPageSize);
+        assertEquals(ret, 0);
+        // Probably 4096, definitely a power of 2
+        assertTrue(pPageSize.getValue() > 0);
+        assertEquals(pPageSize.getValue() & (pPageSize.getValue() - 1), 0);
+    }
+
+    public void testVMInfo() {
+        int hostPort = SystemB.INSTANCE.mach_host_self();
+        assertNotEquals(0, hostPort);
+
+        VMStatistics vmStats = new VMStatistics();
+        int ret = SystemB.INSTANCE.host_statistics(hostPort, SystemB.HOST_VM_INFO, vmStats,
+                new IntByReference(vmStats.size() / SystemB.INT_SIZE));
+        assertEquals(ret, 0);
+        // Nonnegative
+        assertTrue(vmStats.free_count >= 0);
+
+        if (Platform.is64Bit()) {
+            VMStatistics64 vmStats64 = new VMStatistics64();
+            ret = SystemB.INSTANCE.host_statistics64(hostPort, SystemB.HOST_VM_INFO, vmStats64,
+                    new IntByReference(vmStats64.size() / SystemB.INT_SIZE));
+            assertEquals(ret, 0);
+            // Nonnegative
+            assertTrue(vmStats64.free_count >= 0);
+        }
+    }
+
+    public void testCpuLoad() {
+        int hostPort = SystemB.INSTANCE.mach_host_self();
+        assertNotEquals(0, hostPort);
+
+        HostCpuLoadInfo cpuLoadInfo = new HostCpuLoadInfo();
+        int ret = SystemB.INSTANCE.host_statistics(hostPort, SystemB.HOST_CPU_LOAD_INFO, cpuLoadInfo,
+                new IntByReference(cpuLoadInfo.size()));
+        assertEquals(ret, 0);
+        // Should be int[4]
+        assertEquals(cpuLoadInfo.cpu_ticks.length, SystemB.CPU_STATE_MAX);
+    }
+
+    public void testHostLoad() {
+        int hostPort = SystemB.INSTANCE.mach_host_self();
+        assertNotEquals(0, hostPort);
+
+        HostLoadInfo hostLoadInfo = new HostLoadInfo();
+        int ret = SystemB.INSTANCE.host_statistics(hostPort, SystemB.HOST_CPU_LOAD_INFO, hostLoadInfo,
+                new IntByReference(hostLoadInfo.size()));
+        assertEquals(ret, 0);
+        // Should be two int[3]'s
+        assertEquals(hostLoadInfo.avenrun.length, 3);
+        assertEquals(hostLoadInfo.mach_factor.length, 3);
+        // Load factor can't be zero
+        assertTrue(hostLoadInfo.avenrun[0] > 0);
+    }
+
+    public void testHostProcessorInfo() {
+        int hostPort = SystemB.INSTANCE.mach_host_self();
+        assertNotEquals(0, hostPort);
+
+        IntByReference procCount = new IntByReference();
+        PointerByReference procCpuLoadInfo = new PointerByReference();
+        IntByReference procInfoCount = new IntByReference();
+        int ret = SystemB.INSTANCE.host_processor_info(hostPort, SystemB.PROCESSOR_CPU_LOAD_INFO, procCount,
+                procCpuLoadInfo, procInfoCount);
+        assertEquals(ret, 0);
+
+        assertTrue(procCount.getValue() > 0);
+        assertEquals(procCpuLoadInfo.getValue().getIntArray(0, procInfoCount.getValue()).length,
+                procInfoCount.getValue());
+    }
+
+    // From Unix LibCAPI
+    public void testGetenv() {
+        Map<String, String> env = System.getenv();
+        for (Map.Entry<String, String> ee : env.entrySet()) {
+            String name = ee.getKey();
+            String expected = ee.getValue();
+            String actual = SystemB.INSTANCE.getenv(name);
+            assertEquals(name, expected, actual);
+        }
+    }
+
+    // From Unix LibCAPI
+    public void testSetenv() {
+        String name = "SystemBTestEnv";
+        try {
+            String expected = new Date(System.currentTimeMillis()).toString();
+            assertEquals("setenv", 0, SystemB.INSTANCE.setenv(name, expected, 1));
+            assertEquals("Mismatched values", expected, SystemB.INSTANCE.getenv(name));
+            assertEquals("unsetenv", 0, SystemB.INSTANCE.unsetenv(name));
+        } finally {
+            SystemB.INSTANCE.unsetenv(name);
+        }
+    }
+
+    // From Unix LibCAPI
+    public void testGetLoadAvg() {
+        double[] loadavg = new double[3];
+        int retval = SystemB.INSTANCE.getloadavg(loadavg, 3);
+        assertEquals(retval, 3);
+        assertTrue(loadavg[0] >= 0);
+        assertTrue(loadavg[1] >= 0);
+        assertTrue(loadavg[2] >= 0);
+    }
+
+    // From Unix LibCAPI
+    public void testGethostnameGetdomainname() {
+        byte[] buffer = new byte[256];
+        assertEquals("gethostname", 0, SystemB.INSTANCE.gethostname(buffer, buffer.length));
+        String hostname = Native.toString(buffer);
+        assertTrue(hostname.length() > 0);
+        assertEquals("getdomainname", 0, SystemB.INSTANCE.getdomainname(buffer, buffer.length));
+        // May have length 0
+    }
+
     public void testTimeofDay() {
         Timeval tp = new Timeval();
         long before = System.currentTimeMillis();
@@ -201,9 +233,10 @@ public class SystemBTest extends TestCase {
     }
 
     public void testVMMeter() {
-        int machPort = SystemB.INSTANCE.mach_host_self();
+        int hostPort = SystemB.INSTANCE.mach_host_self();
+        assertNotEquals(0, hostPort);
         VMMeter vmstats = new VMMeter();
-        assertEquals(0, SystemB.INSTANCE.host_statistics(machPort, SystemB.HOST_VM_INFO, vmstats,
+        assertEquals(0, SystemB.INSTANCE.host_statistics(hostPort, SystemB.HOST_VM_INFO, vmstats,
                 new IntByReference(vmstats.size())));
         assertTrue(vmstats.v_lookups >= 0);
     }
@@ -322,7 +355,6 @@ public class SystemBTest extends TestCase {
             // Cast pointer to if_msghdr2
             IFmsgHdr2 if2m = new IFmsgHdr2(p);
             if2m.read();
-
 
             assertTrue(if2m.ifm_index >= 0);
             assertTrue(if2m.ifm_data.ifi_ibytes >= 0);

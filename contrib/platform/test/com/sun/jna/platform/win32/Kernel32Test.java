@@ -1,17 +1,32 @@
 /* Copyright (c) 2007 Timothy Wall, All Rights Reserved
  *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+ * The contents of this file is dual-licensed under 2
+ * alternative Open Source/Free licenses: LGPL 2.1 or later and
+ * Apache License 2.0. (starting with JNA version 4.0.0).
  *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
+ * You can freely decide which license you want to apply to
+ * the project.
+ *
+ * You may obtain a copy of the LGPL License at:
+ *
+ * http://www.gnu.org/licenses/licenses.html
+ *
+ * A copy is also included in the downloadable source code package
+ * containing JNA, in file "LGPL2.1".
+ *
+ * You may obtain a copy of the Apache License at:
+ *
+ * http://www.apache.org/licenses/
+ *
+ * A copy is also included in the downloadable source code package
+ * containing JNA, in file "AL2.0".
  */
 package com.sun.jna.platform.win32;
 
+import static com.sun.jna.platform.win32.WinBase.WAIT_OBJECT_0;
+import static com.sun.jna.platform.win32.WinNT.MEM_COMMIT;
+import static com.sun.jna.platform.win32.WinNT.MEM_RESERVE;
+import static com.sun.jna.platform.win32.WinNT.PAGE_EXECUTE_READWRITE;
 import static com.sun.jna.platform.win32.WinioctlUtil.FSCTL_GET_COMPRESSION;
 import static com.sun.jna.platform.win32.WinioctlUtil.FSCTL_GET_REPARSE_POINT;
 import static com.sun.jna.platform.win32.WinioctlUtil.FSCTL_SET_COMPRESSION;
@@ -36,6 +51,10 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
+import org.junit.Test;
 
 import com.sun.jna.Memory;
 import com.sun.jna.Native;
@@ -43,6 +62,8 @@ import com.sun.jna.NativeMappedConverter;
 import com.sun.jna.Platform;
 import com.sun.jna.Pointer;
 import com.sun.jna.platform.win32.BaseTSD.SIZE_T;
+import com.sun.jna.platform.win32.BaseTSD.ULONG_PTR;
+import com.sun.jna.platform.win32.BaseTSD.ULONG_PTRByReference;
 import com.sun.jna.platform.win32.Ntifs.REPARSE_DATA_BUFFER;
 import com.sun.jna.platform.win32.Ntifs.SymbolicLinkReparseBuffer;
 import com.sun.jna.platform.win32.WinBase.FILETIME;
@@ -57,6 +78,7 @@ import com.sun.jna.platform.win32.WinBase.SYSTEMTIME;
 import com.sun.jna.platform.win32.WinBase.SYSTEM_INFO;
 import com.sun.jna.platform.win32.WinBase.WIN32_FIND_DATA;
 import com.sun.jna.platform.win32.WinDef.DWORD;
+import com.sun.jna.platform.win32.WinDef.DWORDByReference;
 import com.sun.jna.platform.win32.WinDef.HMODULE;
 import com.sun.jna.platform.win32.WinDef.HWND;
 import com.sun.jna.platform.win32.WinDef.USHORT;
@@ -67,8 +89,6 @@ import com.sun.jna.platform.win32.WinNT.OSVERSIONINFO;
 import com.sun.jna.platform.win32.WinNT.OSVERSIONINFOEX;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.ShortByReference;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import junit.framework.TestCase;
 
@@ -94,10 +114,12 @@ public class Kernel32Test extends TestCase {
     public void testNoDuplicateMethodsNames() {
         Collection<String> dupSet = AbstractWin32TestSupport.detectDuplicateMethods(Kernel32.class);
         if (dupSet.size() > 0) {
-            for (String name : new String[] {
-                    // has 2 overloads by design since the API accepts both OSVERSIONINFO and OSVERSIONINFOEX
-                    "GetVersionEx"
-                }) {
+            for (String name : new String[]{
+                // has 2 overloads by design since the API accepts both OSVERSIONINFO and OSVERSIONINFOEX
+                "GetVersionEx",
+                // one version is kind-of broken and retained for compatiblity (deprecated)
+                "CreateRemoteThread"
+            }) {
                 dupSet.remove(name);
             }
         }
@@ -353,14 +375,14 @@ public class Kernel32Test extends TestCase {
     public void testGetCurrentThread() {
         HANDLE h = Kernel32.INSTANCE.GetCurrentThread();
         assertNotNull("No current thread handle", h);
-        assertFalse("Null current thread handle", h.equals(0));
+        assertNotNull("Null current thread handle", h.getPointer());
     }
 
     public void testOpenThread() {
         HANDLE h = Kernel32.INSTANCE.OpenThread(WinNT.THREAD_ALL_ACCESS, false,
                 Kernel32.INSTANCE.GetCurrentThreadId());
         assertNotNull(h);
-        assertFalse(h.equals(0));
+        assertNotNull(h.getPointer());
         Kernel32Util.closeHandle(h);
     }
 
@@ -371,7 +393,7 @@ public class Kernel32Test extends TestCase {
     public void testGetCurrentProcess() {
         HANDLE h = Kernel32.INSTANCE.GetCurrentProcess();
         assertNotNull("No current process handle", h);
-        assertFalse("Null current process handle", h.equals(0));
+        assertNotNull("Null current process handle", h.getPointer());
     }
 
     public void testOpenProcess() {
@@ -443,6 +465,60 @@ public class Kernel32Test extends TestCase {
         }
     }
 
+    public void testGetAndSetProcessAffinityMask() {
+        // Pseudo handle, no need to close. Has PROCESS_ALL_ACCESS right.
+        HANDLE pHandle = Kernel32.INSTANCE.GetCurrentProcess();
+        assertNotNull(pHandle);
+
+        ULONG_PTRByReference pProcessAffinity = new ULONG_PTRByReference();
+        ULONG_PTRByReference pSystemAffinity = new ULONG_PTRByReference();
+        assertTrue("Failed to get affinity masks.",
+                Kernel32.INSTANCE.GetProcessAffinityMask(pHandle, pProcessAffinity, pSystemAffinity));
+
+        long processAffinity = pProcessAffinity.getValue().longValue();
+        long systemAffinity = pSystemAffinity.getValue().longValue();
+
+        if (systemAffinity == 0) {
+            // Rare case for process to be running in multiple processor groups, where both
+            // systemAffinity and processAffinity are 0 and we can't do anything else.
+            assertEquals(
+                    "Both process and system affinity must be zero if this process is running in multiple processor groups",
+                    processAffinity, systemAffinity);
+        } else {
+            // Test current affinity
+            assertEquals("Process affinity must be a subset of system affinity", processAffinity,
+                    processAffinity & systemAffinity);
+            assertEquals("System affinity must be a superset of process affinity", systemAffinity,
+                    processAffinity | systemAffinity);
+
+            // Set affinity to a single processor in the current system
+            long lowestOneBit = Long.lowestOneBit(systemAffinity);
+            ULONG_PTR dwProcessAffinityMask = new ULONG_PTR(lowestOneBit);
+            assertTrue("Failed to set affinity",
+                    Kernel32.INSTANCE.SetProcessAffinityMask(pHandle, dwProcessAffinityMask));
+            assertTrue("Failed to get affinity masks.",
+                    Kernel32.INSTANCE.GetProcessAffinityMask(pHandle, pProcessAffinity, pSystemAffinity));
+            assertEquals("Process affinity doesn't match what was just set", lowestOneBit,
+                    pProcessAffinity.getValue().longValue());
+
+            // Now try to set affinity to an invalid processor
+            lowestOneBit = Long.lowestOneBit(~systemAffinity);
+            // In case we have exactly 64 processors we can't do this, otherwise...
+            if (lowestOneBit != 0) {
+                dwProcessAffinityMask = new ULONG_PTR(lowestOneBit);
+                assertFalse("Successfully set affinity when it should have failed",
+                        Kernel32.INSTANCE.SetProcessAffinityMask(pHandle, dwProcessAffinityMask));
+                assertEquals("Last error should be ERROR_INVALID_PARAMETER", WinError.ERROR_INVALID_PARAMETER,
+                        Kernel32.INSTANCE.GetLastError());
+            }
+
+            // Cleanup. Be nice and put affinity back where it started!
+            dwProcessAffinityMask = new ULONG_PTR(processAffinity);
+            assertTrue("Failed to restore affinity to original setting",
+                    Kernel32.INSTANCE.SetProcessAffinityMask(pHandle, dwProcessAffinityMask));
+        }
+    }
+
     public void testGetTempPath() {
         char[] buffer = new char[WinDef.MAX_PATH];
         assertTrue(Kernel32.INSTANCE.GetTempPath(new DWORD(WinDef.MAX_PATH), buffer).intValue() > 0);
@@ -504,22 +580,26 @@ public class Kernel32Test extends TestCase {
         SYSTEM_INFO lpSystemInfo = new SYSTEM_INFO();
         Kernel32.INSTANCE.GetSystemInfo(lpSystemInfo);
         assertTrue(lpSystemInfo.dwNumberOfProcessors.intValue() > 0);
+        // the dwOemID member is obsolete, but gets a value.
+        // the pi member is a structure and isn't read by default
+        assertEquals(lpSystemInfo.processorArchitecture.dwOemID.getLow(),
+                lpSystemInfo.processorArchitecture.pi.wProcessorArchitecture);
     }
 
     public void testGetSystemTimes() {
-      Kernel32 kernel = Kernel32.INSTANCE;
-      FILETIME lpIdleTime = new FILETIME();
-      FILETIME lpKernelTime = new FILETIME();
-      FILETIME lpUserTime = new FILETIME();
-      boolean succ = kernel.GetSystemTimes(lpIdleTime, lpKernelTime, lpUserTime);
-      assertTrue(succ);
-      long idleTime = lpIdleTime.toDWordLong().longValue();
-      long kernelTime = lpKernelTime.toDWordLong().longValue();
-      long userTime = lpUserTime.toDWordLong().longValue();
-      // All should be >= 0.  kernel includes idle.
-      assertTrue(idleTime >= 0);
-      assertTrue(kernelTime >= idleTime);
-      assertTrue(userTime >= 0);
+        Kernel32 kernel = Kernel32.INSTANCE;
+        FILETIME lpIdleTime = new FILETIME();
+        FILETIME lpKernelTime = new FILETIME();
+        FILETIME lpUserTime = new FILETIME();
+        boolean succ = kernel.GetSystemTimes(lpIdleTime, lpKernelTime, lpUserTime);
+        assertTrue(succ);
+        long idleTime = lpIdleTime.toDWordLong().longValue();
+        long kernelTime = lpKernelTime.toDWordLong().longValue();
+        long userTime = lpUserTime.toDWordLong().longValue();
+        // All should be >= 0.  kernel includes idle.
+        assertTrue(idleTime >= 0);
+        assertTrue(kernelTime >= idleTime);
+        assertTrue(userTime >= 0);
     }
 
     public void testIsWow64Process() {
@@ -1279,10 +1359,43 @@ public class Kernel32Test extends TestCase {
         }
     }
 
-    public final void testCreateRemoteThread() throws IOException {
-        HANDLE hThrd = Kernel32.INSTANCE.CreateRemoteThread(null, null, 0, null, null, null, null);
+    public final void testCreateRemoteThreadInvalid() throws IOException {
+        HANDLE hThrd = Kernel32.INSTANCE.CreateRemoteThread(null, null, 0, (Pointer) null, null, 0, null);
         assertNull(hThrd);
         assertEquals(Kernel32.INSTANCE.GetLastError(), WinError.ERROR_INVALID_HANDLE);
+    }
+
+    @Test
+    public void testCreateRemoteThread() {
+        Pointer addr = Kernel32.INSTANCE.VirtualAllocEx(
+            Kernel32.INSTANCE.GetCurrentProcess(), null, new SIZE_T(4096),
+            MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+
+        // mov eax, ecx; ret; int3
+        Memory localBuffer = new Memory(4096);
+        localBuffer.setInt(0, 0xccc3c18b);
+        IntByReference bytesWritten = new IntByReference();
+        Kernel32.INSTANCE.WriteProcessMemory(Kernel32.INSTANCE.GetCurrentProcess(),
+            addr, localBuffer, 4096, bytesWritten);
+        assertEquals(4096, bytesWritten.getValue());
+
+        DWORDByReference threadId = new DWORDByReference();
+        HANDLE hThread = Kernel32.INSTANCE.CreateRemoteThread(
+            Kernel32.INSTANCE.GetCurrentProcess(),
+            null, 0, addr, new Pointer(12345), 0, threadId);
+        assertNotNull(hThread);
+        assertTrue(threadId.getValue().longValue() > 0);
+
+        int waitResult = Kernel32.INSTANCE.WaitForSingleObject(hThread, 10000);
+        assertEquals(WAIT_OBJECT_0, waitResult);
+
+        IntByReference exitCode = new IntByReference();
+        boolean exitResult = Kernel32.INSTANCE.GetExitCodeThread(hThread, exitCode);
+        assertTrue(exitResult);
+        assertEquals(12345, exitCode.getValue());
+
+        assertTrue(Kernel32.INSTANCE.VirtualFreeEx(Kernel32.INSTANCE.GetCurrentProcess(),
+            addr, new SIZE_T(0), WinNT.MEM_RELEASE));
     }
 
     public void testWriteProcessMemory() {
@@ -1374,7 +1487,7 @@ public class Kernel32Test extends TestCase {
                     case WinBase.CBR_56000:
                     case WinBase.CBR_600:
                     case WinBase.CBR_9600:
-                    break;
+                        break;
                     default:
                         fail("Received value of WinBase.DCB.BaudRate is not valid");
                 }
@@ -1658,7 +1771,7 @@ public class Kernel32Test extends TestCase {
             }
         }
     }
-    
+
     public void testSetErrorMode() {
         // Set bit flags to 0x0001
         int previousMode = Kernel32.INSTANCE.SetErrorMode(0x0001);
@@ -1672,50 +1785,50 @@ public class Kernel32Test extends TestCase {
 //    /**
 //     * Test that a named function on win32 can be equally resolved by its ordinal
 //     * value.
-//     * 
+//     *
 //     * From link.exe /dump /exports c:\\Windows\\System32\\kernel32.dll
-//     * 
+//     *
 //     *  746  2E9 0004FA20 GetTapeStatus
 //     *  747  2EA 0002DB20 GetTempFileNameA
 //     *  748  2EB 0002DB30 GetTempFileNameW
 //     *  749  2EC 0002DB40 GetTempPathA
 //     *  750  2ED 0002DB50 GetTempPathW
 //     *  751  2EE 00026780 GetThreadContext
-//     * 
+//     *
 //     * The tested function is GetTempPathW which is mapped to the ordinal 750.
 //     */
 //    public void testGetProcAddress() {
 //        NativeLibrary kernel32Library = NativeLibrary.getInstance("kernel32");
 //        // get module handle needed to resolve function pointer via GetProcAddress
 //        HMODULE kernel32Module = Kernel32.INSTANCE.GetModuleHandle("kernel32");
-//        
+//
 //        Function namedFunction = kernel32Library.getFunction("GetTempPathW");
 //        long namedFunctionPointerValue = Pointer.nativeValue(namedFunction);
-//        
+//
 //        Pointer ordinalFunction = Kernel32.INSTANCE.GetProcAddress(kernel32Module, 750);
 //        long ordinalFunctionPointerValue = Pointer.nativeValue(ordinalFunction);
-//        
+//
 //        assertEquals(namedFunctionPointerValue, ordinalFunctionPointerValue);
 //    }
-    
+
     public void testSetThreadExecutionState() {
         int originalExecutionState = Kernel32.INSTANCE.SetThreadExecutionState(
                 WinBase.ES_CONTINUOUS | WinBase.ES_SYSTEM_REQUIRED | WinBase.ES_AWAYMODE_REQUIRED
         );
-        
+
         assert originalExecutionState > 0;
-        
+
         int intermediateExecutionState = Kernel32.INSTANCE.SetThreadExecutionState(
                 WinBase.ES_CONTINUOUS
         );
-        
+
         assertEquals(WinBase.ES_CONTINUOUS | WinBase.ES_SYSTEM_REQUIRED | WinBase.ES_AWAYMODE_REQUIRED, intermediateExecutionState);
-        
+
         Kernel32.INSTANCE.SetThreadExecutionState(originalExecutionState);
     }
 
     public void testMutex() throws InterruptedException {
-       HANDLE mutexHandle = Kernel32.INSTANCE.CreateMutex(null, true, "JNA-Test-Mutex");
+        HANDLE mutexHandle = Kernel32.INSTANCE.CreateMutex(null, true, "JNA-Test-Mutex");
 
         assertNotNull(mutexHandle);
 

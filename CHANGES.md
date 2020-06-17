@@ -2,16 +2,92 @@ NOTE: as of JNA 4.0, JNA is now dual-licensed under LGPL and AL 2.0 (see LICENSE
 
 NOTE: JNI native support is typically incompatible between minor versions, and almost always incompatible between major versions.
 
-Next release (5.3.0)
+Next Release (5.6.0)
 ====================
 
 Features
 --------
-* [#1050](https://github.com/java-native-access/jna/pull/1050): Add `c.s.j.p.win32.VersionHelpers` and supporting functions - [@dbwiddis](https://github.com/dbwiddis).
+* [#1160](https://github.com/java-native-access/jna/issues/1160): Make FileUtils#moveToTrash a varargs method - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1167](https://github.com/java-native-access/jna/pull/1167): Add `c.s.j.p.win32.Kernel32#GetProcessAffinityMask` - [@dbwiddis](https://github.com/dbwiddis).
+* [#1168](https://github.com/java-native-access/jna/pull/1168): Add `c.s.j.p.win32.Kernel32#SetProcessAffinityMask` - [@dbwiddis](https://github.com/dbwiddis).
+* [#1169](https://github.com/java-native-access/jna/issues/1169): Wait for process in getLinuxLdPaths - [@rdesgroppes](https://github.com/rdesgroppes).
+* [#1178](https://github.com/java-native-access/jna/pull/1178): Add `c.s.j.p.win32.IPHlpAPI#GetTcpStatistics`, `c.s.j.p.win32.IPHlpAPI#GetUdpStatistics`, `c.s.j.p.win32.IPHlpAPI#GetTcpStatisticsEx` and `c.s.j.p.win32.IPHlpAPI#GetUdpStatisticsEx` - [@dbwiddis](https://github.com/dbwiddis).
+* [#1182](https://github.com/java-native-access/jna/pull/1182): Add `toString` to classes extending `c.s.j.ptr.ByReference` - [@dbwiddis](https://github.com/dbwiddis).
+* [#1191](https://github.com/java-native-access/jna/pull/1191): Add `c.s.j.p.win32.Advapi32Util#getTokenPrimaryGroup` - [@dbwiddis](https://github.com/dbwiddis).
+* [#1194](https://github.com/java-native-access/jna/pull/1194): Add `GetConsoleScreenBufferInfo`, `ReadConsoleInput` and `WriteConsole` with associated structures to `c.s.j.p.win32.Wincon` - [@rednoah](https://github.com/rednoah).
+* [#1198](https://github.com/java-native-access/jna/pull/1198): Add `NetSessionEnum` to `c.s.j.p.win32.Netapi32` and `WTSEnumerateSessions`, `WTSQuerySessionInformation`, and `WTSFreeMemory` to `c.s.j.p.win32.Wtsapi32` - [@dbwiddis](https://github.com/dbwiddis).
+* [#1200](https://github.com/java-native-access/jna/pull/1200): Add mappings for `libudev` to `c.s.j.p.linux.Udev` - [@dbwiddis](https://github.com/dbwiddis).
 
 Bug Fixes
 ---------
-* [#1052](https://github.com/java-native-access/jna/issues/1052), [#1053](https://github.com/java-native-access/jna/issues/1053): WinXP compatibility for `c.s.j.p.win32.PdhUtil` - [@dbwiddis](https://github.com/dbwiddis).
+* [#1183](https://github.com/java-native-access/jna/pull/1183): `c.s.j.p.win32.WinDef.CHARByReference#getValue` should only read one byte - [@dbwiddis](https://github.com/dbwiddis).
+* [#1184](https://github.com/java-native-access/jna/pull/1184): `c.s.j.p.win32.WinDef.ULONGLONG` should always be 8 bytes - [@dbwiddis](https://github.com/dbwiddis).
+* [#1196](https://github.com/java-native-access/jna/pull/1196): `c.s.j.p.win32.WinNT.LARGE_INTEGER` needs to populate both union fields - [@dbwiddis](https://github.com/dbwiddis).
+
+Release 5.5.0
+=============
+
+Features
+--------
+* [#1131](https://github.com/java-native-access/jna/pull/1131): Add CoreFoundation, IOKit, and DiskArbitration mappings in `c.s.j.p.mac`. [@dbwiddis](https://github.com/dbwiddis).
+* [#1143](https://github.com/java-native-access/jna/pull/1143): `c.s.j.p.mac.SystemB` now extends `c.s.j.p.unix.LibCAPI`. [@dbwiddis](https://github.com/dbwiddis).
+* [#1147](https://github.com/java-native-access/jna/pull/1147): Add additional OSGi headers for the JNA bundle to support 32bit ARM (hardfloat) [@mattixtech](https://github.com/mattixtech).
+* [#1148](https://github.com/java-native-access/jna/pull/1148)/[#1096](https://github.com/java-native-access/jna/issues/1096): Include Win32 COM utils (`c.s.j.p.win32.com.util` and `c.s.j.p.win32.com.annotation`) in OSGI bundle [@dbwiddis](https://github.com/dbwiddis).
+
+Bug Fixes
+---------
+* [#1115](https://github.com/java-native-access/jna/issues/1115): Fix signature for `c.s.j.p.win32.Kernel32#CreateRemoteThread` and bind `VirtualAllocEx`, `VirtualFreeEx`, `GetExitCodeThread` in `c.s.j.p.win32.Kernel32` - [@apangin](https://github.com/apangin), [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1127](https://github.com/java-native-access/jna/issues/1127): Windows needs a wide string in `c.s.j.p.win32.COM.IShellFolder#ParseDisplayName` - [@dbwiddis](https://github.com/dbwiddis).
+* [#1128](https://github.com/java-native-access/jna/issues/1128): KEY_ALL_ACCESS value is incorrect in `c.s.j.p.win32.WinNT.java` - [@trevormaggs](https://github.com/trevormaggs).
+* [#1133](https://github.com/java-native-access/jna/issues/1133): Ensure JARs created from the build system don't contain invalid `Info-ZIP Unicode Path` extra info - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1134](https://github.com/java-native-access/jna/issues/1134): Read correct member of `WinBase.SYSTEM_INFO.processorArchitecture` union - [@dbwiddis](https://github.com/dbwiddis).
+* [#1118](https://github.com/java-native-access/jna/issues/1118): Fix passing unions containing integer and floating point members as parameters by value - [@matthiasblaesing](https://github.com/matthiasblaesing).
+
+Release 5.4.0
+=============
+
+Features
+--------
+* [#1105](https://github.com/java-native-access/jna/issues/1105): Deprecate `c.s.j.p.win32.Advapi32Util.EventLogRecord#getEventId` in favor of `#getInstanceId` - [@dbwiddis](https://github.com/dbwiddis).
+* [#1097](https://github.com/java-native-access/jna/issues/1097): Allow `.ocx` as extension of native libraries on windows - [@dmigowski](https://github.com/dmigowski).
+* [#1108](https://github.com/java-native-access/jna/pull/1108): Improve performance of `c.s.j.Structure#newInstance` by iteration available constructors instead of exception handling [@bjorndarri](https://github.com/bjorndarri).
+
+Bug Fixes
+---------
+* [#1095](https://github.com/java-native-access/jna/pull/1095) Align behaviour of com.sun.jna.platform.macXAttrUtil#setXattr and #getXAttr with CLI tool - [@jrobhoward](https://github.com/jrobhoward), [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1091](https://github.com/java-native-access/jna/issues/1091): Check target number to be greater than zero, before calling `Structure#toArray` in `c.s.j.p.win32.Netapi32Util` - [@trevormagg](https://github.com/trevormaggs), [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1103](https://github.com/java-native-access/jna/issues/1103): On big endian architecture IntegerType based values are incorrectly decoded when using direct binding - [@matthiasblaesing](https://github.com/matthiasblaesing).
+
+Release 5.3.1
+=============
+
+Bug Fixes
+---------
+* [#1089](https://github.com/java-native-access/jna/issues/1089): `c.s.j.internal.ReflectionUtils` accesses `java.lang.invoke.MethodType` without reflection, causing `java.lang.NoClassDefFoundError` on android API level < 26 - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1087](https://github.com/java-native-access/jna/pull/1087): Fix wrong calls to Structure#toArray with zero sized arrays - [@matthiasblaesing](https://github.com/matthiasblaesing).
+
+Release 5.3.0
+=============
+
+Features
+--------
+* [#1058](https://github.com/java-native-access/jna/pull/1058): Add selectable timeout to stopService() and improve timeout handling - [@keithharp](https://github.com/keithharp).
+* [#1050](https://github.com/java-native-access/jna/pull/1050): Add `c.s.j.p.win32.VersionHelpers` and supporting functions - [@dbwiddis](https://github.com/dbwiddis).
+* [#1061](https://github.com/java-native-access/jna/pull/1061): replace toArray(new T[size]) with toArray(new T[0]) for better performance - [@hc-codersatlas](https://github.com/hc-codersatlas).
+* [#1064](https://github.com/java-native-access/jna/pull/1064): Add `c.s.j.p.win32.Kernel32.GetLogicalProcessorInformationEx` function, convenience Util method and supporting structures - [@dbwiddis](https://github.com/dbwiddis).
+* [#1065](https://github.com/java-native-access/jna/pull/1065): Add `c.s.j.p.win32.PowrProf#CallNTPowerInformation` and supporting structures - [@dbwiddis](https://github.com/dbwiddis).
+* [#1063](https://github.com/java-native-access/jna/pull/1063): Enhance `c.s.j.p.win32.User32` and associated classes to support keyboard related functionality. - [@kevemueller](https://github.com/kevemueller).
+* [#1068](https://github.com/java-native-access/jna/pull/1068): `c.s.j.p.win32.Advapi32Util.getAccountBySid(String systemName, PSID sid)` ignored parameter instead of passing it to the native function - [@nirud](https://github.com/nirud).
+* [#813](https://github.com/java-native-access/jna/issues/813): Support for default methods on interfaces (experimental) - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1073](https://github.com/java-native-access/jna/issues/1073): Support COM setters with multiple parameters using `c.s.j.p.win32.COM.util.ProxyObject` - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1083](https://github.com/java-native-access/jna/issues/1083): Prevent access to unsupported values in `c.s.j.p.win32.COM.WbemcliUtil#enumerateProperties` and bind `c.s.j.p.win32.COM.Wbemcli.IWbemClassObject.GetNames` - [@matthiasblaesing](https://github.com/matthiasblaesing).
+
+Bug Fixes
+---------
+* [#1052](https://github.com/java-native-access/jna/pull/1052), [#1053](https://github.com/java-native-access/jna/issues/1053): WinXP compatibility for `c.s.j.p.win32.PdhUtil` - [@dbwiddis](https://github.com/dbwiddis).
+* [#1055](https://github.com/java-native-access/jna/pull/1055): Include `c.s.j.p.linux` in OSGi bundle. - [@dbwiddis](https://github.com/dbwiddis).
+* [#1066](https://github.com/java-native-access/jna/issues/1066): On AIX OpenJDK differs from IBM J9 in the mapping of library names. While J9 maps jnidispatch to `libjnidispatch.a`, OpenJDK maps to `libjnidispatch.so`, which causes the native library extractor to fail. AIX is now hard-coded to `libjnidispatch.a` - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1079](https://github.com/java-native-access/jna/issues/1079): Fix maximum structure alignment for Android i386 - [@BugsBeGone](https://github.com/BugsBeGone).
 
 Release 5.2.0
 =============
@@ -106,7 +182,7 @@ Bug Fixes
       <li>Change into the expanded directory and run `bash build.sh`.</li>
       <li>The resulting `sunos-x86.jar` is copied back to the original build system to `lib/native/sunos-x86.jar`</li>
   </ol> - [@matthiasblaesing](https://github.com/matthiasblaesing).
-* [#958](https://github.com/java-native-access/jna/issues/958): Update for PR 863: Old toolchains produce binaries without hard-/softfloat markers. Rasbian is missinng the markers and the oracle JDK is also affected. For hardfloat detection now also the Arm EABI section is also considered - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#958](https://github.com/java-native-access/jna/issues/958): Update for PR 863: Old toolchains produce binaries without hard-/softfloat markers. Rasbian is missing the markers and the oracle JDK is also affected. For hardfloat detection now also the Arm EABI section is also considered - [@matthiasblaesing](https://github.com/matthiasblaesing).
 * [#974](https://github.com/java-native-access/jna/issues/974): If the callback code failed to attach to the JVM, this lead to a segfault. The success of attaching to the JVM was checked to late and an invalid `JNIEnv` pointer was used to access the JVM - [@matthiasblaesing](https://github.com/matthiasblaesing).
 * [#1010](https://github.com/java-native-access/jna/issues/1010): Fix binding of `lpAccessName` parameter of `com.sun.jna.platform.win32.Mpr#WNetUseConnection` - [@matthiasblaesing](https://github.com/matthiasblaesing).
 * [#384](https://github.com/java-native-access/jna/issues/384): Switch default value for `jna.nosys` to `true`. By default then the embedded native library is used - [@matthiasblaesing](https://github.com/matthiasblaesing).
@@ -377,13 +453,13 @@ Features
 * [#432](https://github.com/java-native-access/jna/pull/432): Added `com.sun.jna.platform.win32.Kernel32.SetLocalTime` - [@lgoldstein](https://github.com/lgoldstein).
 * [#434](https://github.com/java-native-access/jna/pull/434): Added `com.sun.jna.platform.win32.Kernel32.GetEnvironmentStrings`  - [@lgoldstein](https://github.com/lgoldstein).
 * Loosen OSGI OS name matching to accommodate Windows 8 family - Niels Bertram.
-* [#436] (https://github.com/java-native-access/jna/pull/469): Added basic Pdh API implementation to 'com.sun.jna.platform.win32' - [@lgoldstein](https://github.com/lgoldstein).
-* [#451] (https://github.com/java-native-access/jna/pull/451): Add VARIANT support for CHAR and BYTE  - [@mitkola](https://github.com/mitkola).
-* [#478] (https://github.com/java-native-access/jna/issues/451): Ask ldconfig for more places to search for libraries  - [@gohal](https://github.com/gohal).
-* [#481] (https://github.com/java-native-access/jna/pull/481): Added volume management functions to `com.sun.jna.platform.win32` - [@lgoldstein](https://github.com/lgoldstein).
-* [#483] (https://github.com/java-native-access/jna/pull/483): Found and fixed duplicate method definitions for the same API in `com.sun.jna.platform.win32` - [@lgoldstein](https://github.com/lgoldstein).
-* [#485] (https://github.com/java-native-access/jna/pull/485): Implemented `Comparable` interface for many of the base types in `com.sun.jna.platform.win32.WinDef` - [@lgoldstein](https://github.com/lgoldstein).
-* [#488] (https://github.com/java-native-access/jna/pull/488): Added `GetRawInputDeviceList` to `com.sun.jna.platform.win32.User32` and `User32Util` - [@lgoldstein](https://github.com/lgoldstein).
+* [#436](https://github.com/java-native-access/jna/pull/469): Added basic Pdh API implementation to 'com.sun.jna.platform.win32' - [@lgoldstein](https://github.com/lgoldstein).
+* [#451](https://github.com/java-native-access/jna/pull/451): Add VARIANT support for CHAR and BYTE  - [@mitkola](https://github.com/mitkola).
+* [#478](https://github.com/java-native-access/jna/issues/451): Ask ldconfig for more places to search for libraries  - [@gohal](https://github.com/gohal).
+* [#481](https://github.com/java-native-access/jna/pull/481): Added volume management functions to `com.sun.jna.platform.win32` - [@lgoldstein](https://github.com/lgoldstein).
+* [#483](https://github.com/java-native-access/jna/pull/483): Found and fixed duplicate method definitions for the same API in `com.sun.jna.platform.win32` - [@lgoldstein](https://github.com/lgoldstein).
+* [#485](https://github.com/java-native-access/jna/pull/485): Implemented `Comparable` interface for many of the base types in `com.sun.jna.platform.win32.WinDef` - [@lgoldstein](https://github.com/lgoldstein).
+* [#488](https://github.com/java-native-access/jna/pull/488): Added `GetRawInputDeviceList` to `com.sun.jna.platform.win32.User32` and `User32Util` - [@lgoldstein](https://github.com/lgoldstein).
 * [#490](https://github.com/java-native-access/jna/issues/490): Allow arbitrary calling convention specification, including FFI_MS_CDECL which alters handling of struct return values, and multiple Linux/PowerPC conventions - [@twall](https://github.com/twall).
 
 Bug Fixes
