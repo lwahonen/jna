@@ -2,8 +2,32 @@ NOTE: as of JNA 4.0, JNA is now dual-licensed under LGPL and AL 2.0 (see LICENSE
 
 NOTE: JNI native support is typically incompatible between minor versions, and almost always incompatible between major versions.
 
-Next Release (5.6.0)
+Next Release (5.7.0)
 ====================
+
+Features
+--------
+* [#1217](https://github.com/java-native-access/jna/pull/1217): Add mappings for AIX `Perfstat` library to `c.s.j.p.unix.aix` - [@dbwiddis](https://github.com/dbwiddis).
+* [#1231](https://github.com/java-native-access/jna/pull/1231): The test suite can now be executed on Windows using either ANSI or UNICODE win32 API by passing `-Dw32.ascii=true/false` to ant. Previously, UNICODE was always used. - [@T-Svensson](https://github.com/T-Svensson/)
+* [#1237](https://github.com/java-native-access/jna/pull/1237): *Experimental:* Add artifacts that make jna and jna-platform named modules (provide `module-info.class`). The new artifacts are named `jna-jpms.jar` and `jna-platform-jpms.jar` - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1242](https://github.com/java-native-access/jna/pull/1242): Add CallWindowProc to User32 - [@heldplayer](https://github.com/heldplayer).
+* [#1239](https://github.com/java-native-access/jna/pull/1239): Improve performance of allocation of `c.s.j.Memory` objects - [@joerg1985](https://github.com/joerg1985).
+* [#1246](https://github.com/java-native-access/jna/pull/1246): Improve performance of `c.s.j.Structure#read` and `c.s.j.Structure#write` - [@joerg1985](https://github.com/joerg1985).
+* [#1260](https://github.com/java-native-access/jna/pull/1260): Add mapping for X11 generic events - [@lafoletc](https://github.com/lafoletc).
+* [#1265](https://github.com/java-native-access/jna/pull/1265): Add mapping for XQueryExtension - [@lafoletc](https://github.com/lafoletc).
+* [#1263](https://github.com/java-native-access/jna/pull/1263): Add LowLevelMouseProc - [@nordiakt](https://github.com/nordiakt)
+
+Bug Fixes
+---------
+* [#1244](https://github.com/java-native-access/jna/issues/1244): Fix building on GCC 10 - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1252](https://github.com/java-native-access/jna/issues/1252): - Fix bindings of `CTL_ENTRY#getRgAttribute`, `CTL_INFO#getRgCTLEntry`, `CTL_INFO#getRgExtension`, `CERT_EXTENSIONS#getRgExtension`, `CERT_INFO#getRgExtension`, `CRL_INFO#getRgCRLEntry`, `CRL_INFO#getRgExtension`, `CRL_ENTRY#getRgExtension`. Add bindings for `CertEnumCertificatesInStore`, `CertEnumCTLsInStore`, `CertEnumCRLsInStore` and `CryptQueryObject` in `c.s.j.p.win32.Crypt32`.<br> *WARNING:* The signatures for `CTL_INFO#getRgCTLEntry` and `CTL_INFO#getRgExtension` were changed - as the original signatures were obviously wrong and read the wrong attributes, it is not considered an API break - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1275](https://github.com/java-native-access/jna/issues/1275): Fix `CFStringRef#stringValue` for empty Strings - [@dyorgio](https://github.com/dyorgio).
+* [#1279](https://github.com/java-native-access/jna/issues/1279): Remove `DLLCallback` import from `CallbackReference` - [@dyorgio](https://github.com/dyorgio).
+* [#1278](https://github.com/java-native-access/jna/pull/1278): Improve compatibility of `c.s.j.p.WindowUtils#getProcessFilePath` and fix unittests for windows 32bit intel  - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1284](https://github.com/java-native-access/jna/pull/1284): Fix illegal access exceptions, when retrieving options for private library interfaces with an instance field - [@fkistner](https://github.com/fkistner).
+
+Release 5.6.0
+=============
 
 Features
 --------
@@ -17,12 +41,16 @@ Features
 * [#1194](https://github.com/java-native-access/jna/pull/1194): Add `GetConsoleScreenBufferInfo`, `ReadConsoleInput` and `WriteConsole` with associated structures to `c.s.j.p.win32.Wincon` - [@rednoah](https://github.com/rednoah).
 * [#1198](https://github.com/java-native-access/jna/pull/1198): Add `NetSessionEnum` to `c.s.j.p.win32.Netapi32` and `WTSEnumerateSessions`, `WTSQuerySessionInformation`, and `WTSFreeMemory` to `c.s.j.p.win32.Wtsapi32` - [@dbwiddis](https://github.com/dbwiddis).
 * [#1200](https://github.com/java-native-access/jna/pull/1200): Add mappings for `libudev` to `c.s.j.p.linux.Udev` - [@dbwiddis](https://github.com/dbwiddis).
+* [#1202](https://github.com/java-native-access/jna/pull/1202): Add mappings supporting shared memory including `c.s.j.p.unix.LibCAPI` types `size_t` and `ssize_t`, `c.s.j.p.linux.LibC` methods `munmap()`, `msync()`, and `close()`, `c.s.j.p.unix.LibCUtil` mapping `mmap()` and `ftruncate()`, and `c.s.j.p.linux.LibRT` methods `shm_open()` and `shm_unlink()` - [@dbwiddis](https://github.com/dbwiddis).
+* [#1209](https://github.com/java-native-access/jna/pull/1209): Add mappings for `Thread32First` and `Thread32Next` to `c.s.j.p.win32.Kernel32` - [@dbwiddis](https://github.com/dbwiddis).
+* [#1214](https://github.com/java-native-access/jna/pull/1214): Add mapping for EnumProcesses to `c.s.j.p.win32.Psapi` and `c.s.j.p.win32.PsapiUtil` - [@T-Svensson](https://github.com/T-Svensson/).
 
 Bug Fixes
 ---------
 * [#1183](https://github.com/java-native-access/jna/pull/1183): `c.s.j.p.win32.WinDef.CHARByReference#getValue` should only read one byte - [@dbwiddis](https://github.com/dbwiddis).
 * [#1184](https://github.com/java-native-access/jna/pull/1184): `c.s.j.p.win32.WinDef.ULONGLONG` should always be 8 bytes - [@dbwiddis](https://github.com/dbwiddis).
 * [#1196](https://github.com/java-native-access/jna/pull/1196): `c.s.j.p.win32.WinNT.LARGE_INTEGER` needs to populate both union fields - [@dbwiddis](https://github.com/dbwiddis).
+* [#1216](https://github.com/java-native-access/jna/pull/1216): Failure loading frameworks on macOS 11 - [@dkocher](https://github.com/dkocher).
 
 Release 5.5.0
 =============

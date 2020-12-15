@@ -41,19 +41,20 @@ import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
 
-import com.sun.jna.win32.DLLCallback;
-
-/** Provides a reference to an association between a native callback closure
- * and a Java {@link Callback} closure.
+/**
+ * Provides a reference to an association between a native callback closure and
+ * a Java {@link Callback} closure.
  */
-
 public class CallbackReference extends WeakReference<Callback> {
 
+    // Access to callbackMap, directCallbackMap, pointerCallbackMap is protected
+    // by synchonizing on pointerCallbackMap
     static final Map<Callback, CallbackReference> callbackMap = new WeakHashMap<Callback, CallbackReference>();
     static final Map<Callback, CallbackReference> directCallbackMap = new WeakHashMap<Callback, CallbackReference>();
     static final Map<Pointer, Reference<Callback>> pointerCallbackMap = new WeakHashMap<Pointer, Reference<Callback>>();
     // Track memory allocations associated with this closure (usually String args)
-    static final Map<Object, Object> allocations = new WeakHashMap<Object, Object>();
+    static final Map<Object, Object> allocations =
+            Collections.synchronizedMap(new WeakHashMap<Object, Object>());
     // Global map of allocated closures to facilitate centralized cleanup
     private static final Map<CallbackReference, Reference<CallbackReference>> allocatedMemory =
             Collections.synchronizedMap(new WeakHashMap<CallbackReference, Reference<CallbackReference>>());
@@ -64,6 +65,20 @@ public class CallbackReference extends WeakReference<Callback> {
             PROXY_CALLBACK_METHOD = CallbackProxy.class.getMethod("callback", new Class[] { Object[].class });
         } catch(Exception e) {
             throw new Error("Error looking up CallbackProxy.callback() method");
+        }
+    }
+
+    private static final Class<?> DLL_CALLBACK_CLASS;
+
+    static {
+        if (Platform.isWindows()) {
+            try {
+                DLL_CALLBACK_CLASS = Class.forName("com.sun.jna.win32.DLLCallback");
+            } catch(ClassNotFoundException e) {
+                throw new Error("Error loading DLLCallback class", e);
+            }
+        } else {
+            DLL_CALLBACK_CLASS = null;
         }
     }
 
@@ -212,7 +227,8 @@ public class CallbackReference extends WeakReference<Callback> {
             nativeParamTypes = method.getParameterTypes();
             returnType = method.getReturnType();
             int flags = Native.CB_OPTION_DIRECT;
-            if (callback instanceof DLLCallback) {
+            if (DLL_CALLBACK_CLASS != null
+                && DLL_CALLBACK_CLASS.isInstance(callback)) {
                 flags |= Native.CB_OPTION_IN_DLL;
             }
             peer = Native.createNativeCallback(callback, method,
@@ -258,7 +274,8 @@ public class CallbackReference extends WeakReference<Callback> {
                     + " requires custom type conversion";
                 throw new IllegalArgumentException(msg);
             }
-            int flags = callback instanceof DLLCallback
+            int flags = DLL_CALLBACK_CLASS != null
+                && DLL_CALLBACK_CLASS.isInstance(callback)
                 ? Native.CB_OPTION_IN_DLL : 0;
             peer = Native.createNativeCallback(proxy, PROXY_CALLBACK_METHOD,
                                                nativeParamTypes, returnType,
@@ -619,7 +636,7 @@ public class CallbackReference extends WeakReference<Callback> {
                     Function.INTEGER_TRUE : Function.INTEGER_FALSE;
             } else if (cls == String.class || cls == WString.class) {
                 return getNativeString(value, cls == WString.class);
-            } else if (cls == String[].class || cls == WString.class) {
+            } else if (cls == String[].class || cls == WString[].class) {
                 StringArray sa = cls == String[].class
                     ? new StringArray((String[])value, encoding)
                     : new StringArray((WString[])value);

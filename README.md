@@ -6,7 +6,7 @@
 Java Native Access (JNA)
 ========================
 
-The definitive JNA reference (including an overview and usage details) is in the [JavaDoc](http://java-native-access.github.io/jna/5.5.0/javadoc/).  Please read the [overview](http://java-native-access.github.io/jna/5.5.0/javadoc/overview-summary.html#overview_description).  Questions, comments, or exploratory conversations should begin on the [mailing list](http://groups.google.com/group/jna-users), although you may find it easier to find answers to already-solved problems on [StackOverflow](http://stackoverflow.com/questions/tagged/jna).
+The definitive JNA reference (including an overview and usage details) is in the [JavaDoc](http://java-native-access.github.io/jna/5.6.0/javadoc/).  Please read the [overview](http://java-native-access.github.io/jna/5.6.0/javadoc/overview-summary.html#overview_description).  Questions, comments, or exploratory conversations should begin on the [mailing list](http://groups.google.com/group/jna-users), although you may find it easier to find answers to already-solved problems on [StackOverflow](http://stackoverflow.com/questions/tagged/jna).
 
 JNA provides Java programs easy access to native shared libraries without writing anything but Java code - no JNI or native code is required. This functionality is comparable to Windows' Platform/Invoke and Python's ctypes.
 
@@ -42,6 +42,8 @@ JNA is a mature library with dozens of contributors and hundreds of commercial a
 - [JVM OpenVR Bindings](https://github.com/kotlin-graphics/openvr).
 - [Apache Ignite](https://ignite.apache.org/): Direct IO plugin
 - [Domino JNA](https://github.com/klehmann/domino-jna): Cross-platform access to HCL Notes/Domino C API methods from Java
+- [OSHI](https://github.com/oshi/oshi): Cross-platform Operating System and Hardware Information library for Java
+- [jAlbum](https://jalbum.net): Desktop based web gallery software for any web site.
 
 *Interesting Investigations/Experiments*
 
@@ -60,12 +62,12 @@ Pre-built platform support may be found [here](https://github.com/java-native-ac
 Download
 ========
 
-Version 5.5.0
+Version 5.6.0
 
 JNA
 ---
 
-[![Maven Central](https://img.shields.io/maven-central/v/net.java.dev.jna/jna.svg?label=Maven%20Central)](https://search.maven.org/artifact/net.java.dev.jna/jna/5.5.0/jar)&nbsp;[jna-5.5.0.jar](https://repo1.maven.org/maven2/net/java/dev/jna/jna/5.5.0/jna-5.5.0.jar)
+[![Maven Central](https://img.shields.io/maven-central/v/net.java.dev.jna/jna.svg?label=Maven%20Central)](https://search.maven.org/artifact/net.java.dev.jna/jna/5.6.0/jar)&nbsp;[jna-5.6.0.jar](https://repo1.maven.org/maven2/net/java/dev/jna/jna/5.6.0/jna-5.6.0.jar)
 
 This is the core artifact of JNA and contains only the binding library and the
 core helper classes.
@@ -73,7 +75,7 @@ core helper classes.
 JNA Platform
 ------------
 
-[![Maven Central](https://img.shields.io/maven-central/v/net.java.dev.jna/jna-platform.svg?label=Maven%20Central)](https://search.maven.org/artifact/net.java.dev.jna/jna-platform/5.5.0/jar)&nbsp;[jna-platform-5.5.0.jar](https://repo1.maven.org/maven2/net/java/dev/jna/jna-platform/5.5.0/jna-platform-5.5.0.jar)
+[![Maven Central](https://img.shields.io/maven-central/v/net.java.dev.jna/jna-platform.svg?label=Maven%20Central)](https://search.maven.org/artifact/net.java.dev.jna/jna-platform/5.6.0/jar)&nbsp;[jna-platform-5.6.0.jar](https://repo1.maven.org/maven2/net/java/dev/jna/jna-platform/5.6.0/jna-platform-5.6.0.jar)
 
 This artifact holds cross-platform mappings and mappings for a number of commonly used platform 
 functions, including a large number of Win32 mappings as well as a set of utility classes 
@@ -141,12 +143,12 @@ Using the Library
 * [Platform Library](https://github.com/java-native-access/jna/blob/master/www/PlatformLibrary.md)
 * [Direct Method Mapping](https://github.com/java-native-access/jna/blob/master/www/DirectMapping.md) (Optimization)
 * [Frequently Asked Questions (FAQ)](https://github.com/java-native-access/jna/blob/master/www/FrequentlyAskedQuestions.md)
-* [Avoiding Crashes](http://java-native-access.github.io/jna/5.5.0/javadoc/overview-summary.html#crash-protection)
+* [Avoiding Crashes](http://java-native-access.github.io/jna/5.6.0/javadoc/overview-summary.html#crash-protection)
 
 Primary Documentation (JavaDoc)
 ===============================
 
-The definitive JNA reference is in the [JavaDoc](http://java-native-access.github.io/jna/5.5.0/javadoc/).
+The definitive JNA reference is in the [JavaDoc](http://java-native-access.github.io/jna/5.6.0/javadoc/).
 
 Developers
 ==========
