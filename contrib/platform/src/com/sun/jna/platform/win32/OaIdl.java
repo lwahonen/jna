@@ -94,8 +94,8 @@ public interface OaIdl {
      * The Class EXCEPINFO.
      */
     @FieldOrder({"wCode", "wReserved", "bstrSource", "bstrDescription",
-            "bstrHelpFile", "dwHelpContext", "pvReserved", "pfnDeferredFillIn",
-            "scode"})
+        "bstrHelpFile", "dwHelpContext", "pvReserved", "pfnDeferredFillIn",
+        "scode"})
     public static class EXCEPINFO extends Structure {
 
         /**
@@ -1306,8 +1306,8 @@ public interface OaIdl {
     }
 
     @FieldOrder({"memid", "lprgscode", "lprgelemdescParam", "funckind",
-            "invkind", "callconv", "cParams", "cParamsOpt", "oVft", "cScodes",
-            "elemdescFunc", "wFuncFlags"})
+        "invkind", "callconv", "cParams", "cParamsOpt", "oVft", "cScodes",
+        "elemdescFunc", "wFuncFlags"})
     public static class FUNCDESC extends Structure {
         public static class ByReference extends FUNCDESC implements
                 Structure.ByReference {
@@ -1866,10 +1866,10 @@ public interface OaIdl {
     }
 
     @FieldOrder({"guid", "lcid", "dwReserved", "memidConstructor",
-            "memidDestructor", "lpstrSchema", "cbSizeInstance", "typekind",
-            "cFuncs", "cVars", "cImplTypes", "cbSizeVft", "cbAlignment",
-            "wTypeFlags", "wMajorVerNum", "wMinorVerNum", "tdescAlias",
-            "idldescType"})
+        "memidDestructor", "lpstrSchema", "cbSizeInstance", "typekind",
+        "cFuncs", "cVars", "cImplTypes", "cbSizeVft", "cbAlignment",
+        "wTypeFlags", "wMajorVerNum", "wMinorVerNum", "tdescAlias",
+        "idldescType"})
     public class TYPEATTR extends Structure {
         public static class ByReference extends TYPEATTR implements
                 Structure.ByReference {
