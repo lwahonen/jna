@@ -13,7 +13,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        java: [8, 11, 15, 16-ea]
+        java: [8, 11, 16, 17-ea]
         os: [ubuntu-latest, macos-latest]
       # Run all tests even if one fails
       fail-fast: false
@@ -36,7 +36,9 @@ jobs:
           brew install libtool --force
       - name: Checkstyle
         if: contains(matrix.os, 'ubuntu') && contains(matrix.java, '8')
-        run: ant checkstyle
+        run: |
+          ant checkstyle
+          ant dist
       - name: Build with Ant
         run: |
           ant test

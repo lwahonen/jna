@@ -1,12 +1,13 @@
 ![Java Native Access - JNA](https://github.com/java-native-access/jna/raw/master/www/images/jnalogo.jpg "Java Native Access - JNA")
 
-[![Build Status](https://travis-ci.org/java-native-access/jna.svg?branch=master)](https://travis-ci.org/java-native-access/jna)
-[![Build status](https://ci.appveyor.com/api/projects/status/j6vmpjrw5iktb8iu/branch/master?svg=true)](https://ci.appveyor.com/project/dblock/jna-gsxuq/branch/master)
+[![Github Actions Build Status](https://github.com/java-native-access/jna/workflows/Java%20CI/badge.svg)](https://github.com/java-native-access/jna/actions?query=workflow%3A%22Java+CI%22)
+[![Travis Build Status](https://travis-ci.org/java-native-access/jna.svg?branch=master)](https://travis-ci.org/java-native-access/jna)
+[![Appveyor Build Status](https://ci.appveyor.com/api/projects/status/j6vmpjrw5iktb8iu/branch/master?svg=true)](https://ci.appveyor.com/project/dblock/jna-gsxuq/branch/master)
 
 Java Native Access (JNA)
 ========================
 
-The definitive JNA reference (including an overview and usage details) is in the [JavaDoc](http://java-native-access.github.io/jna/5.6.0/javadoc/).  Please read the [overview](http://java-native-access.github.io/jna/5.6.0/javadoc/overview-summary.html#overview_description).  Questions, comments, or exploratory conversations should begin on the [mailing list](http://groups.google.com/group/jna-users), although you may find it easier to find answers to already-solved problems on [StackOverflow](http://stackoverflow.com/questions/tagged/jna).
+The definitive JNA reference (including an overview and usage details) is in the [JavaDoc](http://java-native-access.github.io/jna/5.8.0/javadoc/).  Please read the [overview](http://java-native-access.github.io/jna/5.8.0/javadoc/overview-summary.html#overview_description).  Questions, comments, or exploratory conversations should begin on the [mailing list](http://groups.google.com/group/jna-users), although you may find it easier to find answers to already-solved problems on [StackOverflow](http://stackoverflow.com/questions/tagged/jna).
 
 JNA provides Java programs easy access to native shared libraries without writing anything but Java code - no JNI or native code is required. This functionality is comparable to Windows' Platform/Invoke and Python's ctypes.
 
@@ -24,16 +25,15 @@ JNA is a mature library with dozens of contributors and hundreds of commercial a
 
 - [Apache Cassandra](http://cassandra.apache.org): Large-scale NoSQL data store.
 - [Rococoa](https://github.com/iterate-ch/rococoa): Java bindings to the Mac OS X Cocoa framework, by Duncan McGregor.
-- [jna-posix](http://kenai.com/projects/jna-posix): Common POSIX Functions for Java.
+- [jna-posix](https://github.com/jenkinsci/jna-posix): Common POSIX Functions for Java.
 - [JNAerator](https://github.com/nativelibs4java/JNAerator): Pronounced "generator", auto-generates JNA mappings from C headers, by Olivier Chafik.
-- [Freedom for Media in Java](http://fmj.sf.net) by Ken Larson/Dieter Krachtus.
-- [gstreamer for Java](http://code.google.com/p/gstreamer-java) by Wayne Meissner.
-- [Videolan](http://trac.videolan.org/jvlc/): JVLC Java Multimedia Library.
+- [Freedom for Media in Java](https://github.com/jitsi/fmj) by Ken Larson/Dieter Krachtus.
+- [GStreamer-Java](https://github.com/gstreamer-java/): Java bindings and utilities for [GStreamer 1.x](https://gstreamer.freedesktop.org/).
+- [VLCJ](https://github.com/caprica/vlcj): Java bindings for libVLC.
 - [SVNKit](http://svnkit.com): Pure Java Subversion client library.
-- [OmegaT Computer-Aided Translation](http://omegat.sf.net).
-- [IntelliJ IDEA](http://jetbrains.com) by JetBrains.
-- [NetBeans IDE](http://netbeans.org).
-- [Athena Backup](http://www.athenabackup.com) by Doug Patriarche.
+- [OmegaT Computer-Aided Translation](https://omegat.org/).
+- [IntelliJ IDEA](https://www.jetbrains.com/) by JetBrains.
+- [Apache NetBeans IDE](https://netbeans.apache.org/) by Apache Software Foundation.
 - [FileBot Media Renamer](http://www.filebot.net) by Reinhard Pointner.
 - [USB for Java](https://launchpad.net/libusb4j) by Mario Boikov.
 - [Waffle](https://github.com/dblock/waffle): Enables SSO on Windows in Java applications, by Daniel Doubrovkine.
@@ -44,12 +44,13 @@ JNA is a mature library with dozens of contributors and hundreds of commercial a
 - [Domino JNA](https://github.com/klehmann/domino-jna): Cross-platform access to HCL Notes/Domino C API methods from Java
 - [OSHI](https://github.com/oshi/oshi): Cross-platform Operating System and Hardware Information library for Java
 - [jAlbum](https://jalbum.net): Desktop based web gallery software for any web site.
+- [jacknji11](https://github.com/joelhockey/jacknji11): Provides a Java PKCS#11 interface.
+- [JNAJack](https://github.com/jaudiolibs/jnajack): Java bindings for [JACK Audio Connection Kit](https://jackaudio.org/).
 
 *Interesting Investigations/Experiments*
 
 - [Drive Lego Mindstorm NXT](http://epirsch.blogspot.com/2008/02/jna-love-nxt.html) by Emmanuel Pirsch.
 - [Detect User Inactivity](http://ochafik.free.fr/blog/?p=98) by Olivier Chafik.
-- [IAXClient Applet](http://callino.cc/jiaxcapplet/) provides VOIP for Java, by Wolfgang Pichler.
 
 There are also a number of examples and projects within the `contrib` directory of the JNA project itself.
 
@@ -62,12 +63,12 @@ Pre-built platform support may be found [here](https://github.com/java-native-ac
 Download
 ========
 
-Version 5.6.0
+Version 5.8.0
 
 JNA
 ---
 
-[![Maven Central](https://img.shields.io/maven-central/v/net.java.dev.jna/jna.svg?label=Maven%20Central)](https://search.maven.org/artifact/net.java.dev.jna/jna/5.6.0/jar)&nbsp;[jna-5.6.0.jar](https://repo1.maven.org/maven2/net/java/dev/jna/jna/5.6.0/jna-5.6.0.jar)
+[![Maven Central](https://img.shields.io/maven-central/v/net.java.dev.jna/jna.svg?label=Maven%20Central)](https://search.maven.org/artifact/net.java.dev.jna/jna/5.8.0/jar)&nbsp;[jna-5.8.0.jar](https://repo1.maven.org/maven2/net/java/dev/jna/jna/5.8.0/jna-5.8.0.jar)&nbsp;[jna-jpms-5.8.0.jar](https://repo1.maven.org/maven2/net/java/dev/jna/jna-jpms/5.8.0/jna-jpms-5.8.0.jar)
 
 This is the core artifact of JNA and contains only the binding library and the
 core helper classes.
@@ -75,10 +76,10 @@ core helper classes.
 JNA Platform
 ------------
 
-[![Maven Central](https://img.shields.io/maven-central/v/net.java.dev.jna/jna-platform.svg?label=Maven%20Central)](https://search.maven.org/artifact/net.java.dev.jna/jna-platform/5.6.0/jar)&nbsp;[jna-platform-5.6.0.jar](https://repo1.maven.org/maven2/net/java/dev/jna/jna-platform/5.6.0/jna-platform-5.6.0.jar)
+[![Maven Central](https://img.shields.io/maven-central/v/net.java.dev.jna/jna-platform.svg?label=Maven%20Central)](https://search.maven.org/artifact/net.java.dev.jna/jna-platform/5.8.0/jar)&nbsp;[jna-platform-5.8.0.jar](https://repo1.maven.org/maven2/net/java/dev/jna/jna-platform/5.8.0/jna-platform-5.8.0.jar)&nbsp;[jna-platform-jpms-5.8.0.jar](https://repo1.maven.org/maven2/net/java/dev/jna/jna-platform-jpms/5.8.0/jna-platform-jpms-5.8.0.jar)
 
-This artifact holds cross-platform mappings and mappings for a number of commonly used platform 
-functions, including a large number of Win32 mappings as well as a set of utility classes 
+This artifact holds cross-platform mappings and mappings for a number of commonly used platform
+functions, including a large number of Win32 mappings as well as a set of utility classes
 that simplify native access. The code is tested and the utility interfaces ensure that
 native memory management is taken care of correctly.
 
@@ -143,12 +144,12 @@ Using the Library
 * [Platform Library](https://github.com/java-native-access/jna/blob/master/www/PlatformLibrary.md)
 * [Direct Method Mapping](https://github.com/java-native-access/jna/blob/master/www/DirectMapping.md) (Optimization)
 * [Frequently Asked Questions (FAQ)](https://github.com/java-native-access/jna/blob/master/www/FrequentlyAskedQuestions.md)
-* [Avoiding Crashes](http://java-native-access.github.io/jna/5.6.0/javadoc/overview-summary.html#crash-protection)
+* [Avoiding Crashes](http://java-native-access.github.io/jna/5.8.0/javadoc/overview-summary.html#crash-protection)
 
 Primary Documentation (JavaDoc)
 ===============================
 
-The definitive JNA reference is in the [JavaDoc](http://java-native-access.github.io/jna/5.6.0/javadoc/).
+The definitive JNA reference is in the [JavaDoc](http://java-native-access.github.io/jna/5.8.0/javadoc/).
 
 Developers
 ==========
@@ -173,7 +174,7 @@ If you are interested in paid support, feel free to say so on the [jna-users mai
 License
 =======
 
-This library is licensed under the LGPL, version 2.1 or later, and (from version 4.0 onward) the Apache Software License, version 2.0. Commercial license arrangements are negotiable.
+This library is licensed under the LGPL, version 2.1 or later, or (from version 4.0 onward) the Apache License, version 2.0. Commercial support may be available, please e-mail twall[at]users[dot]sf[dot]net. See [LICENSE](LICENSE) for more information.
 
 *NOTE: Oracle is not sponsoring this project, even though the package name (com.sun.jna) might imply otherwise.*
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Daniel Widdis
+ * Copyright (c) 2019, 2021 Daniel Widdis
  *
  * The contents of this file is dual-licensed under 2
  * alternative Open Source/Free licenses: LGPL 2.1 or later and
@@ -487,15 +487,20 @@ public interface CoreFoundation extends Library {
          *         failed.
          */
         public String stringValue() {
-            CFIndex length = INSTANCE.CFStringGetLength(this);
-            if (length.longValue() == 0) {
+            // Get number of characters
+            long length = INSTANCE.CFStringGetLength(this).longValue();
+            if (length == 0) {
                 return "";
             }
-            CFIndex maxSize = INSTANCE.CFStringGetMaximumSizeForEncoding(length, kCFStringEncodingUTF8);
-            if (maxSize.intValue() == kCFNotFound) {
+            // Calculate maximum possible size in UTF8 bytes
+            // the CFStringGetMaximumSizeForEncoding function incorrectly returns 3 bytes
+            // per character so we'll use 4 bytes plus a null byte
+            if (length > (Long.MAX_VALUE - 1) / 4) {
                 throw new StringIndexOutOfBoundsException("CFString maximum number of bytes exceeds LONG_MAX.");
             }
-            Memory buf = new Memory(maxSize.longValue());
+            long bufSize = 4 * length + 1;
+            CFIndex maxSize = new CFIndex(bufSize);
+            Memory buf = new Memory(bufSize);
             if (0 != INSTANCE.CFStringGetCString(this, buf, maxSize, kCFStringEncodingUTF8)) {
                 return buf.getString(0, "UTF8");
             }

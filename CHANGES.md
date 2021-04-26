@@ -2,11 +2,61 @@ NOTE: as of JNA 4.0, JNA is now dual-licensed under LGPL and AL 2.0 (see LICENSE
 
 NOTE: JNI native support is typically incompatible between minor versions, and almost always incompatible between major versions.
 
-Next Release (5.7.0)
+Next Release (5.9.0)
 ====================
 
 Features
 --------
+* [#1336](https://github.com/java-native-access/jna/pull/1336): Add `HKEY_CURRENT_USER_LOCAL_SETTINGS` to `c.s.j.p.win32.WinReg` - [@Dani-Hub](https://github.com/Dani-Hub).
+* [#1337](https://github.com/java-native-access/jna/pull/1337): Add `REG_NOTIFY_THREAD_AGNOSTIC` to `c.s.j.p.win32.WinNet` and update `REG_LEGAL_CHANGE_FILTER` - [@Dani-Hub](https://github.com/Dani-Hub).
+* [#1338](https://github.com/java-native-access/jna/pull/1338): Add `RegNotifyChangeKeyValue` to `c.s.j.p.win32.Advapi32` - [@Dani-Hub](https://github.com/Dani-Hub).
+* [#1340](https://github.com/java-native-access/jna/issues/1340): Added `CM_Get_DevNode_Registry_Property` to `c.s.j.p.win32.Cfgmgr32` and corresponding util in `c.s.j.p.win32.Cfgmgr32Util` - [@dbwiddis](https://github.com/dbwiddis).
+
+Bug Fixes
+---------
+* [#1343](https://github.com/java-native-access/jna/issues/1343), [#1345](https://github.com/java-native-access/jna/issues/1345): `c.s.j.p.mac.CoreFoundation.CFStringRef#stringValue` buffer needs space for 4 UTF8 bytes plus a null byte - [@dbwiddis](https://github.com/dbwiddis).
+
+Release 5.8.0
+=============
+
+Features
+--------
+* [#1313](https://github.com/java-native-access/jna/issues/1313): Normalize `RESOURCE_PREFIX` for darwin to `darwin-$arch` and split jnidispatch library per architecture - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1318](https://github.com/java-native-access/jna/pull/1318): Add support for linux-riscv64 - [@thentschel](https://github.com/thentschel).
+* [#1327](https://github.com/java-native-access/jna/pull/1327): Add partial support for future values of `c.s.j.p.win32.WinNT.LOGICAL_PROCESSOR_RELATIONSHIP` enum present in Windows Insider builds - [@dbwiddis](https://github.com/dbwiddis).
+
+Bug Fixes
+---------
+* [#1317](https://github.com/java-native-access/jna/pull/1317): Change the maven coordinates of the JPMS artifacts from classifier `jpms` to custom artifact ids `jna-jpms` and `jna-platform-jpms` - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1322](https://github.com/java-native-access/jna/pull/1322): Handle 0-length domain names in `c.s.j.p.win32.Advapi32Util#getAccountBySid` - [@dbwiddis](https://github.com/dbwiddis).
+* [#1326](https://github.com/java-native-access/jna/pull/1326): Ensure pointers indirected from Memory and pointing into Memory retain originating object - [@matthiasblaesing](https://github.com/matthiasblaesing).
+
+Important Changes
+-----------------
+* The maven coordinates of the experimental JPMS (java module system) artifacts
+  were moved from using the classifier `jpms` to custom artifact ids `jna-jpms`
+  and `jna-platform-jpms`, without an classifier. The reason for this is, that
+  the platform artifacts depend on the jna artifacts and need to pull in the
+  right variant. This is not possible if the classifier is used.
+
+* `RESOURCE_PREFIX` for darwin (mac OS) was changed from `darwin` to
+  `darwin-$arch` as the fat binaries on mac OS causes various problems:
+  It was reported, that binaries were rejected from the appstore because x86
+  binaries were found in the application (jnidispatch for mac OS x86) and that
+  builds needed to be special cased so that the native library can be
+  assembled. The latter is also true for JNA.<br />
+  While the prefix is changed, the old prefix is still searched as a fallback
+  location, so if only a fat binary is present, it can still be loaded.
+
+Release 5.7.0
+=============
+
+Features
+--------
+* [#1301](https://github.com/java-native-access/jna/pull/1301/): Improve bindings of the printer notification functions (`FindFirstPrinterChangeNotification`, `FindNextPrinterChangeNotification`) in `c.s.j.p.w.Winspool` - [@ianjoneill](https://github.com/ianjoneill).
+* [#1238](https://github.com/java-native-access/jna/pull/1238): Add macOS `aarch64` architecture to universal `darwin` target. Cherry pick [libffi/libffi#577](https://github.com/libffi/libffi/pull/577). - [@fkistner](https://github.com/fkistner), [@Vzor-](https://github.com/Vzor-), [@tresf](https://github.com/tresf).
+* [#1264](https://github.com/java-native-access/jna/pull/1264): Update libffi to v3.3; Add Windows `aarch64` target. - [@tresf](https://github.com/tresf).
+* [#1293](https://github.com/java-native-access/jna/issues/1293): Bind part of Windows Application Recovery and Restart API: `RegisterApplicationRestart`, `UnregisterApplicationRestart` and `GetApplicationRestartSettings` in `c.s.j.p.w.Kernel32` - [@matthiasblaesing](https://github.com/matthiasblaesing).
 * [#1217](https://github.com/java-native-access/jna/pull/1217): Add mappings for AIX `Perfstat` library to `c.s.j.p.unix.aix` - [@dbwiddis](https://github.com/dbwiddis).
 * [#1231](https://github.com/java-native-access/jna/pull/1231): The test suite can now be executed on Windows using either ANSI or UNICODE win32 API by passing `-Dw32.ascii=true/false` to ant. Previously, UNICODE was always used. - [@T-Svensson](https://github.com/T-Svensson/)
 * [#1237](https://github.com/java-native-access/jna/pull/1237): *Experimental:* Add artifacts that make jna and jna-platform named modules (provide `module-info.class`). The new artifacts are named `jna-jpms.jar` and `jna-platform-jpms.jar` - [@matthiasblaesing](https://github.com/matthiasblaesing).
@@ -14,17 +64,26 @@ Features
 * [#1239](https://github.com/java-native-access/jna/pull/1239): Improve performance of allocation of `c.s.j.Memory` objects - [@joerg1985](https://github.com/joerg1985).
 * [#1246](https://github.com/java-native-access/jna/pull/1246): Improve performance of `c.s.j.Structure#read` and `c.s.j.Structure#write` - [@joerg1985](https://github.com/joerg1985).
 * [#1260](https://github.com/java-native-access/jna/pull/1260): Add mapping for X11 generic events - [@lafoletc](https://github.com/lafoletc).
-* [#1265](https://github.com/java-native-access/jna/pull/1265): Add mapping for XQueryExtension - [@lafoletc](https://github.com/lafoletc).
 * [#1263](https://github.com/java-native-access/jna/pull/1263): Add LowLevelMouseProc - [@nordiakt](https://github.com/nordiakt)
+* [#1265](https://github.com/java-native-access/jna/pull/1265): Add mapping for XQueryExtension - [@lafoletc](https://github.com/lafoletc).
+* [#1299](https://github.com/java-native-access/jna/pull/1299): Add `c.s.j.p.win32.IPHlpApi#GetExtendedTcpTable`, `c.s.j.p.win32.IPHlpApi#GetExtendedUdpTable`, and supporting structures.  - [@dbwiddis](https://github.com/dbwiddis).
 
 Bug Fixes
 ---------
+* [#1286](https://github.com/java-native-access/jna/pull/1286): Fix bindings of `c.s.j.p.win32.DBT` - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#326](https://github.com/java-native-access/jna/issues/326): Fix loading library that re-uses pointers for different callbacks - [@fpapai](https://github.com/fpapai).
 * [#1244](https://github.com/java-native-access/jna/issues/1244): Fix building on GCC 10 - [@matthiasblaesing](https://github.com/matthiasblaesing).
 * [#1252](https://github.com/java-native-access/jna/issues/1252): - Fix bindings of `CTL_ENTRY#getRgAttribute`, `CTL_INFO#getRgCTLEntry`, `CTL_INFO#getRgExtension`, `CERT_EXTENSIONS#getRgExtension`, `CERT_INFO#getRgExtension`, `CRL_INFO#getRgCRLEntry`, `CRL_INFO#getRgExtension`, `CRL_ENTRY#getRgExtension`. Add bindings for `CertEnumCertificatesInStore`, `CertEnumCTLsInStore`, `CertEnumCRLsInStore` and `CryptQueryObject` in `c.s.j.p.win32.Crypt32`.<br> *WARNING:* The signatures for `CTL_INFO#getRgCTLEntry` and `CTL_INFO#getRgExtension` were changed - as the original signatures were obviously wrong and read the wrong attributes, it is not considered an API break - [@matthiasblaesing](https://github.com/matthiasblaesing).
 * [#1275](https://github.com/java-native-access/jna/issues/1275): Fix `CFStringRef#stringValue` for empty Strings - [@dyorgio](https://github.com/dyorgio).
 * [#1279](https://github.com/java-native-access/jna/issues/1279): Remove `DLLCallback` import from `CallbackReference` - [@dyorgio](https://github.com/dyorgio).
 * [#1278](https://github.com/java-native-access/jna/pull/1278): Improve compatibility of `c.s.j.p.WindowUtils#getProcessFilePath` and fix unittests for windows 32bit intel  - [@matthiasblaesing](https://github.com/matthiasblaesing).
 * [#1284](https://github.com/java-native-access/jna/pull/1284): Fix illegal access exceptions, when retrieving options for private library interfaces with an instance field - [@fkistner](https://github.com/fkistner).
+* [#1300](https://github.com/java-native-access/jna/pull/1300): Deprecate `c.s.j.p.win32.WTypes.BSTR` String constructor and `setValue` method, as `BSTR` allocation should be managed by COM, Automation, and Interop functions - [@dbwiddis](https://github.com/dbwiddis).
+
+
+Breaking Changes
+----------------
+* Prebuild native library for darwin x86 (32bit java on mac OS) was removed
 
 Release 5.6.0
 =============
