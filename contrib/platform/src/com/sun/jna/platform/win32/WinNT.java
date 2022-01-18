@@ -32,7 +32,6 @@ import com.sun.jna.Pointer;
 import com.sun.jna.PointerType;
 import com.sun.jna.Structure;
 import com.sun.jna.Structure.FieldOrder;
-import com.sun.jna.platform.win32.WinNT.PSID;
 import com.sun.jna.Union;
 import com.sun.jna.ptr.ByReference;
 import com.sun.jna.win32.StdCallLibrary.StdCallCallback;
@@ -1075,10 +1074,11 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
     int REG_NOTIFY_CHANGE_ATTRIBUTES = 0x00000002;
     int REG_NOTIFY_CHANGE_LAST_SET = 0x00000004;
     int REG_NOTIFY_CHANGE_SECURITY = 0x00000008;
+    int REG_NOTIFY_THREAD_AGNOSTIC = 0x10000000;
 
     int REG_LEGAL_CHANGE_FILTER = REG_NOTIFY_CHANGE_NAME
             | REG_NOTIFY_CHANGE_ATTRIBUTES | REG_NOTIFY_CHANGE_LAST_SET
-            | REG_NOTIFY_CHANGE_SECURITY;
+            | REG_NOTIFY_CHANGE_SECURITY | REG_NOTIFY_THREAD_AGNOSTIC;
 
     //
     // Predefined Value Types.
@@ -3030,7 +3030,7 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
                     result = new GROUP_RELATIONSHIP(memory);
                     break;
                 default:
-                    throw new IllegalStateException("Unmapped relationship: " + relationship);
+                    result = new UNKNOWN_RELATIONSHIP(memory);
             }
             result.read();
             return result;
@@ -3254,6 +3254,24 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
     }
 
     /**
+     * Represents information associated with a
+     * {@link LOGICAL_PROCESSOR_RELATIONSHIP} enum value which has not yet been
+     * mapped. Only the fields from {@link SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX}
+     * are populated.
+     */
+    @FieldOrder({})
+    public static class UNKNOWN_RELATIONSHIP extends SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX {
+
+        public UNKNOWN_RELATIONSHIP() {
+            super();
+        }
+
+        public UNKNOWN_RELATIONSHIP(Pointer memory) {
+            super(memory);
+        }
+    }
+
+    /**
      * Represents a processor group-specific affinity, such as the affinity of a
      * thread.
      */
@@ -3358,6 +3376,30 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
          * <p>Not supported until Windows Server 2008 R2.</p>
          */
         int RelationGroup = 4;
+
+        /**
+         * <p>
+         * Upcoming value of this enum added for forward compatibility. Documentation
+         * will be added when available.
+         * </p>
+         */
+        int RelationProcessorDie = 5;
+
+        /**
+         * <p>
+         * Upcoming value of this enum added for forward compatibility. Documentation
+         * will be added when available.
+         * </p>
+         */
+        int RelationNumaNodeEx = 6;
+
+        /**
+         * <p>
+         * Upcoming value of this enum added for forward compatibility. Documentation
+         * will be added when available.
+         * </p>
+         */
+        int RelationProcessorModule = 7;
 
         /**
          * <p>On input, retrieves information about all possible relation types. This value is not used on output.</p>

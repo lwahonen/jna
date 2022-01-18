@@ -22,14 +22,10 @@
  */
 package com.sun.jna;
 
-import java.lang.ref.Reference;
+import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.Map;
-import java.util.WeakHashMap;
+import java.util.ArrayList;
 
 /**
  * A <code>Pointer</code> to memory obtained from the native heap via a
@@ -53,9 +49,82 @@ import java.util.WeakHashMap;
  * @see Pointer
  */
 public class Memory extends Pointer {
-    /** Keep track of all allocated memory so we can dispose of it before unloading. */
-    private static final Map<Memory, Reference<Memory>> allocatedMemory =
-            Collections.synchronizedMap(new WeakHashMap<Memory, Reference<Memory>>());
+
+    private static ReferenceQueue<Memory> QUEUE = new ReferenceQueue<Memory>();
+    private static LinkedReference HEAD; // the head of the doubly linked list used for instance tracking
+
+    /**
+     * Keep track of all allocated memory so we can dispose of it before
+     * unloading. This is done using a doubly linked list to enable fast
+     * removal of tracked instances.
+     */
+    private static class LinkedReference extends WeakReference<Memory> {
+
+        private LinkedReference next;
+        private LinkedReference prev;
+
+        private LinkedReference(Memory referent) {
+            super(referent, QUEUE);
+        }
+
+        /**
+         * Add the given {@code instance} to the instance tracking.
+         *
+         * @param instance the instance to track
+         */
+        static LinkedReference track(Memory instance) {
+            // use a different lock here to allow the finialzier to unlink elements too
+            synchronized (QUEUE) {
+                LinkedReference stale;
+
+                // handle stale references here to avoid GC overheating when memory is limited
+                while ((stale = (LinkedReference) QUEUE.poll()) != null) {
+                    stale.unlink();
+                }
+            }
+
+            // keep object allocation outside the syncronized block
+            LinkedReference entry = new LinkedReference(instance);
+
+            synchronized (LinkedReference.class) {
+                if (HEAD != null) {
+                    entry.next = HEAD;
+                    HEAD = HEAD.prev = entry;
+                } else {
+                    HEAD = entry;
+                }
+            }
+
+            return entry;
+        }
+
+        /**
+         * Remove the related instance from tracking and update the linked list.
+         */
+        private void unlink() {
+            synchronized (LinkedReference.class) {
+                LinkedReference next;
+
+                if (HEAD != this) {
+                    if (this.prev == null) {
+                        // this entry was detached before, e.g. disposeAll was called and finalizers are running now
+                        return;
+                    }
+
+                    next = this.prev.next = this.next;
+                } else {
+                    next = HEAD = HEAD.next;
+                }
+
+                if (next != null) {
+                    next.prev = this.prev;
+                }
+
+                // set prev to null to detect detached entries
+                this.prev = null;
+            }
+        }
+    }
 
     private static final WeakMemoryHolder buffers = new WeakMemoryHolder();
 
@@ -68,13 +137,71 @@ public class Memory extends Pointer {
 
     /** Dispose of all allocated memory. */
     public static void disposeAll() {
-        // use a copy since dispose() modifies the map
-        Collection<Memory> refs = new LinkedList<Memory>(allocatedMemory.keySet());
-        for (Memory r : refs) {
-            r.dispose();
+        synchronized (LinkedReference.class) {
+            LinkedReference entry;
+
+            while ((entry = HEAD) != null) {
+                Memory memory = HEAD.get();
+
+                if (memory != null) {
+                    // dispose does the unlink call internal
+                    memory.dispose();
+                } else {
+                    HEAD.unlink();
+                }
+
+                if (HEAD == entry) {
+                    throw new IllegalStateException("the HEAD did not change");
+                }
+            }
+        }
+
+        synchronized (QUEUE) {
+            LinkedReference stale;
+
+            // try to release as mutch memory as possible
+            while ((stale = (LinkedReference) QUEUE.poll()) != null) {
+                stale.unlink();
+            }
         }
     }
 
+    /**
+     * Unit-testing only, ensure the doubly linked list is in a good shape.
+     *
+     * @return the number of tracked instances
+     */
+    static int integrityCheck() {
+        synchronized (LinkedReference.class) {
+            if (HEAD == null) {
+                return 0;
+            }
+
+            ArrayList<LinkedReference> entries = new ArrayList<LinkedReference>();
+            LinkedReference entry = HEAD;
+
+            while (entry != null) {
+                entries.add(entry);
+                entry = entry.next;
+            }
+
+            int index = entries.size() - 1;
+            entry = entries.get(index);
+
+            while (entry != null) {
+                if (entries.get(index) != entry) {
+                    throw new IllegalStateException(entries.get(index) + " vs. " + entry + " at index " + index);
+                }
+
+                entry = entry.prev;
+                index--;
+            }
+
+            return entries.size();
+        }
+    }
+
+    private final LinkedReference reference; // used to track the instance
     protected long size; // Size of the malloc'ed space
 
     /** Provide a view into the original memory.  Keeps an implicit reference
@@ -115,11 +242,13 @@ public class Memory extends Pointer {
         if (peer == 0)
             throw new OutOfMemoryError("Cannot allocate " + size + " bytes");
 
-        allocatedMemory.put(this, new WeakReference<Memory>(this));
+        reference = LinkedReference.track(this);
     }
 
     protected Memory() {
         super();
+
+        reference = null;
     }
 
     /** Provide a view of this memory using the given offset as the base address.  The
@@ -184,11 +313,18 @@ public class Memory extends Pointer {
 
     /** Free the native memory and set peer to zero */
     protected synchronized void dispose() {
+        if (peer == 0) {
+            // someone called dispose before, the finalizer will call dispose again
+            return;
+        }
+
         try {
             free(peer);
         } finally {
-            allocatedMemory.remove(this);
             peer = 0;
+            // no null check here, tracking is only null for SharedMemory
+            // SharedMemory is overriding the dispose method
+            reference.unlink();
         }
     }
 
@@ -264,7 +400,7 @@ public class Memory extends Pointer {
      */
     @Override
     public void read(long bOff, char[] buf, int index, int length) {
-        boundsCheck(bOff, length * 2L);
+        boundsCheck(bOff, length * Native.WCHAR_SIZE);
         super.read(bOff, buf, index, length);
     }
 
@@ -324,6 +460,20 @@ public class Memory extends Pointer {
         super.read(bOff, buf, index, length);
     }
 
+    /**
+     * Indirect the native pointer to <code>malloc</code> space, a la
+     * <code>Pointer.read</code>.  But this method performs a bounds checks to
+     * ensure that the indirection does not cause memory outside the
+     * <code>malloc</code>ed space to be accessed.
+     *
+     * @see Pointer#read(long,Pointer[],int,int)
+     */
+    @Override
+    public void read(long bOff, Pointer[] buf, int index, int length) {
+        boundsCheck(bOff, length * Native.POINTER_SIZE);
+        super.read(bOff, buf, index, length);
+    }
+
     //////////////////////////////////////////////////////////////////////////
     // Raw write methods
     //////////////////////////////////////////////////////////////////////////
@@ -366,7 +516,7 @@ public class Memory extends Pointer {
      */
     @Override
     public void write(long bOff, char[] buf, int index, int length) {
-        boundsCheck(bOff, length * 2L);
+        boundsCheck(bOff, length * Native.WCHAR_SIZE);
         super.write(bOff, buf, index, length);
     }
 
@@ -426,6 +576,20 @@ public class Memory extends Pointer {
         super.write(bOff, buf, index, length);
     }
 
+    /**
+     * Indirect the native pointer to <code>malloc</code> space, a la
+     * <code>Pointer.write</code>.  But this method performs a bounds
+     * checks to ensure that the indirection does not cause memory outside the
+     * <code>malloc</code>ed space to be accessed.
+     *
+     * @see Pointer#write(long,Pointer[],int,int)
+     */
+    @Override
+    public void write(long bOff, Pointer[] buf, int index, int length) {
+        boundsCheck(bOff, length * Native.POINTER_SIZE);
+        super.write(bOff, buf, index, length);
+    }
+
     //////////////////////////////////////////////////////////////////////////
     // Java type read methods
     //////////////////////////////////////////////////////////////////////////
@@ -454,7 +618,7 @@ public class Memory extends Pointer {
      */
     @Override
     public char getChar(long offset) {
-        boundsCheck(offset, 1);
+        boundsCheck(offset, Native.WCHAR_SIZE);
         return super.getChar(offset);
     }
 
@@ -539,7 +703,7 @@ public class Memory extends Pointer {
     @Override
     public Pointer getPointer(long offset) {
         boundsCheck(offset, Native.POINTER_SIZE);
-        return super.getPointer(offset);
+        return shareReferenceIfInBounds(super.getPointer(offset));
     }
 
     /**
@@ -725,5 +889,27 @@ public class Memory extends Pointer {
     /** Dumps the contents of this memory object. */
     public String dump() {
         return dump(0, (int)size());
+    }
+
+    /**
+     * Check whether the supplied Pointer object points into the memory region
+     * backed by this memory object. The intention is to prevent premature GC
+     * of the Memory object.
+     *
+     * @param target Pointer to check
+     * @return {@code target} if target does not point into the region covered
+     * by this memory object, a newly {@code SharedMemory} object, if the pointer
+     * points to memory backed by this Memory object.
+     */
+    private Pointer shareReferenceIfInBounds(Pointer target) {
+        if(target == null) {
+            return null;
+        }
+        long offset = target.peer - this.peer;
+        if (offset >= 0 && offset < this.size) {
+            return this.share(offset);
+        } else {
+            return target;
+        }
     }
 }

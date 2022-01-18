@@ -31,7 +31,9 @@ import java.util.List;
 import org.junit.Test;
 import org.junit.runner.JUnitCore;
 
+import com.sun.jna.CallbackReference;
 import com.sun.jna.Native;
+import com.sun.jna.Platform;
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
 import com.sun.jna.platform.win32.BaseTSD.ULONG_PTR;
@@ -104,6 +106,24 @@ public class User32WindowMessagesTest extends AbstractWin32TestSupport {
             result = User32.INSTANCE.SendMessage(hwndPing, WinUser.WM_USER, new WPARAM(MSG_HOOKED_CODE),
                     new LPARAM(MSG_HOOKED_VAL));
             log("User Message sent to hooked proc " + hwndPing + ", result = " + result);
+            assertEquals(0, result.intValue());
+
+            // DEMO 4 : subclass the window to return a different value when receiving MSG_SIMPLE_CODE
+            // First make sure we remove the hook
+            User32.INSTANCE.UnhookWindowsHookEx(hook);
+            hook = null;
+
+            subclassProc(hwndPing);
+            result = User32.INSTANCE.SendMessage(hwndPing, WinUser.WM_USER, new WPARAM(MSG_SIMPLE_CODE),
+                    new LPARAM(MSG_SIMPLE_VAL));
+            log("User Message sent to subclassed " + hwndPing + ", result = " + result);
+            assertEquals(0xC0FE, result.intValue());
+
+            // Then we check if this still works with a hooked proc as well
+            hook = hookwinProc(hwndPing);
+            result = User32.INSTANCE.SendMessage(hwndPing, WinUser.WM_USER, new WPARAM(MSG_HOOKED_CODE),
+                    new LPARAM(MSG_HOOKED_VAL));
+            log("User Message sent to hooked and subclassed proc " + hwndPing + ", result = " + result);
             assertEquals(0, result.intValue());
 
             // Waits e few moment before shutdown message.
@@ -313,7 +333,7 @@ public class User32WindowMessagesTest extends AbstractWin32TestSupport {
         public boolean callback(HWND hWnd, Pointer data) {
 
             char[] windowText = new char[512];
-            User32.INSTANCE.GetClassName(hWnd, windowText, 512);
+            assertCallSucceeded("GetClassName", User32.INSTANCE.GetClassName(hWnd, windowText, windowText.length) != 0);
             String className = Native.toString(windowText);
 
             if (windowClass.equalsIgnoreCase(className)) {
@@ -393,6 +413,44 @@ public class User32WindowMessagesTest extends AbstractWin32TestSupport {
         int threadtoHook = User32.INSTANCE.GetWindowThreadProcessId(hwndToHook, null);
         // Hook of the wndProc
         return User32.INSTANCE.SetWindowsHookEx(WinUser.WH_CALLWNDPROC, hookProc, hInst, threadtoHook);
+    }
+
+    private void subclassProc(HWND hwndToSubclass) {
+        class SubClassedWindowProc implements WindowProc {
+            private Pointer oldWindowProc;
+
+            @Override
+            public LRESULT callback(HWND hwnd, int uMsg, WPARAM wParam, LPARAM lParam) {
+                if (uMsg == WinUser.WM_USER) {
+                    log(hwnd + " - subclass received a WM_USER message with code : '" + wParam + "' and value : '" + lParam
+                            + "'");
+
+                    if (wParam.intValue() == MSG_SIMPLE_CODE) {
+                        // We also want to be sure the value is still the same passed
+                        assertEqualsForCallbackExecution(MSG_SIMPLE_VAL, lParam.intValue());
+
+                        return new LRESULT(0xC0FE);
+                    }
+                }
+                if (this.oldWindowProc != null) {
+                    return User32.INSTANCE.CallWindowProc(this.oldWindowProc, hwnd, uMsg, wParam, lParam);
+                } else {
+                    // In case the old pointer has not yet been set due to for example a race condition,
+                    // send the message to the default handler instead
+                    return User32.INSTANCE.DefWindowProc(hwnd, uMsg, wParam, lParam);
+                }
+            }
+        }
+
+        SubClassedWindowProc subclass = new SubClassedWindowProc();
+        if(Platform.is64Bit()) {
+            subclass.oldWindowProc = User32.INSTANCE.SetWindowLongPtr(hwndToSubclass, WinUser.GWL_WNDPROC,
+                    CallbackReference.getFunctionPointer(subclass));
+        } else {
+            // From MSDN: When compiling for 32-bit Windows, SetWindowLongPtr is defined as a call to the SetWindowLong function.
+            User32.INSTANCE.SetWindowLong(hwndToSubclass, WinUser.GWL_WNDPROC,
+                (int) Pointer.nativeValue(CallbackReference.getFunctionPointer(subclass)));
+        }
     }
 
     /**

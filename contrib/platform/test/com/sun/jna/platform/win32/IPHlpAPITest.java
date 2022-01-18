@@ -1,4 +1,4 @@
-/* Copyright (c) 2018,2020 Daniel Widdis, All Rights Reserved
+/* Copyright (c) 2018,2020,2021 Daniel Widdis, All Rights Reserved
  *
  * The contents of this file is dual-licensed under 2
  * alternative Open Source/Free licenses: LGPL 2.1 or later and
@@ -23,7 +23,10 @@
  */
 package com.sun.jna.platform.win32;
 
+import static com.sun.jna.platform.win32.IPHlpAPI.AF_INET;
+import static com.sun.jna.platform.win32.IPHlpAPI.AF_INET6;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.math.BigInteger;
@@ -39,11 +42,21 @@ import com.sun.jna.Memory;
 import com.sun.jna.platform.win32.IPHlpAPI.FIXED_INFO;
 import com.sun.jna.platform.win32.IPHlpAPI.MIB_IFROW;
 import com.sun.jna.platform.win32.IPHlpAPI.MIB_IF_ROW2;
+import com.sun.jna.platform.win32.IPHlpAPI.MIB_TCP6ROW_OWNER_PID;
+import com.sun.jna.platform.win32.IPHlpAPI.MIB_TCP6TABLE_OWNER_PID;
+import com.sun.jna.platform.win32.IPHlpAPI.MIB_TCPROW_OWNER_PID;
 import com.sun.jna.platform.win32.IPHlpAPI.MIB_TCPSTATS;
+import com.sun.jna.platform.win32.IPHlpAPI.MIB_TCPTABLE_OWNER_PID;
+import com.sun.jna.platform.win32.IPHlpAPI.MIB_TCP_STATE;
+import com.sun.jna.platform.win32.IPHlpAPI.MIB_UDP6TABLE_OWNER_PID;
 import com.sun.jna.platform.win32.IPHlpAPI.MIB_UDPSTATS;
+import com.sun.jna.platform.win32.IPHlpAPI.MIB_UDPTABLE_OWNER_PID;
+import com.sun.jna.platform.win32.IPHlpAPI.TCP_TABLE_CLASS;
+import com.sun.jna.platform.win32.IPHlpAPI.UDP_TABLE_CLASS;
 import com.sun.jna.ptr.IntByReference;
 
 public class IPHlpAPITest {
+    private static final IPHlpAPI IPHLP = IPHlpAPI.INSTANCE;
 
     @Test
     public void testGetIfEntry() throws SocketException {
@@ -53,26 +66,19 @@ public class IPHlpAPITest {
                 // Create new MIB_IFROW, set index to this interface index
                 MIB_IFROW ifRow = new MIB_IFROW();
                 ifRow.dwIndex = netint.getIndex();
-                assertEquals(WinError.NO_ERROR, IPHlpAPI.INSTANCE.GetIfEntry(ifRow));
-                // Bytes should exceed packets
+                assertEquals(WinError.NO_ERROR, IPHLP.GetIfEntry(ifRow));
                 // These originate from unsigned ints. Use standard Java
                 // widening conversion to long which does sign-extension,
                 // then drop any copies of the sign bit, to prevent the value
                 // being considered a negative one by Java if it is set
-                long bytesSent = (ifRow.dwOutOctets) & 0xffffffffL;
-                long packetsSent = (ifRow.dwOutUcastPkts) & 0xffffffffL;
-                if (packetsSent > 0) {
-                    assertTrue(bytesSent > packetsSent);
-                } else {
-                    assertEquals(0, bytesSent);
-                }
-                long bytesRecv = (ifRow.dwInOctets) & 0xffffffffL;
-                long packetsRecv = (ifRow.dwInUcastPkts) & 0xffffffffL;
-                if (packetsRecv > 0) {
-                    assertTrue(bytesRecv > packetsRecv);
-                } else {
-                    assertEquals(0, bytesRecv);
-                }
+                long bytesSent = ifRow.dwOutOctets & 0xffffffffL;
+                long packetsSent = ifRow.dwOutUcastPkts & 0xffffffffL;
+                long bytesRecv = ifRow.dwInOctets & 0xffffffffL;
+                long packetsRecv = ifRow.dwInUcastPkts & 0xffffffffL;
+                // Bytes should match or exceed minimum packet size of 20.
+                // It is possible to have bytes not part of a packet but not vice versa.
+                assertTrue(bytesSent >= packetsSent * 20L);
+                assertTrue(bytesRecv >= packetsRecv * 20L);
             }
         }
 
@@ -93,18 +99,11 @@ public class IPHlpAPITest {
                     // These originate from unsigned longs.
                     BigInteger bytesSent = new BigInteger(Long.toHexString(ifRow.OutOctets), 16);
                     BigInteger packetsSent = new BigInteger(Long.toHexString(ifRow.OutUcastPkts), 16);
-                    if (packetsSent.longValue() > 0) {
-                        assertEquals(1, bytesSent.compareTo(packetsSent));
-                    } else {
-                        assertEquals(0, bytesSent.compareTo(packetsSent));
-                    }
                     BigInteger bytesRecv = new BigInteger(Long.toHexString(ifRow.InOctets), 16);
                     BigInteger packetsRecv = new BigInteger(Long.toHexString(ifRow.InUcastPkts), 16);
-                    if (packetsRecv.longValue() > 0) {
-                        assertEquals(1, bytesRecv.compareTo(packetsRecv));
-                    } else {
-                        assertEquals(0, bytesRecv.compareTo(packetsRecv));
-                    }
+                    BigInteger minPacketSize = BigInteger.valueOf(20);
+                    assertNotEquals(-1, bytesSent.compareTo(packetsSent.multiply(minPacketSize)));
+                    assertNotEquals(-1, bytesRecv.compareTo(packetsRecv.multiply(minPacketSize)));
                 }
             }
         } else {
@@ -184,5 +183,123 @@ public class IPHlpAPITest {
                 stats.dwInDatagrams <= stats4.dwInDatagrams);
         assertTrue("Datagrams received with errors or no port should be less than inbound datagrams.",
                 stats4.dwNoPorts + stats4.dwInErrors <= stats4.dwInDatagrams);
+    }
+
+    @Test
+    public void testTCPv4Connections() {
+        // Get size needed
+        IntByReference sizePtr = new IntByReference();
+        assertEquals(WinError.ERROR_INSUFFICIENT_BUFFER,
+                IPHLP.GetExtendedTcpTable(null, sizePtr, false, AF_INET, TCP_TABLE_CLASS.TCP_TABLE_OWNER_PID_ALL, 0));
+        // Get buffer and populate table
+        int size = sizePtr.getValue();
+        // Even if array is empty size will have room for dwNumEntries
+        assertTrue(size > 0);
+        Memory buf;
+        do {
+            size = sizePtr.getValue();
+            buf = new Memory(size);
+            int ret = IPHLP.GetExtendedTcpTable(buf, sizePtr, false, AF_INET, TCP_TABLE_CLASS.TCP_TABLE_OWNER_PID_ALL,
+                    0);
+            if (size < sizePtr.getValue()) {
+                assertEquals(WinError.ERROR_INSUFFICIENT_BUFFER, ret);
+            } else {
+                assertEquals(WinError.NO_ERROR, ret);
+            }
+            // In case size changes and buffer was too small, repeat
+        } while (size < sizePtr.getValue());
+        MIB_TCPTABLE_OWNER_PID tcpTable = new MIB_TCPTABLE_OWNER_PID(buf);
+        for (int i = 0; i < tcpTable.dwNumEntries; i++) {
+            MIB_TCPROW_OWNER_PID row = tcpTable.table[i];
+            assertTrue(row.dwState >= MIB_TCP_STATE.MIB_TCP_STATE_CLOSED);
+            assertTrue(row.dwState <= MIB_TCP_STATE.MIB_TCP_STATE_DELETE_TCB);
+        }
+    }
+
+    @Test
+    public void testTCPv6Connections() {
+        // Get size needed
+        IntByReference sizePtr = new IntByReference();
+        assertEquals(WinError.ERROR_INSUFFICIENT_BUFFER,
+                IPHLP.GetExtendedTcpTable(null, sizePtr, false, AF_INET6, TCP_TABLE_CLASS.TCP_TABLE_OWNER_PID_ALL, 0));
+        // Get buffer and populate table
+        int size = sizePtr.getValue();
+        // Even if array is empty size will have room for dwNumEntries
+        assertTrue(size > 0);
+        Memory buf;
+        do {
+            size = sizePtr.getValue();
+            buf = new Memory(size);
+            int ret = IPHLP.GetExtendedTcpTable(buf, sizePtr, false, AF_INET6, TCP_TABLE_CLASS.TCP_TABLE_OWNER_PID_ALL,
+                    0);
+            if (size < sizePtr.getValue()) {
+                assertEquals(WinError.ERROR_INSUFFICIENT_BUFFER, ret);
+            } else {
+                assertEquals(WinError.NO_ERROR, ret);
+            }
+            // In case size changes and buffer was too small, repeat
+        } while (size < sizePtr.getValue());
+        MIB_TCP6TABLE_OWNER_PID tcpTable = new MIB_TCP6TABLE_OWNER_PID(buf);
+        for (int i = 0; i < tcpTable.dwNumEntries; i++) {
+            MIB_TCP6ROW_OWNER_PID row = tcpTable.table[i];
+            assertTrue(row.State >= MIB_TCP_STATE.MIB_TCP_STATE_CLOSED);
+            assertTrue(row.State <= MIB_TCP_STATE.MIB_TCP_STATE_DELETE_TCB);
+        }
+    }
+
+    @Test
+    public void testUDPv4Connections() {
+        // Get size needed
+        IntByReference sizePtr = new IntByReference();
+        assertEquals(WinError.ERROR_INSUFFICIENT_BUFFER,
+                IPHLP.GetExtendedUdpTable(null, sizePtr, false, AF_INET, UDP_TABLE_CLASS.UDP_TABLE_OWNER_PID, 0));
+        // Get buffer and populate table
+        int size = sizePtr.getValue();
+        // Even if array is empty size will have room for dwNumEntries
+        assertTrue(size > 0);
+        Memory buf;
+        do {
+            size = sizePtr.getValue();
+            buf = new Memory(size);
+            int ret = IPHLP.GetExtendedUdpTable(buf, sizePtr, false, AF_INET, UDP_TABLE_CLASS.UDP_TABLE_OWNER_PID, 0);
+            if (size < sizePtr.getValue()) {
+                assertEquals(WinError.ERROR_INSUFFICIENT_BUFFER, ret);
+            } else {
+                assertEquals(WinError.NO_ERROR, ret);
+            }
+            // In case size changes and buffer was too small, repeat
+        } while (size < sizePtr.getValue());
+        MIB_UDPTABLE_OWNER_PID udpTable = new MIB_UDPTABLE_OWNER_PID(buf);
+        if (udpTable.dwNumEntries > 0) {
+            assertTrue(udpTable.dwNumEntries * udpTable.table[0].size() <= size);
+        }
+    }
+
+    @Test
+    public void testUDPv6Connections() {
+        // Get size needed
+        IntByReference sizePtr = new IntByReference();
+        assertEquals(WinError.ERROR_INSUFFICIENT_BUFFER,
+                IPHLP.GetExtendedUdpTable(null, sizePtr, false, AF_INET6, UDP_TABLE_CLASS.UDP_TABLE_OWNER_PID, 0));
+        // Get buffer and populate table
+        int size = sizePtr.getValue();
+        // Even if array is empty size will have room for dwNumEntries
+        assertTrue(size > 0);
+        Memory buf;
+        do {
+            size = sizePtr.getValue();
+            buf = new Memory(size);
+            int ret = IPHLP.GetExtendedUdpTable(buf, sizePtr, false, AF_INET6, UDP_TABLE_CLASS.UDP_TABLE_OWNER_PID, 0);
+            if (size < sizePtr.getValue()) {
+                assertEquals(WinError.ERROR_INSUFFICIENT_BUFFER, ret);
+            } else {
+                assertEquals(WinError.NO_ERROR, ret);
+            }
+            // In case size changes and buffer was too small, repeat
+        } while (size < sizePtr.getValue());
+        MIB_UDP6TABLE_OWNER_PID udpTable = new MIB_UDP6TABLE_OWNER_PID(buf);
+        if (udpTable.dwNumEntries > 0) {
+            assertTrue(udpTable.dwNumEntries * udpTable.table[0].size() <= size);
+        }
     }
 }

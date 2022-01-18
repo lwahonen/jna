@@ -654,6 +654,7 @@ public final class Native implements Version {
                     if (field.getType() == cls
                         && Modifier.isStatic(field.getModifiers())) {
                         // Ensure the field gets initialized by reading it
+                        field.setAccessible(true); // interface might be private
                         libraries.put(cls, new WeakReference<Object>(field.get(null)));
                         break;
                     }
@@ -1058,9 +1059,32 @@ public final class Native implements Version {
             resourcePath = resourcePath.substring(1);
         }
         URL url = loader.getResource(resourcePath);
-        if (url == null && resourcePath.startsWith(Platform.RESOURCE_PREFIX)) {
-            // If not found with the standard resource prefix, try without it
-            url = loader.getResource(libname);
+        if (url == null) {
+            if (resourcePath.startsWith(Platform.RESOURCE_PREFIX)) {
+                // Fallback for legacy darwin behaviour: darwin was in the past
+                // special cased in that all architectures were mapped to the same
+                // prefix and it was expected, that a fat binary was present at that
+                // point, that contained all architectures.
+                if(Platform.RESOURCE_PREFIX.startsWith("darwin")) {
+                    url = loader.getResource("darwin/" + resourcePath.substring(Platform.RESOURCE_PREFIX.length() + 1));
+                }
+                if (url == null) {
+                    // If not found with the standard resource prefix, try without it
+                    url = loader.getResource(libname);
+                }
+            } else if (resourcePath.startsWith("com/sun/jna/" + Platform.RESOURCE_PREFIX + "/")) {
+                // Fallback for legacy darwin behaviour: darwin was in the past
+                // special cased in that all architectures were mapped to the same
+                // prefix and it was expected, that a fat binary was present at that
+                // point, that contained all architectures.
+                if(Platform.RESOURCE_PREFIX.startsWith("com/sun/jna/darwin")) {
+                    url = loader.getResource("com/sun/jna/darwin" + resourcePath.substring(("com/sun/jna/" + Platform.RESOURCE_PREFIX).length() + 1));
+                }
+                if (url == null) {
+                    // If not found with the standard resource prefix, try without it
+                    url = loader.getResource(libname);
+                }
+            }
         }
         if (url == null) {
             String path = System.getProperty("java.class.path");
@@ -1087,6 +1111,7 @@ public final class Native implements Version {
         else if (!Boolean.getBoolean("jna.nounpack")) {
             InputStream is = loader.getResourceAsStream(resourcePath);
             FileOutputStream fos = null;
+
             if (is == null) {
                 throw new IOException("Can't obtain InputStream for " + resourcePath);
             }

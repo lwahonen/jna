@@ -2,7 +2,8 @@
 <project name="JNA" default="default" basedir="." 
          xmlns:artifact="antlib:org.apache.maven.artifact.ant"
          xmlns:as="antlib:org.codehaus.mojo.animal_sniffer"
-         xmlns:if="ant:if">
+         xmlns:if="ant:if"
+         xmlns:unless="ant:unless">
   <description>Builds and tests JNA</description>
 
   <!-- Default build compiles all platform-independent stuff as well
@@ -37,6 +38,9 @@
   <property name="aar" value="${name}.aar"/>
   <property name="minjar" value="${name}-min.jar"/>
   <property name="testjar" value="${name}-test.jar"/>
+  <property name="testjar2" value="${name}-test2.jar"/>
+  <property name="testjar3" value="${name}-test3.jar"/>
+  <property name="jar-jpms" value="${name}-jpms.jar"/>
   <property name="debug" value="true"/>
   <property name="debug.native" value="false"/>
   <property name="cflags_extra.native" value=""/>
@@ -59,7 +63,7 @@
 
   <!-- JNA library release version - android versionCode is derived from mjar/minor/revision -->
   <property name="jna.major" value="5"/>
-  <property name="jna.minor" value="6"/>
+  <property name="jna.minor" value="9"/>
   <property name="jna.revision" value="0"/>
   <property name="jna.build" value="0"/> <!--${build.number}-->
   <condition property="version.suffix" value="" else="-SNAPSHOT">
@@ -72,7 +76,7 @@
   <!-- jnidispatch library release version -->
   <property name="jni.major" value="6"/>
   <property name="jni.minor" value="1"/>
-  <property name="jni.revision" value="0"/>
+  <property name="jni.revision" value="1"/>
   <property name="jni.build" value="0"/> <!--${build.number}-->
   <property name="jni.version" value="${jni.major}.${jni.minor}.${jni.revision}"/>
   <property name="jni.md5" value="147a998f0cbc89681a1ae6c0dd121629"/>
@@ -123,6 +127,7 @@
   </condition>
   <property name="dist-jar" value="${dist}/${jar}"/>
   <property name="dist-aar" value="${dist}/${aar}"/>
+  <property name="dist-jar-jpms" value="${dist}/${jar-jpms}"/>
 
   <!-- Maven -->
   <!-- define Maven coordinates -->
@@ -135,6 +140,7 @@
   <property name="platform-jar" value="${dist}/jna-platform.jar"/>
   <property name="platform-javadoc-jar" value="${dist}/platform-${jna.version}-javadoc.jar" />
   <property name="platform-sources-jar" value="${dist}/platform-${jna.version}-sources.jar" />
+  <property name="platform-jpms-jar" value="${dist}/jna-platform-jpms.jar" />
 
   <!-- defined maven snapshots and staging repository id and url -->
   <property name="maven-snapshots-repository-id" value="oss.sonatype.org" />
@@ -148,9 +154,13 @@
 
   <property name="pom-base" value="pom-jna.xml" />
   <property name="pom-platform-base" value="pom-jna-platform.xml" />
+  <property name="pom-jpms-base" value="pom-jna-jpms.xml" />
+  <property name="pom-platform-jpms-base" value="pom-jna-platform-jpms.xml" />
 
   <property name="pom" value="${build}/pom-jna.xml" />
   <property name="pom-platform" value="${build}/pom-jna-platform.xml" />
+  <property name="pom-jpms" value="${build}/pom-jna-jpms.xml" />
+  <property name="pom-platform-jpms" value="${build}/pom-jna-platform-jpms.xml" />
 
   <target name="default" depends="test" description="Build and Test."/>
 
@@ -171,20 +181,10 @@
            classpathref="maven-ant-tasks.classpath" />
 
   <target name="-prepare-anttools">
-      <mkdir dir="${build}/ant-tools" />
-      <javac classpath="lib/ant.jar"
-             destdir="${build}/ant-tools"
-             includeantruntime="false"
-             encoding="UTF-8"
-      >
-          <src path="src" />
-          <src path="ant-tools-src" />
-          <include name="**/ELFAnalyser.java" />
-          <include name="**/BuildArmSoftFloatDetector.java" />
-          <include name="**/CalcAndroidVersion.java" />
-      </javac>
-      <taskdef name="BuildArmSoftFloatDetector" classname="com.sun.jna.BuildArmSoftFloatDetector" classpath="${build}/ant-tools" />
-      <taskdef name="CalcAndroidVersion" classname="com.sun.jna.CalcAndroidVersion" classpath="${build}/ant-tools" />
+      <subant antfile="build-ant-tools.xml" buildpath="${basedir}"></subant>
+      <taskdef name="BuildArmSoftFloatDetector" classname="com.sun.jna.BuildArmSoftFloatDetector" classpath="${build}/ant-tools:$lib/asm-8.0.1.jar" />
+      <taskdef name="CalcAndroidVersion" classname="com.sun.jna.ant.CalcAndroidVersion" classpath="${build}/ant-tools:lib/asm-8.0.1.jar" />
+      <taskdef name="ModuleGenerator" classname="com.sun.jna.ant.ModuleGenerator" classpath="${build}/ant-tools:lib/asm-8.0.1.jar" />
   </target>
 
   <target name="-dynamic-properties" depends="-prepare-anttools">
@@ -201,7 +201,7 @@
     <property name="build.os.family" value="other"/>
     <property name="build.os.arch" value="${os.arch}" />
     <property name="build.os.endianess" value="${sun.cpu.endian}" />
-    
+
     <condition property="-native" value="true">
       <not><isset property="build-native"/></not>
     </condition>
@@ -209,17 +209,30 @@
       <isset property="-native"/>
     </condition>
 
-    <copy file="${pom-base}" todir="${build}" />
-    <copy file="${pom-platform-base}" todir="${build}" />
+    <copy file="${pom-base}" tofile="${pom}" />
+    <copy file="${pom-platform-base}" tofile="${pom-platform}" />
+    <copy file="${pom-jpms-base}" tofile="${pom-jpms}" />
+    <copy file="${pom-platform-jpms-base}" tofile="${pom-platform-jpms}" />
 
     <replaceregexp match="(&lt;version&gt;).*(&lt;/version&gt;)"
                    replace="\1${jna.version}\2"
+                   flags="g"
                    file="${pom}"/>
 
     <replaceregexp match="(&lt;version&gt;).*(&lt;/version&gt;)"
                    replace="\1${jna.version}\2"
                    flags="g"
                    file="${pom-platform}"/>
+
+    <replaceregexp match="(&lt;version&gt;).*(&lt;/version&gt;)"
+                   replace="\1${jna.version}\2"
+                   flags="g"
+                   file="${pom-jpms}"/>
+
+    <replaceregexp match="(&lt;version&gt;).*(&lt;/version&gt;)"
+                 replace="\1${jna.version}\2"
+                 flags="g"
+                 file="${pom-platform-jpms}"/>
 
     <condition property="jar.omitted" value="**/*jnidispatch*" else="jnilib-included">
       <isset property="omit-jnilib"/>
@@ -282,8 +295,7 @@
     <condition property="os.prefix" value="win32-${jre.arch}">
       <equals arg1="${build.os.family}" arg2="windows"/>
     </condition>
-    <!-- Darwin builds are universal, no arch required -->
-    <condition property="os.prefix" value="darwin">
+    <condition property="os.prefix" value="darwin-${jre.arch}">
       <equals arg1="${build.os.family}" arg2="mac"/>
     </condition>
     <condition property="os.prefix" value="sunos-${jre.arch}">
@@ -301,6 +313,7 @@
     <condition property="os.prefix" value="kfreebsd-${jre.arch}">
       <equals arg1="${build.os.name}" arg2="GNU/kFreeBSD"/>
     </condition>
+    <property name="resource.prefix" value="${os.prefix}" description="fallback"/>
     <fail unless="os.prefix" message="OS/arch not supported (${os.name}/${jre.arch}), edit build.xml and native/Makefile to add it."/>
     <!-- Keep all natives separate -->
     <property name="native.subdir" value="native-${os.prefix}"/>
@@ -431,36 +444,38 @@
     <!-- Bundle native components with primary jar to facilitate
          easy distribution to common platforms.
       -->
-    <jar jarfile="${build}/${jar}" duplicate="preserve" createUnicodeExtraFields="never" encoding="UTF-8">
-      <manifest>
-        <attribute name="Main-Class" value="com.sun.jna.Native"/>
-        <attribute name="Manifest-Version" value="1.0"/>
-        <attribute name="Implementation-Title" value="${impl.title}"/>
-        <attribute name="Implementation-Vendor" value="${vendor}"/>
-        <attribute name="Implementation-Version" value="${impl.version}"/>
-        <attribute name="Specification-Title" value="${spec.title}"/>
-        <attribute name="Specification-Vendor" value="${spec.vendor}"/>
-        <attribute name="Specification-Version" value="${spec.version}"/>
-        <attribute name="Automatic-Module-Name" value="com.sun.jna"/>
-        <!--
-            OSGi Bundle attributes
-            See http://www.osgi.org/Specifications/Reference
-          -->
-        <attribute name="Bundle-Category" value="jni"/>
-        <attribute name="Bundle-ManifestVersion" value="2"/>
-        <attribute name="Bundle-Name" value="jna"/>
-        <attribute name="Bundle-Description" value="JNA Library"/>
-        <attribute name="Bundle-SymbolicName" value="com.sun.jna"/>
-        <attribute name="Bundle-Version" value="${jna.major}.${jna.minor}.${jna.revision}"/>
-        <attribute name="Bundle-RequiredExecutionEnvironment" value="JavaSE-1.6"/>
-        <attribute name="Bundle-Vendor" value="${vendor}"/>
-        <attribute name="Bundle-ActivationPolicy" value="lazy"/>
-        <attribute name="Export-Package" value="com.sun.jna;version=${jna.major}.${jna.minor}.${jna.revision}, com.sun.jna.ptr;version=${jna.major}.${jna.minor}.${jna.revision}, com.sun.jna.win32;version=${jna.major}.${jna.minor}.${jna.revision}"/>
-        <!-- Note that no terminal "*" is included in this list,
-             which will force failure on unsupported platforms.
-          -->
-        <attribute name="Bundle-NativeCode"
-                   value="
+  <macrodef name="build-manifest">
+      <attribute name="target" />
+      <attribute name="module-info" default="false" />
+      <sequential>
+          <manifest file="@{target}" mode="replace">
+              <attribute name="Main-Class" value="com.sun.jna.Native"/>
+              <attribute name="Manifest-Version" value="1.0"/>
+              <attribute name="Implementation-Title" value="${impl.title}"/>
+              <attribute name="Implementation-Vendor" value="${vendor}"/>
+              <attribute name="Implementation-Version" value="${impl.version}"/>
+              <attribute name="Specification-Title" value="${spec.title}"/>
+              <attribute name="Specification-Vendor" value="${spec.vendor}"/>
+              <attribute name="Specification-Version" value="${spec.version}"/>
+              <!--
+                OSGi Bundle attributes
+                See http://www.osgi.org/Specifications/Reference
+              -->
+              <attribute name="Bundle-Category" value="jni"/>
+              <attribute name="Bundle-ManifestVersion" value="2"/>
+              <attribute name="Bundle-Name" value="jna"/>
+              <attribute name="Bundle-Description" value="JNA Library"/>
+              <attribute name="Bundle-SymbolicName" value="com.sun.jna"/>
+              <attribute name="Bundle-Version" value="${jna.major}.${jna.minor}.${jna.revision}"/>
+              <attribute name="Bundle-RequiredExecutionEnvironment" value="JavaSE-1.6"/>
+              <attribute name="Bundle-Vendor" value="${vendor}"/>
+              <attribute name="Bundle-ActivationPolicy" value="lazy"/>
+              <attribute name="Export-Package" value="com.sun.jna;version=${jna.major}.${jna.minor}.${jna.revision}, com.sun.jna.ptr;version=${jna.major}.${jna.minor}.${jna.revision}, com.sun.jna.win32;version=${jna.major}.${jna.minor}.${jna.revision}"/>
+              <!-- Note that no terminal "*" is included in this list,
+                 which will force failure on unsupported platforms.
+              -->
+              <attribute name="Bundle-NativeCode"
+                         value="
 com/sun/jna/win32-x86/jnidispatch.dll;
 processor=x86;osname=win32,
 com/sun/jna/win32-x86-64/jnidispatch.dll;
@@ -469,6 +484,8 @@ com/sun/jna/win32-x86/jnidispatch.dll;
 processor=x86;osname=win,
 com/sun/jna/win32-x86-64/jnidispatch.dll;
 processor=x86-64;osname=win,
+com/sun/jna/win32-aarch64/jnidispatch.dll;
+processor=aarch64;osname=win,
 com/sun/jna/w32ce-arm/jnidispatch.dll;
 processor=arm;osname=wince,
 
@@ -517,15 +534,50 @@ com/sun/jna/freebsd-x86/libjnidispatch.so;
 processor=x86;osname=freebsd,
 com/sun/jna/freebsd-x86-64/libjnidispatch.so;
 processor=x86-64;osname=freebsd,
+
 com/sun/jna/openbsd-x86/libjnidispatch.so;
 processor=x86;osname=openbsd,
 com/sun/jna/openbsd-x86-64/libjnidispatch.so;
 processor=x86-64;osname=openbsd,
 
-com/sun/jna/darwin/libjnidispatch.jnilib;
-osname=macosx;processor=x86;processor=x86-64;processor=ppc
+com/sun/jna/darwin-ppc/libjnidispatch.jnilib;
+osname=macosx;processor=ppc,
+com/sun/jna/darwin-ppc64/libjnidispatch.jnilib;
+osname=macosx;processor=ppc64,
+com/sun/jna/darwin-x86/libjnidispatch.jnilib;
+osname=macosx;processor=x86,
+com/sun/jna/darwin-x86-64/libjnidispatch.jnilib;
+osname=macosx;processor=x86-64,
+com/sun/jna/darwin-aarch64/libjnidispatch.jnilib;
+osname=macosx;processor=aarch64
 "/>
-      </manifest>
+          </manifest>
+          <manifest file="@{target}" mode="update" if:true="@{module-info}">
+              <attribute name="Multi-Release" value="true"/>
+          </manifest>
+          <manifest file="@{target}" mode="update" unless:true="@{module-info}">
+              <attribute name="Automatic-Module-Name" value="com.sun.jna"/>
+          </manifest>
+      </sequential>
+  </macrodef>
+    <delete dir="${build}/manifest"/>
+    <mkdir dir="${build}/manifest"/>
+    <build-manifest target="${build}/manifest/module.mf" module-info="true"/>
+    <build-manifest target="${build}/manifest/automatic.mf" module-info="false"/>
+    <ModuleGenerator
+        targetFile="${build}/manifest/module-info.class"
+        name="com.sun.jna"
+        version="${jna.major}.${jna.minor}.${jna.revision}"
+        open="false"
+    >
+        <exports package="com.sun.jna" />
+        <exports package="com.sun.jna.ptr" />
+        <exports package="com.sun.jna.win32" />
+        <exports package="com.sun.jna.internal" to="com.sun.jna.platform"/>
+        <requires module="java.logging" />
+        <requires module="java.desktop" />
+    </ModuleGenerator>
+    <jar jarfile="${build}/${jar}" duplicate="preserve" createUnicodeExtraFields="never" encoding="UTF-8" manifest="${build}/manifest/automatic.mf">
       <fileset dir="${classes}" excludes="${jar.omitted}">
         <patternset refid="jar-compiled"/>
       </fileset>
@@ -538,9 +590,21 @@ osname=macosx;processor=x86;processor=x86-64;processor=ppc
       <zipfileset src="${lib.native}/aix-ppc64.jar"
                   includes="*jnidispatch*"
                   prefix="com/sun/jna/aix-ppc64"/>
-      <zipfileset src="${lib.native}/darwin.jar"
+      <zipfileset src="${lib.native}/darwin-ppc.jar"
                   includes="*jnidispatch*"
-                  prefix="com/sun/jna/darwin"/>
+                  prefix="com/sun/jna/darwin-ppc"/>
+      <zipfileset src="${lib.native}/darwin-ppc64.jar"
+                  includes="*jnidispatch*"
+                  prefix="com/sun/jna/darwin-ppc64"/>
+      <zipfileset src="${lib.native}/darwin-x86.jar"
+                  includes="*jnidispatch*"
+                  prefix="com/sun/jna/darwin-x86"/>
+      <zipfileset src="${lib.native}/darwin-x86-64.jar"
+                  includes="*jnidispatch*"
+                  prefix="com/sun/jna/darwin-x86-64"/>
+      <zipfileset src="${lib.native}/darwin-aarch64.jar"
+                  includes="*jnidispatch*"
+                  prefix="com/sun/jna/darwin-aarch64"/>
       <zipfileset src="${lib.native}/linux-x86.jar"
                   includes="*jnidispatch*"
                   prefix="com/sun/jna/linux-x86"/>
@@ -577,6 +641,9 @@ osname=macosx;processor=x86;processor=x86-64;processor=ppc
       <zipfileset src="${lib.native}/linux-s390x.jar"
                   includes="*jnidispatch*"
                   prefix="com/sun/jna/linux-s390x"/>
+      <zipfileset src="${lib.native}/linux-riscv64.jar"
+                  includes="*jnidispatch*"
+                  prefix="com/sun/jna/linux-riscv64"/>
       <zipfileset src="${lib.native}/sunos-x86.jar"
                   includes="*jnidispatch*"
                   prefix="com/sun/jna/sunos-x86"/>
@@ -604,6 +671,9 @@ osname=macosx;processor=x86;processor=x86-64;processor=ppc
       <zipfileset src="${lib.native}/win32-x86-64.jar"
                   includes="*jnidispatch*"
                   prefix="com/sun/jna/win32-x86-64"/>
+      <zipfileset src="${lib.native}/win32-aarch64.jar"
+                  includes="*jnidispatch*"
+                  prefix="com/sun/jna/win32-aarch64"/>
       <zipfileset src="${lib.native}/w32ce-arm.jar"
                   includes="*jnidispatch*"
                   prefix="com/sun/jna/w32ce-arm"/>
@@ -614,6 +684,10 @@ osname=macosx;processor=x86;processor=x86-64;processor=ppc
     <zip zipfile="${build}/${minjar}">
       <zipfileset src="${build}/${jar}" excludes="**/*jnidispatch*"/>
     </zip>
+    <jar jarfile="${build}/jna-jpms.jar" duplicate="preserve" createUnicodeExtraFields="never" encoding="UTF-8" manifest="${build}/manifest/module.mf">
+      <zipfileset src="${build}/${jar}" excludes="META-INF/MANIFEST.mf"/>
+      <zipfileset dir="${build}/manifest/" includes="module-info.class" prefix="META-INF/versions/9"/>
+    </jar>
   </target>
 
   <target name="aar" depends="jar" description="Build Android Archive">
@@ -717,7 +791,8 @@ osname=macosx;processor=x86;processor=x86-64;processor=ppc
     </condition>
     <!-- args are based on GNU grep, other versions may differ -->
     <apply dir="${build.headers}" executable="${grep}" parallel="true"
-           failonerror="${grep.required}" relative="true" output="${md5.file}">
+           failonerror="${grep.required}" relative="true" output="${md5.file}"
+           error="${md5.file}.error">
       <arg value="-A"/>
       <arg value="1"/>
       <arg value="JNIEXPORT"/>
@@ -754,9 +829,14 @@ osname=macosx;processor=x86;processor=x86-64;processor=ppc
   <!-- Invalidate native libraries when native API changes -->
   <target name="-native-api-check" depends="javah" unless="jni.valid">
     <echo>Invalidating native code, new checksum is ${md5}</echo>
-    <copy file="${lib.native}/out-of-date.jar" tofile="${lib.native}/darwin.jar" overwrite="true"/>
+    <copy file="${lib.native}/out-of-date.jar" tofile="${lib.native}/darwin-ppc.jar" overwrite="true"/>
+    <copy file="${lib.native}/out-of-date.jar" tofile="${lib.native}/darwin-ppc64.jar" overwrite="true"/>
+    <copy file="${lib.native}/out-of-date.jar" tofile="${lib.native}/darwin-x86.jar" overwrite="true"/>
+    <copy file="${lib.native}/out-of-date.jar" tofile="${lib.native}/darwin-x86-64.jar" overwrite="true"/>
+    <copy file="${lib.native}/out-of-date.jar" tofile="${lib.native}/darwin-aarch64.jar" overwrite="true"/>
     <copy file="${lib.native}/out-of-date.jar" tofile="${lib.native}/win32-x86.jar" overwrite="true"/>
     <copy file="${lib.native}/out-of-date.jar" tofile="${lib.native}/win32-x86-64.jar" overwrite="true"/>
+    <copy file="${lib.native}/out-of-date.jar" tofile="${lib.native}/win32-aarch64.jar" overwrite="true"/>
     <copy file="${lib.native}/out-of-date.jar" tofile="${lib.native}/w32ce-arm.jar" overwrite="true"/>
     <copy file="${lib.native}/out-of-date.jar" tofile="${lib.native}/linux-x86.jar" overwrite="true"/>
     <copy file="${lib.native}/out-of-date.jar" tofile="${lib.native}/linux-x86-64.jar" overwrite="true"/>
@@ -770,6 +850,7 @@ osname=macosx;processor=x86;processor=x86-64;processor=ppc
     <copy file="${lib.native}/out-of-date.jar" tofile="${lib.native}/linux-sparcv9.jar" overwrite="true"/>
     <copy file="${lib.native}/out-of-date.jar" tofile="${lib.native}/linux-mips64el.jar" overwrite="true"/>
     <copy file="${lib.native}/out-of-date.jar" tofile="${lib.native}/linux-s390x.jar" overwrite="true"/>
+    <copy file="${lib.native}/out-of-date.jar" tofile="${lib.native}/linux-riscv64.jar" overwrite="true"/>
     <copy file="${lib.native}/out-of-date.jar" tofile="${lib.native}/freebsd-x86.jar" overwrite="true"/>
     <copy file="${lib.native}/out-of-date.jar" tofile="${lib.native}/freebsd-x86-64.jar" overwrite="true"/>
     <copy file="${lib.native}/out-of-date.jar" tofile="${lib.native}/openbsd-x86.jar" overwrite="true"/>
@@ -838,7 +919,22 @@ osname=macosx;processor=x86;processor=x86-64;processor=ppc
       <matches pattern="^android-" string="${os.prefix}"/>
     </condition>
     <property name="make.OS" value="IGNORE="/>
-    <!-- Ensure Makefile ARCH property properly set -->
+    <!-- Ensure Makefile ARCH property properly set for darwin -->
+    <condition property="ARCH" value="aarch64">
+        <equals arg1="${os.prefix}" arg2="darwin-aarch64"/>
+    </condition>
+    <condition property="ARCH" value="i386">
+        <equals arg1="${os.prefix}" arg2="darwin-x86"/>
+    </condition>
+    <condition property="ARCH" value="x86-64">
+        <equals arg1="${os.prefix}" arg2="darwin-x86-64"/>
+    </condition>
+    <condition property="ARCH" value="ppc">
+        <equals arg1="${os.prefix}" arg2="darwin-ppc"/>
+    </condition>
+    <condition property="ARCH" value="ppc64">
+        <equals arg1="${os.prefix}" arg2="darwin-ppc64"/>
+    </condition>
     <condition property="ARCH" value="arm">
       <equals arg1="${os.prefix}" arg2="w32ce-arm"/>
     </condition>
@@ -849,7 +945,7 @@ osname=macosx;processor=x86;processor=x86-64;processor=ppc
       <equals arg1="${os.prefix}" arg2="android-armv7"/>
     </condition>
     <condition property="ARCH" value="aarch64">
-      <equals arg1="${os.prefix}" arg2="android-aarch64"/>
+      <matches string="${os.prefix}" pattern="-aarch64$"/>
     </condition>
     <condition property="ARCH" value="x86">
       <equals arg1="${os.prefix}" arg2="android-x86"/>
@@ -869,6 +965,9 @@ osname=macosx;processor=x86;processor=x86-64;processor=ppc
     <condition property="ARCH" value="ppc64">
       <equals arg1="${os.prefix}" arg2="aix-ppc64"/>
     </condition>
+    <condition property="ARCH" value="riscv64">
+      <matches string="${os.prefix}" pattern="-riscv64$"/>
+    </condition>
     <!-- ensure ARCH is set properly for 64-bit capable platforms -->
     <!-- use ANT_OPTS=-d64/-d32 to build 64-bit/32-bit if not the platform default -->
     <property name="ARCH" value="${build.os.arch}"/>
@@ -884,49 +983,43 @@ osname=macosx;processor=x86;processor=x86-64;processor=ppc
     <condition property="make.SDKROOT" value="SDKROOT=${SDKROOT}">
       <isset property="SDKROOT"/>
     </condition>
-    <property name="xcode" value="/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform"/>
-    <condition property="make.SDKROOT"
-	       value="SDKROOT=${xcode}/Developer/SDKs/MacOSX10.11.sdk">
+    <!-- If not manually provided, detect the SDKROOT in various locations:
+         - Modern build environments ("MacOSX.sdk", no version):
+           /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
+
+         - macOS 10.8 and older:
+           /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX(version).sdk
+
+         - Prior versions:
+           /Developer/SDKs/MacOSX(version).sdk
+    -->
+    <condition property="make.SDKROOT" value="SDKROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk">
       <and>
-        <equals arg1="${os.prefix}" arg2="darwin" trim="true"/>
-        <available file="${xcode}/Developer/SDKs/MacOSX10.11.sdk"/>
+        <matches string="${os.prefix}" pattern="^darwin-"/>
+        <available file="/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"/>
       </and>
     </condition>
-    <condition property="make.SDKROOT"
-	       value="SDKROOT=${xcode}/Developer/SDKs/MacOSX10.9.sdk">
+    <condition property="sdk-parent" value="/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs">
       <and>
-        <equals arg1="${os.prefix}" arg2="darwin" trim="true"/>
-        <available file="${xcode}/Developer/SDKs/MacOSX10.9.sdk"/>
+        <matches string="${os.prefix}" pattern="^darwin-"/>
+        <available file="/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs"/>
       </and>
     </condition>
-    <condition property="make.SDKROOT"
-	       value="SDKROOT=${xcode}/Developer/SDKs/MacOSX10.8.sdk">
+    <condition property="sdk-parent" value="/Developer/SDKs">
       <and>
-        <equals arg1="${os.prefix}" arg2="darwin" trim="true"/>
-        <available file="${xcode}/Developer/SDKs/MacOSX10.8.sdk"/>
+        <matches string="${os.prefix}" pattern="^darwin-"/>
+        <available file="/Developer/SDKs"/>
       </and>
     </condition>
-    <condition property="make.SDKROOT"
-	       value="SDKROOT=/Developer/SDKs/MacOSX10.6.sdk">
-      <and>
-        <equals arg1="${os.prefix}" arg2="darwin" trim="true"/>
-        <available file="/Developer/SDKs/MacOSX10.6.sdk"/>
-      </and>
+    <!-- Multiple SDKs is common; find the most recent (sort -V requires 10.12+) -->
+    <exec executable="sh" dir="${sdk-parent}" outputproperty="sdk-latest" if:set="darwin.build" unless:set="make.SDKROOT">
+      <arg value="-c"/>
+      <arg line="&quot;ls -d MacOSX10.*.sdk | sort -t &quot;.&quot; -k2 -n | tail -1&quot;"/>
+    </exec>
+    <condition property="make.SDKROOT" value="SDKROOT=${sdk-parent}/${sdk-latest}" else="IGNORE=">
+      <isset property="sdk-latest"/>
     </condition>
-    <condition property="make.SDKROOT"
-	       value="SDKROOT=/Developer/SDKs/MacOSX10.5.sdk">
-      <and>
-        <equals arg1="${os.prefix}" arg2="darwin" trim="true"/>
-        <available file="/Developer/SDKs/MacOSX10.5.sdk"/>
-      </and>
-    </condition>
-    <condition property="make.SDKROOT"
-	       value="SDKROOT=/Developer/SDKs/MacOSX10.4u.sdk" else="IGNORE=">
-      <and>
-        <equals arg1="${os.prefix}" arg2="darwin" trim="true"/>
-        <available file="/Developer/SDKs/MacOSX10.4u.sdk"/>
-      </and>
-    </condition>
+
     <!-- Windows' drive letters and spaces in absolute paths wreak havoc on
          make -->
     <condition property="make.BUILD" value="BUILD=../${build}/${native.subdir}" else="BUILD=${build.native}">
@@ -955,7 +1048,7 @@ osname=macosx;processor=x86;processor=x86-64;processor=ppc
       <isset property="EXTRA_MAKE_OPTS"/>
     </condition>
     <!-- Native resource path within jna.jar -->
-    <property name="native.path" value="com/sun/jna/${os.prefix}"/>
+    <property name="native.path" value="com/sun/jna/${resource.prefix}"/>
 
     <!-- Default make program -->
     <property name="make" value="make"/>
@@ -1098,13 +1191,13 @@ cd ..
       <exclude name="${tests.exclude}"/>
     </javac>
     <!-- Embed testlib-jar at root and at default resource path -->
-    <mkdir dir="${test.classes}/${os.prefix}"/>
+    <mkdir dir="${test.classes}/${resource.prefix}"/>
     <copy todir="${test.classes}">
       <fileset dir="${build.native}">
         <include name="*testlib-jar*"/>
       </fileset>
     </copy>
-    <copy todir="${test.classes}/${os.prefix}">
+    <copy todir="${test.classes}/${resource.prefix}">
       <fileset dir="${build.native}">
         <include name="*testlib-jar*"/>
       </fileset>
@@ -1125,6 +1218,42 @@ cd ..
         <attribute name="permissions" value="all-permissions"/>
       </manifest>
     </jar>
+
+    <!--
+        Create test case for darwin - darwin supports two paths: darwin-$arch
+        and darwin.
+
+        - The jna-test2.jar is the artifact, that contains the native library
+          in darwin-$arch
+        - The jna-test3.jar is the artifact, that contains the native library
+          in darwin
+    -->
+
+    <delete>
+        <fileset dir="${test.classes}">
+            <include name="*testlib-jar*"/>
+        </fileset>
+    </delete>
+
+    <jar jarfile="${build}/${testjar2}" createUnicodeExtraFields="never" encoding="UTF-8">
+      <fileset dir="${test.classes}">
+        <include name="**/*testlib-jar*"/>
+      </fileset>
+    </jar>
+
+    <condition property="resource.secondary-prefix" value="darwin">
+        <matches pattern="^darwin.*" string="${resource.prefix}"/>
+    </condition>
+    <property name="resource.secondary-prefix" value="${resource.prefix}" />
+
+    <move file="${test.classes}/${resource.prefix}" tofile="${test.classes}/${resource.secondary-prefix}" />
+
+    <jar jarfile="${build}/${testjar3}" createUnicodeExtraFields="never" encoding="UTF-8">
+      <fileset dir="${test.classes}">
+        <include name="**/*testlib-jar*"/>
+      </fileset>
+    </jar>
+
     <!-- Ensure jar-based library is unavailable on FS-based class path -->
     <delete>
       <fileset dir="${build}">
@@ -1229,7 +1358,7 @@ cd ..
       </and>
     </condition>
     <property name="tests.platform" value=""/>
-    <property name="tests.include" value="com/sun/jna/*Test.java"/>
+    <property name="tests.include" value="com/sun/jna/*Test.java com/sun/jna/different_package/*Test.java"/>
     <property name="tests.exclude" value=""/>
     <property name="tests.exclude-patterns" value=""/>
     <condition property="java.awt.headless" value="true">
@@ -1255,7 +1384,7 @@ cd ..
       <formatter type="xml"/>
       <batchtest todir="${results.junit}">
         <fileset dir="${test.src}" excludes="${tests.exclude-patterns}">
-          <include name="${tests.include}"/>
+          <patternset includes="${tests.include}"/>
           <include name="${tests.platform}"/>
           <exclude name="${tests.exclude}"/>
         </fileset>
@@ -1363,8 +1492,8 @@ cd ..
   <target name="dist" depends="jar,aar,javadoc,contrib-jars,compile-tests,native"
           description="Build distribution files">
     <copy todir="${dist}" force="true" overwrite="true">
-      <fileset dir="${build}" includes="${jar},${minjar},${aar}"/>
-      <fileset dir="${contrib}/platform/dist" includes="jna-platform.jar"/>
+      <fileset dir="${build}" includes="${jar},${minjar},${aar},${jar-jpms}"/>
+      <fileset dir="${contrib}/platform/dist" includes="jna-platform.jar,jna-platform-jpms.jar"/>
       <fileset dir="${lib.native}">
         <include name="*.jar"/>
         <exclude name="out-of-date.jar"/>
@@ -1419,7 +1548,7 @@ cd ..
     </subant>
   </target>
 
-  <target name="install" depends="dist" description="Install jna and jna-platform artifacts into local maven repository">
+  <target name="install" depends="dist,-bootstrap-maven" description="Install jna and jna-platform artifacts into local maven repository">
     <artifact:mvn failonerror="true">
       <arg value="org.apache.maven.plugins:maven-install-plugin:2.5:install-file"/>
       <arg value="-DpomFile=${pom}"/>
@@ -1437,15 +1566,31 @@ cd ..
 
     <artifact:mvn failonerror="true">
       <arg value="org.apache.maven.plugins:maven-install-plugin:2.5:install-file"/>
+      <arg value="-DpomFile=${pom-jpms}"/>
+      <arg value="-Dfile=${dist-jar-jpms}"/>
+      <arg value="-Dsources=${maven-sources-jar}"/>
+      <arg value="-Djavadoc=${maven-javadoc-jar}"/>
+    </artifact:mvn>
+
+    <artifact:mvn failonerror="true">
+      <arg value="org.apache.maven.plugins:maven-install-plugin:2.5:install-file"/>
       <arg value="-DpomFile=${pom-platform}"/>
       <arg value="-Dfile=${platform-jar}"/>
+      <arg value="-Dsources=${platform-sources-jar}"/>
+      <arg value="-Djavadoc=${platform-javadoc-jar}"/>
+    </artifact:mvn>
+
+    <artifact:mvn failonerror="true">
+      <arg value="org.apache.maven.plugins:maven-install-plugin:2.5:install-file"/>
+      <arg value="-DpomFile=${pom-platform-jpms}"/>
+      <arg value="-Dfile=${platform-jpms-jar}"/>
       <arg value="-Dsources=${platform-sources-jar}"/>
       <arg value="-Djavadoc=${platform-javadoc-jar}"/>
     </artifact:mvn>
   </target>
 
   <!-- NOTE: The 'deploy' target works only if the version (jna.version in build.xml) ends in '-SNAPSHOT'. -->
-  <target name="deploy" depends="dist" description="deploy snapshot version to Maven snapshot repository">
+  <target name="deploy" depends="dist,-bootstrap-maven" description="deploy snapshot version to Maven snapshot repository">
     <artifact:mvn failonerror="true">
       <arg value="org.apache.maven.plugins:maven-deploy-plugin:2.7:deploy-file"/>
       <arg value="-Durl=${maven-snapshots-repository-url}"/>
@@ -1464,6 +1609,28 @@ cd ..
       <arg value="-DpomFile=${pom-platform}"/>
       <arg value="-Dfile=${platform-jar}"/>
       <arg value="-Dfiles=${platform-sources-jar},${platform-javadoc-jar}"/>
+      <arg value="-Dtypes=jar,jar,jar"/>
+      <arg value="-Dclassifiers=sources,javadoc"/>
+    </artifact:mvn>
+
+    <artifact:mvn failonerror="true">
+      <arg value="org.apache.maven.plugins:maven-deploy-plugin:2.7:deploy-file"/>
+      <arg value="-Durl=${maven-snapshots-repository-url}"/>
+      <arg value="-DrepositoryId=${maven-snapshots-repository-id}"/>
+      <arg value="-DpomFile=${pom-jpms}"/>
+      <arg value="-Dfile=${dist-jar-jpms}"/>
+      <arg value="-Dfiles=${maven-sources-jar},${maven-javadoc-jar}"/>
+      <arg value="-Dtypes=jar,jar"/>
+      <arg value="-Dclassifiers=sources,javadoc"/>
+    </artifact:mvn>
+
+    <artifact:mvn failonerror="true">
+      <arg value="org.apache.maven.plugins:maven-deploy-plugin:2.7:deploy-file"/>
+      <arg value="-Durl=${maven-snapshots-repository-url}"/>
+      <arg value="-DrepositoryId=${maven-snapshots-repository-id}"/>
+      <arg value="-DpomFile=${pom-platform-jpms}"/>
+      <arg value="-Dfile=${platform-jpms-jar}"/>
+      <arg value="-Dfiles=${platform-sources-jar},${platform-javadoc-jar}"/>
       <arg value="-Dtypes=jar,jar"/>
       <arg value="-Dclassifiers=sources,javadoc"/>
     </artifact:mvn>
@@ -1472,7 +1639,7 @@ cd ..
 
   <property name="version-maven-gpg-plugin" value="1.4"/>
 
-  <target name="stage" depends="dist" description="deploy release version to Maven staging repository">
+  <target name="stage" depends="dist,-bootstrap-maven" description="deploy release version to Maven staging repository">
     <!-- sign and deploy the jna,  artifact -->
     <artifact:mvn failonerror="true">
       <arg value="org.apache.maven.plugins:maven-gpg-plugin:${version-maven-gpg-plugin}:sign-and-deploy-file"/>
@@ -1480,9 +1647,9 @@ cd ..
       <arg value="-DrepositoryId=${maven-staging-repository-id}"/>
       <arg value="-DpomFile=${pom}"/>
       <arg value="-Dfile=${dist-jar}"/>
-      <arg value="-Dfiles=${maven-sources-jar},${maven-javadoc-jar},${dist-aar}"/>
-      <arg value="-Dclassifiers=sources,javadoc,"/>
-      <arg value="-Dtypes=jar,jar,aar"/>
+      <arg value="-Dfiles=${maven-sources-jar},${maven-javadoc-jar},${dist-jar-jpms},${dist-aar}"/>
+      <arg value="-Dclassifiers=sources,javadoc,jpms,"/>
+      <arg value="-Dtypes=jar,jar,jar,aar"/>
       <arg value="-Dgpg.useagent=true"/>
     </artifact:mvn>
 
@@ -1493,11 +1660,59 @@ cd ..
       <arg value="-DrepositoryId=${maven-staging-repository-id}"/>
       <arg value="-DpomFile=${pom-platform}"/>
       <arg value="-Dfile=${platform-jar}"/>
-      <arg value="-Dfiles=${platform-sources-jar},${platform-javadoc-jar}"/>
-      <arg value="-Dclassifiers=sources,javadoc"/>
-      <arg value="-Dtypes=jar,jar"/>
+      <arg value="-Dfiles=${platform-sources-jar},${platform-javadoc-jar},${platform-jpms-jar}"/>
+      <arg value="-Dclassifiers=sources,javadoc,jpms"/>
+      <arg value="-Dtypes=jar,jar,jar"/>
       <arg value="-Dgpg.useagent=true"/>
     </artifact:mvn>
+
+    <!-- sign and deploy the jna,  artifact -->
+    <artifact:mvn failonerror="true">
+      <arg value="org.apache.maven.plugins:maven-gpg-plugin:${version-maven-gpg-plugin}:sign-and-deploy-file"/>
+      <arg value="-Durl=${maven-staging-repository-url}"/>
+      <arg value="-DrepositoryId=${maven-staging-repository-id}"/>
+      <arg value="-DpomFile=${pom-jpms}"/>
+      <arg value="-Dfile=${dist-jar-jpms}"/>
+      <arg value="-Dfiles=${maven-sources-jar},${maven-javadoc-jar}"/>
+      <arg value="-Dtypes=jar,jar"/>
+      <arg value="-Dclassifiers=sources,javadoc"/>
+      <arg value="-Dgpg.useagent=true"/>
+    </artifact:mvn>
+
+    <!-- sign and deploy the platform artifact -->
+    <artifact:mvn failonerror="true">
+      <arg value="org.apache.maven.plugins:maven-gpg-plugin:${version-maven-gpg-plugin}:sign-and-deploy-file"/>
+      <arg value="-Durl=${maven-staging-repository-url}"/>
+      <arg value="-DrepositoryId=${maven-staging-repository-id}"/>
+      <arg value="-DpomFile=${pom-platform-jpms}"/>
+      <arg value="-Dfile=${platform-jpms-jar}"/>
+      <arg value="-Dfiles=${platform-sources-jar},${platform-javadoc-jar}"/>
+      <arg value="-Dtypes=jar,jar"/>
+      <arg value="-Dclassifiers=sources,javadoc"/>
+      <arg value="-Dgpg.useagent=true"/>
+    </artifact:mvn>
+  </target>
+
+  <target name="-bootstrap-maven">
+      <artifact:remoteRepository id="remote.mavenCentral" url="https://repo1.maven.org/maven2/" />
+      <artifact:dependencies pathId="dependency.dummy">
+          <remoteRepository refid="remote.mavenCentral" />
+          <dependency groupId="org.apache.maven.plugins" artifactId="maven-gpg-plugin" version="1.4" type="maven-plugin"/>
+          <dependency groupId="org.apache.maven.plugins" artifactId="maven-deploy-plugin" version="2.7" type="maven-plugin"/>
+          <dependency groupId="org.apache.maven.plugins" artifactId="maven-install-plugin" version="2.5" type="maven-plugin"/>
+          <dependency groupId="org.apache.maven" artifactId="apache-maven" version="2.0.10" />
+          <dependency groupId="org.apache.maven" artifactId="maven-model" version="2.0.10" />
+          <dependency groupId="org.apache.maven" artifactId="maven-artifact" version="2.0.10" />
+          <dependency groupId="org.apache.maven" artifactId="maven-project" version="2.0.10" />
+          <dependency groupId="org.apache.maven" artifactId="maven-artifact-manager" version="2.0.10" />
+          <dependency groupId="org.apache.maven" artifactId="maven-plugin-registry" version="2.0.10" />
+          <dependency groupId="org.apache.maven" artifactId="maven-plugin-api" version="2.0.10" />
+          <dependency groupId="org.codehaus.plexus" artifactId="plexus-utils" version="3.0.15" />
+      </artifact:dependencies>
+      <artifact:dependencies pathId="dependency.dummy2">
+          <remoteRepository refid="remote.mavenCentral" />
+          <dependency groupId="org.codehaus.plexus" artifactId="plexus-utils" version="1.5.5" />
+      </artifact:dependencies>
   </target>
 
   <target name="checkstyle">

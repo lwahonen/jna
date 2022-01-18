@@ -143,15 +143,19 @@ public class Advapi32Test extends TestCase {
         String accountName = "Administrator";
         assertFalse(Advapi32.INSTANCE.LookupAccountName(
                 null, accountName, null, pSid, null, pDomain, peUse));
-        assertEquals(W32Errors.ERROR_INSUFFICIENT_BUFFER, Kernel32.INSTANCE.GetLastError());
-        assertTrue(pSid.getValue() > 0);
-        Memory sidMemory = new Memory(pSid.getValue());
-        PSID pSidMemory = new PSID(sidMemory);
-        char[] referencedDomainName = new char[pDomain.getValue() + 1];
-        assertTrue(Advapi32.INSTANCE.LookupAccountName(
-                null, accountName, pSidMemory, pSid, referencedDomainName, pDomain, peUse));
-        assertEquals(SID_NAME_USE.SidTypeUser, peUse.getPointer().getInt(0));
-        assertTrue(Native.toString(referencedDomainName).length() > 0);
+        int lastError = Kernel32.INSTANCE.GetLastError();
+        // The Administrator account may not exist
+        if (lastError != W32Errors.ERROR_NONE_MAPPED) {
+            assertEquals(W32Errors.ERROR_INSUFFICIENT_BUFFER, lastError);
+            assertTrue(pSid.getValue() > 0);
+            Memory sidMemory = new Memory(pSid.getValue());
+            PSID pSidMemory = new PSID(sidMemory);
+            char[] referencedDomainName = new char[pDomain.getValue() + 1];
+            assertTrue(Advapi32.INSTANCE.LookupAccountName(null, accountName, pSidMemory, pSid, referencedDomainName,
+                    pDomain, peUse));
+            assertEquals(SID_NAME_USE.SidTypeUser, peUse.getPointer().getInt(0));
+            assertTrue(Native.toString(referencedDomainName).length() > 0);
+        }
     }
 
     public void testIsValidSid() {
@@ -694,6 +698,23 @@ public class Advapi32Test extends TestCase {
                 lpcMaxValueNameLen, lpcMaxValueLen, lpcbSecurityDescriptor,
                 lpftLastWriteTime));
         assertTrue(lpcSubKeys.getValue() > 0);
+    }
+
+    public void testRegNotifyChangeKeyValue() {
+        final HKEYByReference phKey = new HKEYByReference();
+        assertEquals(W32Errors.ERROR_SUCCESS, Advapi32.INSTANCE.RegOpenKeyEx(WinReg.HKEY_CURRENT_USER,
+                "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", 0, WinNT.KEY_NOTIFY, phKey));
+        final HANDLE event = Kernel32.INSTANCE.CreateEvent(null, true /* manual reset */, false /* initial state */,
+                null);
+        assertNotNull(event);
+        final int filter = WinNT.REG_NOTIFY_CHANGE_LAST_SET | WinNT.REG_NOTIFY_CHANGE_NAME;
+        assertEquals(W32Errors.ERROR_SUCCESS,
+                Advapi32.INSTANCE.RegNotifyChangeKeyValue(phKey.getValue(), true, filter, event, true));
+        final int res = Kernel32.INSTANCE.WaitForSingleObject(event, 1000);
+        // Two possible outcomes: Either we notice a timeout or we notice a change:
+        assertTrue(res == WinError.WAIT_TIMEOUT || res == WinBase.WAIT_OBJECT_0);
+        assertEquals(W32Errors.ERROR_SUCCESS, Advapi32.INSTANCE.RegCloseKey(phKey.getValue()));
+        assertTrue(Kernel32.INSTANCE.CloseHandle(event));
     }
 
     public void testIsWellKnownSid() {

@@ -478,9 +478,9 @@ public interface Variant {
         }
 
         public Object getValue() {
-            this.read();
+            // this.read() is called by this.getVarType()
             int varType = this.getVarType().intValue();
-            switch (this.getVarType().intValue()) {
+            switch (varType) {
                 case VT_UI1:
                     return this._variant.__variant.readField("bVal");
                 case VT_I2:
@@ -773,14 +773,15 @@ public interface Variant {
             }
 
             public ByReference(VARIANT[] variantArg) {
-                this.variantArg = variantArg;
+                super(variantArg);
             }
         }
 
-        public VARIANT[] variantArg = new VARIANT[1];
+        public VARIANT[] variantArg;
 
         public VariantArg() {
             super();
+            variantArg = new VARIANT[1];
         }
 
         /**
@@ -789,6 +790,7 @@ public interface Variant {
          */
         public VariantArg(Pointer pointer) {
             super(pointer);
+            variantArg = new VARIANT[1];
         }
 
         public VariantArg(VARIANT[] variantArg) {

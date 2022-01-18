@@ -240,3 +240,40 @@ a combination of TypeMapper and FunctionMapper (see
 `com.sun.jna.win32.W32APIOptions.DEFAULT_OPTIONS`) so that you can leave off the 
 “-A” or “-W” suffix (you never need to use both simultaneously) and use 
 “String” rather than explicit “WString”.
+
+Does JNA publish a module descriptor (module-info.java) to support the Java Module System (JPMS)?
+-------------------------------------------------------------------------------------------------------------------------------------------
+
+Since version 5.8.0, JNA publishes an additional JAR with a `module-info` class alongside
+the main project JAR, using an artifact with `-jpms` appended, e.g., `jna-jpms-5.8.0.jar`
+and `jna-platform-jpms-5.8.0.jar`.  For a Maven build, use the following dependency statement:
+```
+<dependency>
+  <groupId>net.java.dev.jna</groupId>
+  <artifactId>jna-jpms</artifactId>
+  <version>5.8.0</version>
+</dependency>
+```
+and include `requires com.sun.jna;` in your module descriptor in your `module-info.java` file.
+
+If you use the `jna-platform` user-contributed mappings:
+```
+<dependency>
+  <groupId>net.java.dev.jna</groupId>
+  <artifactId>jna-platform-jpms</artifactId>
+  <version>5.8.0</version>
+</dependency>
+```
+and include `requires com.sun.jna.platform;` in your module descriptor.
+
+If you have a library that may be consumed by downstream users, consider making these managed dependencies.
+
+In addition to adding the `requires` directive, note that some JNA classes designed
+for inheritance make use of reflection to access constructors and/or fields of the subclass.
+Reflection is disabled by the module system's strong encapsulation.  It may be necessary to
+make packages which include subclasses of JNA's classes (such as `Structure` and
+`PointerType` among others) accessible via reflection to the `com.sun.jna` module
+using either an `open` module, `opens`, or `opens ... to` directive, or an `exports` 
+or `exports ... to` directive, depending on the particular application and level of 
+access required. If migrating an existing project, `opens` replicates the full
+non-modular (classpath) reflective access.

@@ -144,9 +144,9 @@ class Convert {
     }
 
     public static Object toJavaObject(VARIANT value, Class<?> targetClass, ObjectFactory factory, boolean addReference, boolean freeValue) {
-        if (null == value
-                || value.getVarType().intValue() == VT_EMPTY
-                || value.getVarType().intValue() == VT_NULL) {
+        int varType = (value != null) ? value.getVarType().intValue() : VT_NULL;
+
+        if (varType == VT_EMPTY || varType == VT_NULL) {
             return null;
         }
 
@@ -163,8 +163,9 @@ class Convert {
 
         VARIANT inputValue = value;
 
-        if (value.getVarType().intValue() == (VT_BYREF | VT_VARIANT)) {
+        if (varType == (VT_BYREF | VT_VARIANT)) {
             value = (VARIANT) value.getValue();
+            varType = value.getVarType().intValue();
         }
 
         // Passing null or Object.class as targetClass switch to default
@@ -173,9 +174,7 @@ class Convert {
 
             targetClass = null;
 
-            int varType = value.getVarType().intValue();
-
-            switch (value.getVarType().intValue()) {
+            switch (varType) {
                 case VT_UI1:
                 case VT_I1:
                     targetClass = Byte.class;
@@ -261,30 +260,22 @@ class Convert {
             result = value.dateValue();
         } else if (String.class.equals(targetClass)) {
             result = value.stringValue();
-        } else if (value.getValue() instanceof com.sun.jna.platform.win32.COM.Dispatch) {
-            com.sun.jna.platform.win32.COM.Dispatch d = (com.sun.jna.platform.win32.COM.Dispatch) value.getValue();
-            if (targetClass != null && targetClass.isInterface()) {
-                Object proxy = factory.createProxy(targetClass, d);
-                // must release a COM reference, createProxy adds one, as does the
-                // call
-                if (!addReference) {
-                    int n = d.Release();
-                }
-                result = proxy;
-            } else {
-                result = d;
-            }
         } else {
-            /*
-                WinDef.SCODE.class.equals(targetClass)
-                    || OaIdl.CURRENCY.class.equals(targetClass)
-                    || OaIdl.DECIMAL.class.equals(targetClass)
-                    || OaIdl.SAFEARRAY.class.equals(targetClass)
-                    || com.sun.jna.platform.win32.COM.IUnknown.class.equals(targetClass)
-                    || Variant.class.equals(targetClass)
-                    || PVOID.class.equals(targetClass
-             */
             result = value.getValue();
+            if (result instanceof com.sun.jna.platform.win32.COM.Dispatch) {
+                com.sun.jna.platform.win32.COM.Dispatch d = (com.sun.jna.platform.win32.COM.Dispatch) result;
+                if (targetClass != null && targetClass.isInterface()) {
+                    Object proxy = factory.createProxy(targetClass, d);
+                    // must release a COM reference, createProxy adds one, as does the
+                    // call
+                    if (!addReference) {
+                        int n = d.Release();
+                    }
+                    result = proxy;
+                } else {
+                    result = d;
+                }
+            }
         }
 
         if (IComEnum.class.isAssignableFrom(targetClass)) {
