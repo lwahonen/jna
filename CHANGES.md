@@ -2,21 +2,54 @@ NOTE: as of JNA 4.0, JNA is now dual-licensed under LGPL and AL 2.0 (see LICENSE
 
 NOTE: JNI native support is typically incompatible between minor versions, and almost always incompatible between major versions.
 
-Next Release (5.9.0)
-====================
+Next Release (5.11.0)
+=====================
+
+Features
+--------
+* [#1398](https://github.com/java-native-access/jna/pull/1398): Increase `c.s.j.p.win32.Sspi#MAX_TOKEN_SIZE` on Windows 8/Server 2012 and later - [@dbwiddis](https://github.com/dbwiddis).
+* [#1398](https://github.com/java-native-access/jna/pull/1403): Rebuild AIX binaries with libffi 3.4.2 (other architectures were part of 5.10) - [@matthiasblaesing](https://github.com/matthiasblaesing).
+
+Bug Fixes
+---------
+
+
+Release 5.10.0
+==============
+
+Features
+--------
+* [#1377](https://github.com/java-native-access/jna/pull/1377): Add `RegLoadAppKey` to `c.s.j.p.win32.Advapi32` and `registryLoadAppKey` to `c.s.j.p.win32.Advapi32Util` - [@mfilippov](https://github.com/mfilippov).
+* [#1093](https://github.com/java-native-access/jna/issues/1093): Add `OpenFileMapping` to `c.s.j.p.win32.Kernel32` - [@lmitusinski](https://github.com/lmitusinski).
+* [#1388](https://github.com/java-native-access/jna/issues/1388): Map the arch `zarch_64` as reported by SAPJVM8 to `s390x` - [@MBaesken](https://github.com/MBaesken).
+* [#1381](https://github.com/java-native-access/jna/issues/1381): Update embedded libffi to 3.4.2 - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1393](https://github.com/java-native-access/jna/issues/1393): Update native encoding detection for JEP400 / JDK 18 (`file.encoding` now defaults to `UTF-8`) - [@matthiasblaesing](https://github.com/matthiasblaesing).
+
+Bug Fixes
+---------
+* [#1378](https://github.com/java-native-access/jna/pull/1378): Handle failure in `ffi_closure_alloc` - [@davecturner](https://github.com/davecturner).
+
+
+Release 5.9.0
+=============
 
 Features
 --------
 * [#1336](https://github.com/java-native-access/jna/pull/1336): Add `HKEY_CURRENT_USER_LOCAL_SETTINGS` to `c.s.j.p.win32.WinReg` - [@Dani-Hub](https://github.com/Dani-Hub).
 * [#1337](https://github.com/java-native-access/jna/pull/1337): Add `REG_NOTIFY_THREAD_AGNOSTIC` to `c.s.j.p.win32.WinNet` and update `REG_LEGAL_CHANGE_FILTER` - [@Dani-Hub](https://github.com/Dani-Hub).
 * [#1338](https://github.com/java-native-access/jna/pull/1338): Add `RegNotifyChangeKeyValue` to `c.s.j.p.win32.Advapi32` - [@Dani-Hub](https://github.com/Dani-Hub).
-* [#1340](https://github.com/java-native-access/jna/issues/1340): Added `CM_Get_DevNode_Registry_Property` to `c.s.j.p.win32.Cfgmgr32` and corresponding util in `c.s.j.p.win32.Cfgmgr32Util` - [@dbwiddis](https://github.com/dbwiddis).
+* [#1340](https://github.com/java-native-access/jna/issues/1340): Add `CM_Get_DevNode_Registry_Property` to `c.s.j.p.win32.Cfgmgr32` and corresponding util in `c.s.j.p.win32.Cfgmgr32Util` - [@dbwiddis](https://github.com/dbwiddis).
 * [#1352](https://github.com/java-native-access/jna/pull/1352): Add `BringWindowToTop` to `c.s.j.p.win32.User32` - [@kahgoh](https://github.com/kahgoh).
+* [#1354](https://github.com/java-native-access/jna/pull/1352): Add `GetParent` to `c.s.j.p.win32.User32` - [@kahgoh](https://github.com/kahgoh).
+* [#1360](https://github.com/java-native-access/jna/issues/1360): Add `CommandLineToArgvW` to `c.s.j.p.win32.Shell32` and corresponding util in `c.s.j.p.win32.Shell32Util` - [@dbwiddis](https://github.com/dbwiddis).
+* [#1363](https://github.com/java-native-access/jna/issues/1363): Update `NUMA_NODE_RELATIONSHIP` in `c.s.j.p.win32.WinNT` to new version of the structure and improve support for future values of `c.s.j.p.win32.WinNT.LOGICAL_PROCESSOR_RELATIONSHIP` - [@dbwiddis](https://github.com/dbwiddis).
 
 Bug Fixes
 ---------
 * [#1343](https://github.com/java-native-access/jna/issues/1343): `c.s.j.p.mac.CoreFoundation.CFStringRef#stringValue` buffer needs space for a null byte - [@dbwiddis](https://github.com/dbwiddis).
 * [#1351](https://github.com/java-native-access/jna/issues/1351): Define `c.s.j.p.unix.size_t.ByReference` and fix macOS sysctl `size_t *` parameters - [@dbwiddis](https://github.com/dbwiddis).
+* [#1362](https://github.com/java-native-access/jna/issues/1362): Clear security sensitive data after usage in `c.s.j.p.win32.Crypt32Util#cryptProtectData` and `#cryptUnprotectData` - [@dmytro-sheyko](https://github.com/dmytro-sheyko).
+* [#1361](https://github.com/java-native-access/jna/issues/1361): Make `c.s.j.p.win32.Crypt32Util#cryptProtectData` and `#cryptUnprotectData` properly handle 0-length array as input - [@dmytro-sheyko](https://github.com/dmytro-sheyko).
 
 Release 5.8.0
 =============
