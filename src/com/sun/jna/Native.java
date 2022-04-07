@@ -1150,7 +1150,7 @@ public final class Native implements Version {
             }
         }
         else if (!Boolean.getBoolean("jna.nounpack")) {
-            InputStream is = loader.getResourceAsStream(resourcePath);
+            InputStream is = url.openStream();
 
             if (is == null) {
                 throw new IOException("Can't obtain InputStream for " + resourcePath);
