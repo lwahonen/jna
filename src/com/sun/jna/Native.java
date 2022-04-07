@@ -1055,6 +1055,21 @@ public final class Native implements Version {
         return file.getName().startsWith(JNA_TMPLIB_PREFIX);
     }
 
+    /** Attempt to extract a native library from the current resource path,
+     * using the current thread context class loader.
+     * @param name Base name of native library to extract.  May also be an
+     * absolute resource path (i.e. starts with "/"), in which case the
+     * no transformations of the library name are performed.  If only the base
+     * name is given, the resource path is attempted both with and without
+     * {@link Platform#RESOURCE_PREFIX}, after mapping the library name via
+     * {@link NativeLibrary#mapSharedLibraryName(String)}.
+     * @return File indicating extracted resource on disk
+     * @throws IOException if resource not found
+     */
+    public static File extractFromResourcePath(String name) throws IOException {
+        return extractFromResourcePath(name, null);
+    }
+
     /** Attempt to extract a native library from the resource path using the
      * given class loader.
      * @param name Base name of native library to extract.  May also be an
@@ -1136,102 +1151,17 @@ public final class Native implements Version {
         }
         else if (!Boolean.getBoolean("jna.nounpack")) {
             InputStream is = loader.getResourceAsStream(resourcePath);
-            FileOutputStream fos = null;
 
             if (is == null) {
                 throw new IOException("Can't obtain InputStream for " + resourcePath);
             }
 
             if (Boolean.getBoolean("jna.permanentextract")) {
-                try {
-                    LOG.log(DEBUG_JNA_LOAD_LEVEL, "Starting permanent extract of "+resourcePath);
-                    String libSHA1=getHashForFile(loader.getResourceAsStream(resourcePath));
-                    LOG.log(DEBUG_JNA_LOAD_LEVEL, "DLL hash is "+libSHA1);
-
-                    File dir = getTempDir();
-                    String libName=name.substring(name.lastIndexOf('/')+1, name.length());
-                    if(!libName.toLowerCase().endsWith(".dll") && Platform.isWindows() )
-                        libName+=".dll";
-                    String pathname = dir.getCanonicalPath() + "/sha1_" + libSHA1 + "_" + libName;
-                    File libMaybe=new File(pathname);
-                    if(libMaybe.exists())
-                    {
-                        LOG.log(DEBUG_JNA_LOAD_LEVEL, "Using existing file " + libMaybe.getAbsolutePath());
-                        return libMaybe;
-                    }
-                    File temp=File.createTempFile(JNA_TMPLIB_PREFIX, Platform.isWindows() ? ".tmp" : null, dir);
-                    temp.deleteOnExit();
-                    fos = new FileOutputStream(temp);
-                    int count;
-                    byte[] buf = new byte[1024];
-                    while ((count = is.read(buf, 0, buf.length)) > 0) {
-                        fos.write(buf, 0, count);
-                    }
-                    fos.close();
-                    LOG.log(DEBUG_JNA_LOAD_LEVEL, "All bytes have been written to temp file " + temp.getAbsolutePath()+", now renaming to "+libMaybe.getAbsolutePath());
-
-                    boolean moveError = !temp.renameTo(libMaybe);
-                    if(moveError)
-                    {
-                        if(libMaybe.exists())
-                        {
-                            LOG.log(Level.WARNING, "Had a race happen with " + libMaybe.getAbsolutePath() + ", using existing");
-                        } else {
-                            LOG.log(Level.SEVERE, "Unable to move " + temp.getAbsolutePath() + " to " + libMaybe.getAbsolutePath());
-
-                            OutputStream out = null;
-                            InputStream in = null;
-                            try {
-                                in = new BufferedInputStream(new FileInputStream(temp));
-                                out = new BufferedOutputStream(new FileOutputStream(libMaybe));
-
-                                byte[] buffer = new byte[1024];
-                                int lengthRead;
-                                while ((lengthRead = in.read(buffer)) > 0) {
-                                    out.write(buffer, 0, lengthRead);
-                                }
-                                out.flush();
-                                in.close();
-                                out.close();
-                                in=null;
-                                out=null;
-                                LOG.log(Level.SEVERE, "DLL created with problems " + libMaybe.getAbsolutePath());
-                                if (!temp.delete())
-                                    temp.deleteOnExit();
-                                return libMaybe;
-                            } catch (Throwable t) {
-                                throw new IOException("Unable to move or copy " + temp.getAbsolutePath() + " to " + libMaybe.getAbsolutePath());
-                            } finally {
-                                if (in != null)
-                                    in.close();
-                                if (out != null)
-                                    out.close();
-                            }
-                        }
-                    } else
-                    {
-                        LOG.log(DEBUG_JNA_LOAD_LEVEL, "DLL created without problems "+libMaybe.getAbsolutePath());
-                    }
-                    return libMaybe;
-                } catch (NoSuchAlgorithmException e) {
-                    throw new IOException("Failed to create temporary file for " + name + " library: " + e.getMessage());
-                }
-                catch (IOException e)
-                {
-                    throw new IOException("Failed to create temporary file for " + name + " library: " + e.getMessage());
-                }
-                finally {
-                    if(is != null) {
-                        try { is.close(); } catch (IOException e) {  }
-                    }
-                    if (fos != null) {
-                        try { fos.close(); } catch(IOException e) { }
-                    }
-                }
+                return doPermanentExtract(name, loader, resourcePath, is);
             }
 
 
-
+            FileOutputStream fos = null;
             try {
                 // Suffix is required on windows, or library fails to load
                 // Let Java pick the suffix, except on windows, to avoid
@@ -1287,6 +1217,95 @@ public final class Native implements Version {
             }
         }
         return lib;
+    }
+
+    private static File doPermanentExtract(String name, ClassLoader loader, String resourcePath, InputStream is) throws IOException {
+        FileOutputStream fos = null;
+        try {
+            LOG.log(DEBUG_JNA_LOAD_LEVEL, "Starting permanent extract of "+ resourcePath);
+            String libSHA1=getHashForFile(loader.getResourceAsStream(resourcePath));
+            LOG.log(DEBUG_JNA_LOAD_LEVEL, "DLL hash is "+libSHA1);
+
+            File dir = getTempDir();
+            String libName= name.substring(name.lastIndexOf('/')+1, name.length());
+            if(!libName.toLowerCase().endsWith(".dll") && Platform.isWindows() )
+                libName+=".dll";
+            String pathname = dir.getCanonicalPath() + "/sha1_" + libSHA1 + "_" + libName;
+            File libMaybe=new File(pathname);
+            if(libMaybe.exists())
+            {
+                LOG.log(DEBUG_JNA_LOAD_LEVEL, "Using existing file " + libMaybe.getAbsolutePath());
+                return libMaybe;
+            }
+            File temp=File.createTempFile(JNA_TMPLIB_PREFIX, Platform.isWindows() ? ".tmp" : null, dir);
+            temp.deleteOnExit();
+            fos = new FileOutputStream(temp);
+            int count;
+            byte[] buf = new byte[1024];
+            while ((count = is.read(buf, 0, buf.length)) > 0) {
+                fos.write(buf, 0, count);
+            }
+            fos.close();
+            LOG.log(DEBUG_JNA_LOAD_LEVEL, "All bytes have been written to temp file " + temp.getAbsolutePath()+", now renaming to "+libMaybe.getAbsolutePath());
+
+            boolean moveError = !temp.renameTo(libMaybe);
+            if(moveError)
+            {
+                if(libMaybe.exists())
+                {
+                    LOG.log(Level.WARNING, "Had a race happen with " + libMaybe.getAbsolutePath() + ", using existing");
+                } else {
+                    LOG.log(Level.SEVERE, "Unable to move " + temp.getAbsolutePath() + " to " + libMaybe.getAbsolutePath());
+
+                    OutputStream out = null;
+                    InputStream in = null;
+                    try {
+                        in = new BufferedInputStream(new FileInputStream(temp));
+                        out = new BufferedOutputStream(new FileOutputStream(libMaybe));
+
+                        byte[] buffer = new byte[1024];
+                        int lengthRead;
+                        while ((lengthRead = in.read(buffer)) > 0) {
+                            out.write(buffer, 0, lengthRead);
+                        }
+                        out.flush();
+                        in.close();
+                        out.close();
+                        in=null;
+                        out=null;
+                        LOG.log(Level.SEVERE, "DLL created with problems " + libMaybe.getAbsolutePath());
+                        if (!temp.delete())
+                            temp.deleteOnExit();
+                        return libMaybe;
+                    } catch (Throwable t) {
+                        throw new IOException("Unable to move or copy " + temp.getAbsolutePath() + " to " + libMaybe.getAbsolutePath());
+                    } finally {
+                        if (in != null)
+                            in.close();
+                        if (out != null)
+                            out.close();
+                    }
+                }
+            } else
+            {
+                LOG.log(DEBUG_JNA_LOAD_LEVEL, "DLL created without problems "+libMaybe.getAbsolutePath());
+            }
+            return libMaybe;
+        } catch (NoSuchAlgorithmException e) {
+            throw new IOException("Failed to create temporary file for " + name + " library: " + e.getMessage());
+        }
+        catch (IOException e)
+        {
+            throw new IOException("Failed to create temporary file for " + name + " library: " + e.getMessage());
+        }
+        finally {
+            if(is != null) {
+                try { is.close(); } catch (IOException e) {  }
+            }
+            if (fos != null) {
+                try { fos.close(); } catch(IOException e) { }
+            }
+        }
     }
 
     public static Object loadFromResourcePath(String name, ClassLoader loader) throws IOException {
@@ -2381,8 +2400,6 @@ public final class Native implements Version {
      * otions.
      */
     static native long open(String name, int flags);
-
-    //static native long open(byte[] name, int flags);
 
     /** Close the given native library. */
     static native void close(long handle);

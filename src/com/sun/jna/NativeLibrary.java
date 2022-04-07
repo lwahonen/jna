@@ -271,29 +271,16 @@ public class NativeLibrary {
             // As a last resort, try to extract the library from the class
             // path, using the current context class loader.
             if (handle == 0) {
-                try
-                {
-                    Object maybe=Native.extractFromResourcePath(libraryName, (ClassLoader) options.get(Library.OPTION_CLASSLOADER));
-                    if(maybe instanceof File)
-                    {
-                        File embedded=(File) maybe;
-                        try
-                        {
-                            handle=Native.open(embedded.getAbsolutePath(), openFlags);
-                            libraryPath=embedded.getAbsolutePath();
-                        } finally
-                        {
-                            // Don't leave temporary files around
-                            if(Native.isUnpacked(embedded))
-                            {
-                                Native.deleteLibrary(embedded);
-                            }
+                try {
+                    File embedded = Native.extractFromResourcePath(libraryName, (ClassLoader)options.get(Library.OPTION_CLASSLOADER));
+                    try {
+                        handle = Native.open(embedded.getAbsolutePath(), openFlags);
+                        libraryPath = embedded.getAbsolutePath();
+                    } finally {
+                        // Don't leave temporary files around
+                        if (Native.isUnpacked(embedded)) {
+                            Native.deleteLibrary(embedded);
                         }
-                    }
-                    if(maybe instanceof byte[])
-                    {
-                        byte[] buffer=(byte[]) maybe;
-                       // handle=Native.open(buffer, openFlags);
                     }
                 }
                 catch(IOException e2) {
