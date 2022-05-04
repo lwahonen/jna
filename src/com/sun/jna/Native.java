@@ -1180,24 +1180,23 @@ public final class Native implements Version {
                 }
                 fos.close();
                 fos = null;
-                Random random = new Random();
-                do {
-                    long n = random.nextLong();
-                    if (n == Long.MIN_VALUE) {
-                        n = 0;      // corner case
-                    } else {
-                        n = Math.abs(n);
-                    }
-                    String tempLibName = dir.getCanonicalPath() + "/" + JNA_TMPLIB_PREFIX + Long.toString(n);
-                    if(Platform.isWindows())
-                        tempLibName+=".dll";
-                    lib = new File(tempLibName);
-                }while(lib.exists());
-                LOG.log(DEBUG, "Moving temp file to final name {0}", lib.getAbsolutePath());
+
+                lib=generateTempName(dir);
+                LOG.log(DEBUG, "Moving temp file to final name {0} attempt 1", lib.getAbsolutePath());
 
                 boolean moveError = !temp.renameTo(lib);
                 if (moveError) {
-                    throw new IOException("Unable to move " + temp + " to " + lib);
+                    LOG.log(Level.WARNING, String.format("Moving temp file %s to final name %s failed, sleeping for one second and trying one more time with a new random name", temp.getAbsolutePath(), lib.getAbsolutePath()));
+                    Thread.sleep(1000);
+
+                    lib = generateTempName(dir);
+                    LOG.log(DEBUG, "Moving temp file to final name {0}, attempt 2", lib.getAbsolutePath());
+
+                    moveError = !temp.renameTo(lib);
+                    if (moveError) {
+                        // We can't move our temp file. Maybe we can copy the bits?
+                        copyFile(temp, lib);
+                    }
                 }
                 if (!Boolean.getBoolean("jnidispatch.preserve")) {
                     lib.deleteOnExit();
@@ -1206,7 +1205,7 @@ public final class Native implements Version {
                     LOG.log(DEBUG_JNA_LOAD_LEVEL, "DLL created without problems "+lib.getAbsolutePath());
                 }
             }
-            catch(IOException e) {
+            catch(IOException | InterruptedException e) {
                 throw new IOException("Failed to create temporary file for " + name + " library: " + e.getMessage());
             }
             finally {
@@ -1219,6 +1218,26 @@ public final class Native implements Version {
         return lib;
     }
 
+    // Generate a random filename in given directory, loop until file doesn't exist
+    private static File generateTempName(File dir) throws IOException {
+        File lib = null;
+        Random random = new Random();
+        do {
+            long n = random.nextLong();
+            if (n == Long.MIN_VALUE) {
+                n = 0;      // corner case
+            } else {
+                n = Math.abs(n);
+            }
+            String tempLibName = dir.getCanonicalPath() + "/" + JNA_TMPLIB_PREFIX + Long.toString(n);
+            if (Platform.isWindows())
+                tempLibName += ".dll";
+            lib = new File(tempLibName);
+        } while (lib.exists());
+        return lib;
+    }
+
+    // Write DLL from jars into a file in given temp path
     private static File doPermanentExtract(String name, ClassLoader loader, String resourcePath, InputStream is) throws IOException {
         FileOutputStream fos = null;
         try {
@@ -1255,35 +1274,16 @@ public final class Native implements Version {
                 {
                     LOG.log(Level.WARNING, "Had a race happen with " + libMaybe.getAbsolutePath() + ", using existing");
                 } else {
-                    LOG.log(Level.SEVERE, "Unable to move " + temp.getAbsolutePath() + " to " + libMaybe.getAbsolutePath());
-
-                    OutputStream out = null;
-                    InputStream in = null;
-                    try {
-                        in = new BufferedInputStream(new FileInputStream(temp));
-                        out = new BufferedOutputStream(new FileOutputStream(libMaybe));
-
-                        byte[] buffer = new byte[1024];
-                        int lengthRead;
-                        while ((lengthRead = in.read(buffer)) > 0) {
-                            out.write(buffer, 0, lengthRead);
-                        }
-                        out.flush();
-                        in.close();
-                        out.close();
-                        in=null;
-                        out=null;
+                    LOG.log(Level.SEVERE, String.format("Unable to move %s to %s", temp.getAbsolutePath(), libMaybe.getAbsolutePath()));
+                    // We can't move the file over, maybe we can create a new file and write all the bytes into it?
+                    try{
+                        copyFile(temp, libMaybe);
                         LOG.log(Level.SEVERE, "DLL created with problems " + libMaybe.getAbsolutePath());
                         if (!temp.delete())
                             temp.deleteOnExit();
                         return libMaybe;
                     } catch (Throwable t) {
                         throw new IOException("Unable to move or copy " + temp.getAbsolutePath() + " to " + libMaybe.getAbsolutePath());
-                    } finally {
-                        if (in != null)
-                            in.close();
-                        if (out != null)
-                            out.close();
                     }
                 }
             } else
@@ -1305,6 +1305,31 @@ public final class Native implements Version {
             if (fos != null) {
                 try { fos.close(); } catch(IOException e) { }
             }
+        }
+    }
+
+    private static void copyFile(File source, File destination) throws IOException {
+        OutputStream out = null;
+        InputStream in = null;
+        try {
+            in = new BufferedInputStream(new FileInputStream(source));
+            out = new BufferedOutputStream(new FileOutputStream(destination));
+
+            byte[] buffer = new byte[65536];
+            int lengthRead;
+            while ((lengthRead = in.read(buffer)) > 0) {
+                out.write(buffer, 0, lengthRead);
+            }
+            out.flush();
+            in.close();
+            out.close();
+            in = null;
+            out = null;
+        } finally {
+            if (out != null)
+                out.close();
+            if (in != null)
+                in.close();
         }
     }
 
