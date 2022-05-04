@@ -131,8 +131,8 @@ public final class Native implements Version {
         DEFAULT_CHARSET = nativeCharset;
         DEFAULT_ENCODING = nativeCharset.name();
     }
-    public static final boolean DEBUG_LOAD = Boolean.getBoolean("jna.debug_load");
-    public static final boolean DEBUG_JNA_LOAD = Boolean.getBoolean("jna.debug_load.jna");
+    public static boolean DEBUG_LOAD = Boolean.getBoolean("jna.debug_load");
+    public static boolean DEBUG_JNA_LOAD = Boolean.getBoolean("jna.debug_load.jna");
     private final static Level DEBUG_JNA_LOAD_LEVEL = DEBUG_JNA_LOAD ? Level.INFO : Level.FINE;
 
     // Used by tests, do not remove
@@ -1205,7 +1205,10 @@ public final class Native implements Version {
                     LOG.log(DEBUG_JNA_LOAD_LEVEL, "DLL created without problems "+lib.getAbsolutePath());
                 }
             }
-            catch(IOException | InterruptedException e) {
+            catch(IOException e) {
+                throw new IOException("Failed to create temporary file for " + name + " library: " + e.getMessage());
+            }
+            catch(InterruptedException e) {
                 throw new IOException("Failed to create temporary file for " + name + " library: " + e.getMessage());
             }
             finally {
