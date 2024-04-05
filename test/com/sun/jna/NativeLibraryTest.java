@@ -48,6 +48,7 @@ public class NativeLibraryTest extends TestCase {
             { Platform.LINUX, "lib", ".so" },
             { Platform.WINDOWS, "", ".dll" },
             { Platform.SOLARIS, "lib", ".so" },
+            { Platform.DRAGONFLYBSD, "lib", ".so" },
             { Platform.FREEBSD, "lib", ".so" },
             { Platform.OPENBSD, "lib", ".so" },
             { Platform.WINDOWSCE, "", ".dll" },
@@ -69,7 +70,7 @@ public class NativeLibraryTest extends TestCase {
 
     public void testGCNativeLibrary() throws Exception {
         NativeLibrary lib = NativeLibrary.getInstance("testlib");
-        Reference<NativeLibrary> ref = new WeakReference<NativeLibrary>(lib);
+        Reference<NativeLibrary> ref = new WeakReference<>(lib);
         lib = null;
         System.gc();
         long start = System.currentTimeMillis();
@@ -131,7 +132,7 @@ public class NativeLibraryTest extends TestCase {
     public void testAliasSimpleLibraryName() throws Exception {
         NativeLibrary nl = NativeLibrary.getInstance("testlib");
         File file = nl.getFile();
-        Reference<NativeLibrary> ref = new WeakReference<NativeLibrary>(nl);
+        Reference<NativeLibrary> ref = new WeakReference<>(nl);
         nl = null;
         System.gc();
         long start = System.currentTimeMillis();
@@ -171,7 +172,7 @@ public class NativeLibraryTest extends TestCase {
 
     public void testFunctionHoldsLibraryReference() throws Exception {
         NativeLibrary lib = NativeLibrary.getInstance("testlib");
-        Reference<NativeLibrary> ref = new WeakReference<NativeLibrary>(lib);
+        Reference<NativeLibrary> ref = new WeakReference<>(lib);
         Function f = lib.getFunction("callCount");
         lib = null;
         System.gc();

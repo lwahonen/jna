@@ -72,12 +72,13 @@ public class Win32ServiceDemo {
 
     public static final String serviceName = "Win32ServiceDemo";
     public static final String description = "TestService Description";
-    private static final Set<String> SUFFIXES = new HashSet<String>();
+    private static final Set<String> SUFFIXES = new HashSet<>();
 
     static {
         SUFFIXES.add("jna.jar");
         SUFFIXES.add("jna-test.jar");
         SUFFIXES.add("classes");
+        SUFFIXES.add("test-classes");
     }
 
     private final Object waitObject = new Object();

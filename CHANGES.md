@@ -2,24 +2,50 @@ NOTE: as of JNA 4.0, JNA is now dual-licensed under LGPL and AL 2.0 (see LICENSE
 
 NOTE: JNI native support is typically incompatible between minor versions, and almost always incompatible between major versions.
 
-Next Release (5.14.0)
+Next Release (5.15.0)
 =====================
 
 Features
 --------
+* [#1578](https://github.com/java-native-access/jna/pull/1578): Add support for FreeBSD aarch64 - [@alexdupre](https://github.com/alexdupre).
+* [#1593](https://github.com/java-native-access/jna/pull/1593): Add support for DragonFly BSD x86-64 - [@liweitianux](https://github.com/liweitianux).
+* [#1595](https://github.com/java-native-access/jna/pull/1595): Add `IsProcessorFeaturePresent` to `c.s.j.p.win32.Kernel32` - [@dbwiddis](https://github.com/dbwiddis).
+
+Bug Fixes
+---------
+* [#1579](https://github.com/java-native-access/jna/issues/1579): Fix analysis of ELF binary on arm systems running with a java ELF binary without section table headers (java8 on armv7 NAS) - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1586](https://github.com/java-native-access/jna/issues/1586): Fix free_callback JNI weak reference leak - [@xiezhaokun](https://github.com/xiezhaokun).
+* [6486c90d913a413f247eef84742ce3c474738933](https://github.com/java-native-access/jna/commit/6486c90d913a413f247eef84742ce3c474738933): Check CallbackReference#cbstruct for null when checking existing Reference - [@matthiasblaesing](https://github.com/matthiasblaesing).
+
+Release 5.14.0
+==============
+
+Features
+--------
+* [#1556](https://github.com/java-native-access/jna/pull/1556): Add `SetJob`, `SetPrinter` to `c.s.j.p.w.Winspool` - [@tresf](https://github.com/tresf).
+* [#1534](https://github.com/java-native-access/jna/pull/1534): Add `GetMethod`, `Put`, `SpawnInstance` to `c.s.j.p.win32.COM.WbemCli#IWbemClassObject` and `ExecMethod` to `c.s.j.p.win32.COM.WbemCli#IWbemServices` - [@faddom](https://github.com/faddom).
+* [#1544](https://github.com/java-native-access/jna/pull/1544): Add `GetPriorityClass`, `SetPriorityClass`, `GetThreadPriority`, `SetThreadPriority` and associated constants to `c.s.j.p.win32.Kernel32` - [@dEajL3kA](https://github.com/dEajL3kA).
+* [#1548](https://github.com/java-native-access/jna/pull/1548): Make interface `c.s.j.p.mac.XAttr public` - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1551](https://github.com/java-native-access/jna/pull/1551): Add `c.s.j.p.bsd.ExtAttr` and `c.s.j.p.bsd.ExtAttrUtil` to wrap BSD [<sys/extattr.h>](https://man.freebsd.org/cgi/man.cgi?query=extattr&sektion=2) system calls. [@rednoah](https://github.com/rednoah).
+* [#1517](https://github.com/java-native-access/jna/pull/1517): Add missing `O_*` (e.g. `O_APPEND`, `O_SYNC`, `O_DIRECT`, ...) to `c.s.j.p.linux.Fcntl` - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1521](https://github.com/java-native-access/jna/issues/1521): Shutdown CleanerThread once the last cleanable is removed - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1557](https://github.com/java-native-access/jna/issues/1557): Build linux-riscv64 on Ubuntu focal to improve compatibility with older glibc versions - [@matthiasblaesing](https://github.com/matthiasblaesing).
 
 Bug Fixes
 ---------
 * [#1501](https://github.com/java-native-access/jna/pull/1501): `Library.OPTION_STRING_ENCODING` is ignore for string arguments function calls - [@matthiasblaesing](https://github.com/matthiasblaesing).
 * [#1504](https://github.com/java-native-access/jna/pull/1504): Increase maximum supported fixed args on varargs calls from 3 to 255 - [@andrew-nowak](https://github.com/andrew-nowak).
+* [#1545](https://github.com/java-native-access/jna/pull/1545): Fix Java 6 incompatibility in `c.s.j.p.win32.Kerne32Util` and `c.s.j.p.win32.DBT` - [@matthiasblaesing](https://github.com/matthiasblaesing).
 
 Important Changes
 -----------------
 * The interfaces between Java and native code have changed, so `libjnidispatch`
   must be rebuilt to be compatible with this release.
+* Release drops support for JDKs 6 + 7, so you'll need at least JDK 8 to
+  update to use this version.
 
-Release (5.13.0)
-================
+Release 5.13.0
+==============
 
 Features
 --------

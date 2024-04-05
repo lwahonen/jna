@@ -211,7 +211,7 @@ public final class Native implements Version {
         loadNativeDispatchLibrary();
 
         if (! isCompatibleVersion(VERSION_NATIVE, getNativeVersion())) {
-            String LS = System.getProperty("line.separator");
+            String LS = System.lineSeparator();
             throw new Error(LS + LS
                             + "There is an incompatible JNA native library installed on this system" + LS
                             + "Expected: " + VERSION_NATIVE + LS
@@ -387,11 +387,7 @@ public final class Native implements Version {
             try {
                 charset = Charset.forName(encoding);
             }
-            catch(IllegalCharsetNameException e) {
-                LOG.log(Level.WARNING, "JNA Warning: Encoding ''{0}'' is unsupported ({1})",
-                        new Object[]{encoding, e.getMessage()});
-            }
-            catch(UnsupportedCharsetException  e) {
+            catch(IllegalCharsetNameException | UnsupportedCharsetException  e) {
                 LOG.log(Level.WARNING, "JNA Warning: Encoding ''{0}'' is unsupported ({1})",
                         new Object[]{encoding, e.getMessage()});
             }
@@ -507,7 +503,7 @@ public final class Native implements Version {
      * @return A {@link List} of all the strings in the buffer
      */
     public static List<String> toStringList(char[] buf, int offset, int len) {
-        List<String> list = new ArrayList<String>();
+        List<String> list = new ArrayList<>();
         int lastPos = offset;
         int maxPos = offset + len;
         for (int curPos = offset; curPos < maxPos; curPos++) {
@@ -681,7 +677,7 @@ public final class Native implements Version {
                         && Modifier.isStatic(field.getModifiers())) {
                         // Ensure the field gets initialized by reading it
                         field.setAccessible(true); // interface might be private
-                        libraries.put(cls, new WeakReference<Object>(field.get(null)));
+                        libraries.put(cls, new WeakReference<>(field.get(null)));
                         break;
                     }
                 }
@@ -775,7 +771,7 @@ public final class Native implements Version {
             throw new IllegalArgumentException("OPTIONS must be a public field of type java.util.Map (" + e + "): " + mappingClass);
         }
         // Make a clone of the original options
-        libraryOptions = new HashMap<String, Object>(libraryOptions);
+        libraryOptions = new HashMap<>(libraryOptions);
         if (!libraryOptions.containsKey(Library.OPTION_TYPE_MAPPER)) {
             libraryOptions.put(Library.OPTION_TYPE_MAPPER, lookupField(mappingClass, "TYPE_MAPPER", TypeMapper.class));
         }
@@ -1580,7 +1576,7 @@ public final class Native implements Version {
             if(Platform.isMac()) {
                 // https://developer.apple.com/library/archive/documentation/FileManagement/Conceptual/FileSystemProgrammingGuide/MacOSXDirectories/MacOSXDirectories.html
                 jnatmp = new File(System.getProperty("user.home"), "Library/Caches/JNA/temp");
-            } else if (Platform.isLinux() || Platform.isSolaris() || Platform.isAIX() || Platform.isFreeBSD() || Platform.isNetBSD() || Platform.isOpenBSD() || Platform.iskFreeBSD()) {
+            } else if (Platform.isLinux() || Platform.isSolaris() || Platform.isAIX() || Platform.isDragonFlyBSD() || Platform.isFreeBSD() || Platform.isNetBSD() || Platform.isOpenBSD() || Platform.iskFreeBSD()) {
                 // https://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html
                 // The XDG_CACHE_DIR is expected to be per user
                 String xdgCacheEnvironment = System.getenv("XDG_CACHE_HOME");
@@ -1802,8 +1798,8 @@ public final class Native implements Version {
         CallbackReference.setCallbackThreadInitializer(cb, initializer);
     }
 
-    private static final Map<Class<?>, long[]> registeredClasses = new WeakHashMap<Class<?>, long[]>();
-    private static final Map<Class<?>, NativeLibrary> registeredLibraries = new WeakHashMap<Class<?>, NativeLibrary>();
+    private static final Map<Class<?>, long[]> registeredClasses = new WeakHashMap<>();
+    private static final Map<Class<?>, NativeLibrary> registeredLibraries = new WeakHashMap<>();
 
     private static void unregisterAll() {
         synchronized(registeredClasses) {
@@ -2036,7 +2032,7 @@ public final class Native implements Version {
     // method name, library name, call conv
     public static void register(Class<?> cls, NativeLibrary lib) {
         Method[] methods = cls.getDeclaredMethods();
-        List<Method> mlist = new ArrayList<Method>();
+        List<Method> mlist = new ArrayList<>();
         Map<String, ?> options = lib.getOptions();
         TypeMapper mapper = (TypeMapper) options.get(Library.OPTION_TYPE_MAPPER);
         boolean allowObjects = Boolean.TRUE.equals(options.get(Library.OPTION_ALLOW_OBJECTS));
@@ -2176,11 +2172,11 @@ public final class Native implements Version {
      * looking them up later.
      */
     private static Map<String, Object> cacheOptions(Class<?> cls, Map<String, ?> options, Object proxy) {
-        Map<String, Object> libOptions = new HashMap<String, Object>(options);
+        Map<String, Object> libOptions = new HashMap<>(options);
         libOptions.put(_OPTION_ENCLOSING_LIBRARY, cls);
         typeOptions.put(cls, libOptions);
         if (proxy != null) {
-            libraries.put(cls, new WeakReference<Object>(proxy));
+            libraries.put(cls, new WeakReference<>(proxy));
         }
 
         // If it's a direct mapping, AND implements a Library interface,
