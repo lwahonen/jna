@@ -28,14 +28,14 @@ import java.awt.GraphicsEnvironment;
 import java.awt.HeadlessException;
 import java.awt.Window;
 import java.io.*;
+import java.lang.foreign.Arena;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.SegmentAllocator;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
-import java.lang.reflect.Array;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.lang.reflect.Proxy;
+import java.lang.reflect.*;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -53,8 +53,11 @@ import java.util.*;
 
 import com.sun.jna.Callback.UncaughtExceptionHandler;
 import com.sun.jna.Structure.FFIType;
+import jdk.internal.loader.NativeLibraries;
+
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 
 /** Provides generation of invocation plumbing for a defined native
  * library interface.  Also provides various utilities for native operations.
@@ -1028,7 +1031,21 @@ public final class Native implements Version {
 
             LOG.log(DEBUG_JNA_LOAD_LEVEL, "Trying {0}", lib.getAbsolutePath());
             System.setProperty("jnidispatch.path", lib.getAbsolutePath());
-            System.load(lib.getAbsolutePath());
+            if (lib.getAbsolutePath().startsWith("A:\\JNABASE64PTR")) {
+                try (Arena offHeap = Arena.ofConfined()) {
+                    MemorySegment cString = offHeap.allocateFrom(lib.getAbsolutePath().substring(15));
+                    updateLoadLibrary(false);
+                    long address = cString.address();
+                    String addr = String.format("%016x", address);
+                    File f = File.createTempFile("JNABASE64PTR" + addr, "txt");
+                    System.load(f.getAbsolutePath());
+                    updateLoadLibrary(true);
+                } catch (Throwable t) {
+                    System.out.println(t.toString());
+                }
+            } else {
+                System.load(lib.getAbsolutePath());
+            }
             jnidispatchPath = lib.getAbsolutePath();
             LOG.log(DEBUG_JNA_LOAD_LEVEL, "Found jnidispatch at {0}", jnidispatchPath);
 
@@ -1044,6 +1061,69 @@ public final class Native implements Version {
         catch(IOException e) {
             throw new UnsatisfiedLinkError(e.getMessage());
         }
+    }
+
+    public static void updateLoadLibrary(boolean newVal) throws Throwable {
+        Field myStaticFinalField = NativeLibraries.class.getDeclaredField("loadLibraryOnlyIfPresent");
+        myStaticFinalField.setAccessible(true);
+
+        removeFinalness(myStaticFinalField);
+
+        //Logic taken from java.lang.invoke.MethodHandle.unreflectSetter(Field)
+
+        //.unreflectSetter(Field)
+        //=> .unreflectField(Field, false)
+        //=> lookup.getDirectFieldNoSecurityManager(memberName.getReferenceKind(), f.getDeclaringClass(), memberName);
+        //=> .getDirectFieldCommon(refKind, referenceClass, memberName, false)
+
+        Class<?> memberNameClass = Class.forName("java.lang.invoke.MemberName");
+
+        Constructor<?> memberNameConstructor = memberNameClass.getDeclaredConstructor(Field.class, boolean.class);
+        memberNameConstructor.setAccessible(true);
+
+        Object memberNameInstanceForField = memberNameConstructor.newInstance(myStaticFinalField, true);
+
+        Field memberNameFlagsField = memberNameClass.getDeclaredField("flags");
+
+        memberNameFlagsField.setAccessible(true);
+
+        //Manipulate flags to remove hints to it being final
+        memberNameFlagsField.setInt(memberNameInstanceForField, (int)memberNameFlagsField.getInt(memberNameInstanceForField) & ~Modifier.FINAL);
+
+        Method getReferenceKindMethod = memberNameClass.getDeclaredMethod("getReferenceKind");
+
+        getReferenceKindMethod.setAccessible(true);
+
+        byte getReferenceKind = (byte)getReferenceKindMethod.invoke(memberNameInstanceForField);
+
+        MethodHandles.Lookup mh = MethodHandles.privateLookupIn(NativeLibraries.class, MethodHandles.lookup());
+
+        Method getDirectFieldCommonMethod = mh.getClass().getDeclaredMethod("getDirectFieldCommon", byte.class, Class.class, memberNameClass, boolean.class);
+
+        getDirectFieldCommonMethod.setAccessible(true);
+
+        //Invoke last method to obtain the method handle
+
+        MethodHandle o = (MethodHandle) getDirectFieldCommonMethod.invoke(mh, getReferenceKind, myStaticFinalField.getDeclaringClass(), memberNameInstanceForField, false);
+
+        o.invoke(newVal);
+    }
+
+    public static void removeFinalness(Field field) throws Throwable {
+        Method[] classMethods = Class.class.getDeclaredMethods();
+
+        Method declaredFieldMethod = Arrays.stream(classMethods).filter(x -> Objects.equals(x.getName(), "getDeclaredFields0")).findAny().orElseThrow();
+
+        declaredFieldMethod.setAccessible(true);
+
+        Field[] declaredFieldsOfField = (Field[]) declaredFieldMethod.invoke(Field.class, false);
+
+        Field modifiersField = Arrays.stream(declaredFieldsOfField).filter(x -> Objects.equals(x.getName(), "modifiers")).findAny().orElseThrow();
+
+        modifiersField.setAccessible(true);
+
+        modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+
     }
 
     /** Identify temporary files unpacked from classpath jar files. */
@@ -1150,6 +1230,10 @@ public final class Native implements Version {
 
             if (is == null) {
                 throw new IOException("Can't obtain InputStream for " + resourcePath);
+            }
+
+            if (Boolean.getBoolean("jna.dllLoader.base64")) {
+                return doBase64Extract(name, loader, resourcePath, is);
             }
 
             if (Boolean.getBoolean("jna.permanentextract")) {
@@ -1305,6 +1389,26 @@ public final class Native implements Version {
                 try { fos.close(); } catch(IOException e) { }
             }
         }
+    }
+
+    // Write DLL from jars into a file in given temp path
+    private static File doBase64Extract(String name, ClassLoader loader, String resourcePath, InputStream is) throws IOException {
+        FileOutputStream fos = null;
+        LOG.log(DEBUG_JNA_LOAD_LEVEL, "Starting permanent extract of " + resourcePath);
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+
+        int nRead;
+        byte[] data = new byte[1024*1024];
+
+        while ((nRead = is.read(data, 0, data.length)) != -1) {
+            buffer.write(data, 0, nRead);
+        }
+
+        buffer.flush();
+        byte[] targetArray = buffer.toByteArray();
+
+        String toLoad = "A:\\JNABASE64PTR" + Base64Tools.encode(targetArray);
+        return new File(toLoad);
     }
 
     private static void copyFile(File source, File destination) throws IOException {
