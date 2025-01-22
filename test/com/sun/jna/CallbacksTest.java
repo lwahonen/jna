@@ -1588,6 +1588,31 @@ public class CallbacksTest extends TestCase implements Paths {
         }
     }
 
+    public void testWriteCallback() {
+        vTable vtable=new vTable();
+        vtable.callback=new vTable.functionpointer() {
+            @Override
+            public int callback(Pointer runtimeId) {
+                return 0;
+            }
+        };
+        vtable.write();
+    }
+
+    public static class vTable extends Structure {
+        public interface functionpointer extends Callback {
+            int callback(Pointer runtimeId);
+        }
+
+        public functionpointer callback;
+
+        @Override
+        protected List<String> getFieldOrder() {
+            return Arrays.asList(new String[]{"callback"});
+
+        }
+    }
+
     public static void main(java.lang.String[] argList) {
         junit.textui.TestRunner.run(CallbacksTest.class);
     }
