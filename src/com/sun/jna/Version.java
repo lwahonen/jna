@@ -24,6 +24,6 @@
 package com.sun.jna;
 interface Version {
     // Buildsystem replaces variables and compiled class will hold the right value
-    String VERSION = "7.0.0";
-    String VERSION_NATIVE = "7.0.0";
+    String VERSION = "TEMPLATE";
+    String VERSION_NATIVE = "TEMPLATE";
 }
