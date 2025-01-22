@@ -289,7 +289,7 @@ class ELFAnalyser {
             raf.getChannel().read(data, shoff);
 
             for(int i = 0; i < shnum; i++) {
-                data.position(i * shentsize);
+                ((Buffer)data).position(i * shentsize);
                 ByteBuffer header = data.slice();
                 header.order(data.order());
                 header.limit(shentsize);

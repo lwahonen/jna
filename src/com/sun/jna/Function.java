@@ -22,6 +22,7 @@
  */
 package com.sun.jna;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.Map;
@@ -49,6 +50,8 @@ import java.util.Map;
  * @see Pointer
  */
 public class Function extends Pointer {
+    public static TypeMapper globalFallbackMapper=null;
+
     /** Any argument which implements this interface will have the
      * {@link #read} method called immediately after function invocation.
      */
@@ -621,11 +624,49 @@ public class Function extends Pointer {
                 return ss[0].getPointer();
             }
         } else if (argClass.isArray()){
+            if(globalFallbackMapper != null) {
+                Pointer[] pointers=new Pointer[Array.getLength(arg)];
+                for (int i=0; i < pointers.length; i++) {
+                    Object item=Array.get(arg, i);
+                    Class<?> type=item.getClass();
+                    ToNativeConverter converter=globalFallbackMapper.getToNativeConverter(type);
+                    if (converter != null) {
+                        ToNativeContext context;
+                        if (invokingMethod != null) {
+                            context=new MethodParameterContext(this, args, index, invokingMethod);
+                        } else {
+                            context=new FunctionParameterContext(this, args, index);
+                        }
+                        item=converter.toNative(item, context);
+                        pointers[i]=(Pointer) item;
+                    }
+                    else {
+                        throw new IllegalArgumentException("Unsupported array element type: "
+                                + item.getClass());
+                    }
+                }
+                return new PointerArray(pointers);
+            }
             throw new IllegalArgumentException("Unsupported array argument type: "
                                                + argClass.getComponentType());
         } else if (allowObjects) {
             return arg;
         } else if (!Native.isSupportedNativeType(arg.getClass())) {
+            if(globalFallbackMapper != null) {
+                Class<?> type=arg.getClass();
+                ToNativeConverter converter=globalFallbackMapper.getToNativeConverter(type);
+                if (converter != null) {
+                    ToNativeContext context;
+                    if (invokingMethod != null) {
+                        context=new MethodParameterContext(this, args, index, invokingMethod);
+                    } else {
+                        context=new FunctionParameterContext(this, args, index);
+                    }
+                    arg=converter.toNative(arg, context);
+                    return arg;
+                }
+            }
+
             throw new IllegalArgumentException("Unsupported argument type "
                                                + arg.getClass().getName()
                                                + " at parameter " + index

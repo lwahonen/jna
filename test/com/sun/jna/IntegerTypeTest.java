@@ -31,13 +31,20 @@ public class IntegerTypeTest extends TestCase {
 
     public static class Sized extends IntegerType {
         private static final long serialVersionUID = 1L;
-        public Sized() { this(4, 0); }
-        public Sized(int size, long value) { super(size, value); }
+
+        public Sized() {
+            this(4, 0);
+        }
+
+        public Sized(int size, long value) {
+            super(size, value);
+        }
     }
 
     public void testWriteNull() {
         class NTStruct extends Structure {
             public Sized field;
+
             @Override
             protected List<String> getFieldOrder() {
                 return Arrays.asList("field");
@@ -46,9 +53,11 @@ public class IntegerTypeTest extends TestCase {
         NTStruct s = new NTStruct();
         assertNotNull("Field not initialized", s.field);
     }
+
     public void testReadNull() {
         class NTStruct extends Structure {
             public Sized field;
+
             @Override
             protected List<String> getFieldOrder() {
                 return Arrays.asList("field");
@@ -60,34 +69,32 @@ public class IntegerTypeTest extends TestCase {
     }
 
     public void testCheckArgumentSize() {
-        for (int i=1;i <= 8;i*=2) {
-            long value = -1L << (i*8-1);
+        for (int i = 1; i <= 8; i *= 2) {
+            long value = -1L << (i * 8 - 1);
             new Sized(i, value);
             new Sized(i, -1);
             new Sized(i, 0);
             new Sized(i, 1);
 
-            value = 1L << (i*8-1);
+            value = 1L << (i * 8 - 1);
             new Sized(i, value);
-            value = -1L & ~(-1L << (i*8));
+            value = -1L & ~(-1L << (i * 8));
             new Sized(i, value);
 
             if (i < 8) {
                 try {
-                    value = 1L << (i*8);
+                    value = 1L << (i * 8);
                     new Sized(i, value);
                     fail("Value exceeding size (" + i + ") should fail");
-                }
-                catch(IllegalArgumentException e) {
+                } catch (IllegalArgumentException e) {
                 }
             }
             if (i < 8) {
                 try {
-                    value = -1L << (i*8);
+                    value = -1L << (i * 8);
                     new Sized(i, value);
                     fail("Negative value (" + value + ") exceeding size (" + i + ") should fail");
-                }
-                catch(IllegalArgumentException e) {
+                } catch (IllegalArgumentException e) {
                 }
             }
         }
@@ -110,20 +117,17 @@ public class IntegerTypeTest extends TestCase {
         try {
             new TestType(1, 0x100L);
             fail("Exception should be thrown if byte value out of bounds");
-        }
-        catch(IllegalArgumentException e) {
+        } catch (IllegalArgumentException e) {
         }
         try {
             new TestType(2, 0x10000L);
             fail("Exception should be thrown if short value out of bounds");
-        }
-        catch(IllegalArgumentException e) {
+        } catch (IllegalArgumentException e) {
         }
         try {
             new TestType(4, 0x100000000L);
             fail("Exception should be thrown if int value out of bounds");
-        }
-        catch(IllegalArgumentException e) {
+        } catch (IllegalArgumentException e) {
         }
     }
 
@@ -161,6 +165,21 @@ public class IntegerTypeTest extends TestCase {
         assertEquals("Mismatched same value comparison", 0, IntegerType.compare(v1, v1));
         assertEquals("Mismatched natural order comparison", (-1), IntegerType.compare(v1, v2));
         assertEquals("Mismatched reversed order comparison", 1, IntegerType.compare(v2, v1));
+    }
+
+    public void testEquals() {
+        NativeLong l = new NativeLong(5);
+        assertTrue("Mismatched equal with value type", l.equals(5));
+        assertTrue("Mismatched equal with NativeLong", l.equals(new NativeLong(5)));
+        assertFalse("Mismatched not equal with value type", l.equals(7));
+        assertFalse("Mismatched not equal with NativeLong", l.equals(new NativeLong(7)));
+    }
+
+    public void testCompare() {
+        NativeLong l = new NativeLong(5);
+        assertEquals("Mismatched equal native value comparison", 0, IntegerType.compare(l, 5));
+        assertTrue("Mismatched larger native value comparison", (IntegerType.compare(l, 7) < 0));
+        assertTrue("Mismatched smaller native value comparison", (IntegerType.compare(l, 4) > 0));
     }
 
     public static void main(String[] args) {
