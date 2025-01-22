@@ -47,7 +47,7 @@ public class W32APITypeMapper extends DefaultTypeMapper {
     /** Default TypeMapper to use - depends on the value of {@code w32.ascii} system property */
     public static final TypeMapper DEFAULT = Boolean.getBoolean("w32.ascii") ? ASCII : UNICODE;
 
-    protected W32APITypeMapper(boolean unicode) {
+    public W32APITypeMapper(boolean unicode) {
         if (unicode) {
             TypeConverter stringConverter = new TypeConverter() {
                 @Override

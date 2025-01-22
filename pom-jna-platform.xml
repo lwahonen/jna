@@ -13,6 +13,11 @@
   <description>Java Native Access Platform</description>
   <url>https://github.com/java-native-access/jna</url>
 
+    <properties>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <maven.compiler.source>1.8</maven.compiler.source>
+    </properties>
+    
   <licenses>
     <license>
       <name>LGPL-2.1-or-later</name>

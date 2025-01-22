@@ -27,12 +27,7 @@ import java.awt.Component;
 import java.awt.GraphicsEnvironment;
 import java.awt.HeadlessException;
 import java.awt.Window;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FilenameFilter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Array;
@@ -51,15 +46,10 @@ import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.UnsupportedCharsetException;
 import java.security.AccessController;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedAction;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.StringTokenizer;
-import java.util.WeakHashMap;
+import java.util.*;
 
 import com.sun.jna.Callback.UncaughtExceptionHandler;
 import com.sun.jna.Structure.FFIType;
@@ -141,8 +131,8 @@ public final class Native implements Version {
         DEFAULT_CHARSET = nativeCharset;
         DEFAULT_ENCODING = nativeCharset.name();
     }
-    public static final boolean DEBUG_LOAD = Boolean.getBoolean("jna.debug_load");
-    public static final boolean DEBUG_JNA_LOAD = Boolean.getBoolean("jna.debug_load.jna");
+    public static boolean DEBUG_LOAD = Boolean.getBoolean("jna.debug_load");
+    public static boolean DEBUG_JNA_LOAD = Boolean.getBoolean("jna.debug_load.jna");
     private final static Level DEBUG_JNA_LOAD_LEVEL = DEBUG_JNA_LOAD ? Level.INFO : Level.FINE;
 
     // Used by tests, do not remove
@@ -1157,9 +1147,15 @@ public final class Native implements Version {
         }
         else if (!Boolean.getBoolean("jna.nounpack")) {
             InputStream is = url.openStream();
+
             if (is == null) {
                 throw new IOException("Can't obtain InputStream for " + resourcePath);
             }
+
+            if (Boolean.getBoolean("jna.permanentextract")) {
+                return doPermanentExtract(name, loader, resourcePath, is);
+            }
+
 
             FileOutputStream fos = null;
             try {
@@ -1167,19 +1163,48 @@ public final class Native implements Version {
                 // Let Java pick the suffix, except on windows, to avoid
                 // problems with Web Start.
                 File dir = getTempDir();
-                lib = File.createTempFile(JNA_TMPLIB_PREFIX, Platform.isWindows()?".dll":null, dir);
-                if (!Boolean.getBoolean("jnidispatch.preserve")) {
-                    lib.deleteOnExit();
-                }
-                LOG.log(DEBUG, "Extracting library to {0}", lib.getAbsolutePath());
-                fos = new FileOutputStream(lib);
+
+                File temp = File.createTempFile(JNA_TMPLIB_PREFIX, ".tmp", dir);
+                temp.deleteOnExit();
+                fos = new FileOutputStream(temp);
+                LOG.log(DEBUG, "Extracting library to temp file {0}", temp.getAbsolutePath());
+
                 int count;
                 byte[] buf = new byte[1024];
                 while ((count = is.read(buf, 0, buf.length)) > 0) {
                     fos.write(buf, 0, count);
                 }
+                fos.close();
+                fos = null;
+
+                lib=generateTempName(dir);
+                LOG.log(DEBUG, "Moving temp file to final name {0} attempt 1", lib.getAbsolutePath());
+
+                boolean moveError = !temp.renameTo(lib);
+                if (moveError) {
+                    LOG.log(Level.WARNING, String.format("Moving temp file %s to final name %s failed, sleeping for one second and trying one more time with a new random name", temp.getAbsolutePath(), lib.getAbsolutePath()));
+                    Thread.sleep(1000);
+
+                    lib = generateTempName(dir);
+                    LOG.log(DEBUG, "Moving temp file to final name {0}, attempt 2", lib.getAbsolutePath());
+
+                    moveError = !temp.renameTo(lib);
+                    if (moveError) {
+                        // We can't move our temp file. Maybe we can copy the bits?
+                        copyFile(temp, lib);
+                    }
+                }
+                if (!Boolean.getBoolean("jnidispatch.preserve")) {
+                    lib.deleteOnExit();
+                }
+                if (DEBUG_JNA_LOAD) {
+                    LOG.log(DEBUG_JNA_LOAD_LEVEL, "DLL created without problems "+lib.getAbsolutePath());
+                }
             }
             catch(IOException e) {
+                throw new IOException("Failed to create temporary file for " + name + " library: " + e.getMessage());
+            }
+            catch(InterruptedException e) {
                 throw new IOException("Failed to create temporary file for " + name + " library: " + e.getMessage());
             }
             finally {
@@ -1190,6 +1215,231 @@ public final class Native implements Version {
             }
         }
         return lib;
+    }
+
+    // Generate a random filename in given directory, loop until file doesn't exist
+    private static File generateTempName(File dir) throws IOException {
+        File lib = null;
+        Random random = new Random();
+        do {
+            long n = random.nextLong();
+            if (n == Long.MIN_VALUE) {
+                n = 0;      // corner case
+            } else {
+                n = Math.abs(n);
+            }
+            String tempLibName = dir.getCanonicalPath() + "/" + JNA_TMPLIB_PREFIX + Long.toString(n);
+            if (Platform.isWindows())
+                tempLibName += ".dll";
+            lib = new File(tempLibName);
+        } while (lib.exists());
+        return lib;
+    }
+
+    // Write DLL from jars into a file in given temp path
+    private static File doPermanentExtract(String name, ClassLoader loader, String resourcePath, InputStream is) throws IOException {
+        FileOutputStream fos = null;
+        try {
+            LOG.log(DEBUG_JNA_LOAD_LEVEL, "Starting permanent extract of "+ resourcePath);
+            String libSHA1=getHashForFile(loader.getResourceAsStream(resourcePath));
+            LOG.log(DEBUG_JNA_LOAD_LEVEL, "DLL hash is "+libSHA1);
+
+            File dir = getTempDir();
+            String libName= name.substring(name.lastIndexOf('/')+1, name.length());
+            if(!libName.toLowerCase().endsWith(".dll") && Platform.isWindows() )
+                libName+=".dll";
+            String pathname = dir.getCanonicalPath() + "/sha1_" + libSHA1 + "_" + libName;
+            File libMaybe=new File(pathname);
+            if(libMaybe.exists())
+            {
+                LOG.log(DEBUG_JNA_LOAD_LEVEL, "Using existing file " + libMaybe.getAbsolutePath());
+                return libMaybe;
+            }
+            File temp=File.createTempFile(JNA_TMPLIB_PREFIX, Platform.isWindows() ? ".tmp" : null, dir);
+            temp.deleteOnExit();
+            fos = new FileOutputStream(temp);
+            int count;
+            byte[] buf = new byte[1024];
+            while ((count = is.read(buf, 0, buf.length)) > 0) {
+                fos.write(buf, 0, count);
+            }
+            fos.close();
+            LOG.log(DEBUG_JNA_LOAD_LEVEL, "All bytes have been written to temp file " + temp.getAbsolutePath()+", now renaming to "+libMaybe.getAbsolutePath());
+
+            boolean moveError = !temp.renameTo(libMaybe);
+            if(moveError)
+            {
+                if(libMaybe.exists())
+                {
+                    LOG.log(Level.WARNING, "Had a race happen with " + libMaybe.getAbsolutePath() + ", using existing");
+                } else {
+                    LOG.log(Level.SEVERE, String.format("Unable to move %s to %s", temp.getAbsolutePath(), libMaybe.getAbsolutePath()));
+                    // We can't move the file over, maybe we can create a new file and write all the bytes into it?
+                    try{
+                        copyFile(temp, libMaybe);
+                        LOG.log(Level.SEVERE, "DLL created with problems " + libMaybe.getAbsolutePath());
+                        if (!temp.delete())
+                            temp.deleteOnExit();
+                        return libMaybe;
+                    } catch (Throwable t) {
+                        throw new IOException("Unable to move or copy " + temp.getAbsolutePath() + " to " + libMaybe.getAbsolutePath());
+                    }
+                }
+            } else
+            {
+                LOG.log(DEBUG_JNA_LOAD_LEVEL, "DLL created without problems "+libMaybe.getAbsolutePath());
+            }
+            return libMaybe;
+        } catch (NoSuchAlgorithmException e) {
+            throw new IOException("Failed to create temporary file for " + name + " library: " + e.getMessage());
+        }
+        catch (IOException e)
+        {
+            throw new IOException("Failed to create temporary file for " + name + " library: " + e.getMessage());
+        }
+        finally {
+            if(is != null) {
+                try { is.close(); } catch (IOException e) {  }
+            }
+            if (fos != null) {
+                try { fos.close(); } catch(IOException e) { }
+            }
+        }
+    }
+
+    private static void copyFile(File source, File destination) throws IOException {
+        OutputStream out = null;
+        InputStream in = null;
+        try {
+            in = new BufferedInputStream(new FileInputStream(source));
+            out = new BufferedOutputStream(new FileOutputStream(destination));
+
+            byte[] buffer = new byte[65536];
+            int lengthRead;
+            while ((lengthRead = in.read(buffer)) > 0) {
+                out.write(buffer, 0, lengthRead);
+            }
+            out.flush();
+            in.close();
+            out.close();
+            in = null;
+            out = null;
+        } finally {
+            if (out != null)
+                out.close();
+            if (in != null)
+                in.close();
+        }
+    }
+
+    public static Object loadFromResourcePath(String name, ClassLoader loader) throws IOException {
+
+        final Level DEBUG = (DEBUG_LOAD
+                || (DEBUG_JNA_LOAD && name.contains("jnidispatch"))) ? Level.INFO : Level.FINE;
+        if (loader == null) {
+            loader = Thread.currentThread().getContextClassLoader();
+            // Context class loader is not guaranteed to be set
+            if (loader == null) {
+                loader = Native.class.getClassLoader();
+            }
+        }
+        LOG.log(DEBUG, "Looking in classpath from {0} for {1}", new Object[]{loader, name});
+        String libname = name.startsWith("/") ? name : NativeLibrary.mapSharedLibraryName(name);
+        String resourcePath = name.startsWith("/") ? name : Platform.RESOURCE_PREFIX + "/" + libname;
+        if (resourcePath.startsWith("/")) {
+            resourcePath = resourcePath.substring(1);
+        }
+        URL url = loader.getResource(resourcePath);
+        if (url == null && resourcePath.startsWith(Platform.RESOURCE_PREFIX)) {
+            // If not found with the standard resource prefix, try without it
+            url = loader.getResource(libname);
+        }
+        if (url == null) {
+            String path = System.getProperty("java.class.path");
+            if (loader instanceof URLClassLoader) {
+                path = Arrays.asList(((URLClassLoader)loader).getURLs()).toString();
+            }
+            throw new IOException("Native library (" + resourcePath + ") not found in resource path (" + path + ")");
+        }
+        LOG.log(DEBUG, "Found library resource at {0}", url);
+
+        File lib = null;
+        if (url.getProtocol().toLowerCase().equals("file")) {
+            try {
+                lib = new File(new URI(url.toString()));
+            }
+            catch(URISyntaxException e) {
+                lib = new File(url.getPath());
+            }
+            LOG.log(DEBUG, "Looking in {0}", lib.getAbsolutePath());
+            if (!lib.exists()) {
+                throw new IOException("File URL " + url + " could not be properly decoded");
+            }
+        }
+        else if (!Boolean.getBoolean("jna.nounpack"))
+        {
+            InputStream is=loader.getResourceAsStream(resourcePath);
+            if(is == null)
+            {
+                throw new IOException("Can't obtain InputStream for " + resourcePath);
+            }
+
+            try {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                // Suffix is required on windows, or library fails to load
+                // Let Java pick the suffix, except on windows, to avoid
+                // problems with Web Start.
+                LOG.log(DEBUG, "Extracting library to temp buffer");
+
+                int count;
+                byte[] buf = new byte[1024];
+                while ((count = is.read(buf, 0, buf.length)) > 0) {
+                    baos.write(buf, 0, count);
+                }
+                byte[] ret=baos.toByteArray();
+                baos.close();
+
+                if (DEBUG_JNA_LOAD) {
+                    LOG.log(DEBUG_JNA_LOAD_LEVEL, "DLL streamed to byte array without problems, byte count "+ret.length);
+                }
+                return ret;
+            }
+            catch(IOException e) {
+                throw new IOException("Failed to create temporary file for " + name + " library: " + e.getMessage());
+            }
+            finally {
+                try { is.close(); } catch(IOException e) { }
+            }
+        }
+        return lib;
+    }
+
+    private static String getHashForFile(InputStream is) throws NoSuchAlgorithmException, IOException
+    {
+        try
+        {
+            MessageDigest messageDigest=null;
+            messageDigest=MessageDigest.getInstance("SHA1");
+            final byte[] buffer=new byte[1024];
+            int read=0;
+            while((read=is.read(buffer)) > 0)
+            {
+                messageDigest.update(buffer, 0, read);
+            }
+
+            // Convert the byte to hex format
+            Formatter formatter=new Formatter();
+            for(final byte b : messageDigest.digest())
+            {
+                formatter.format("%02x", b);
+            }
+            return formatter.toString();
+        } finally
+        {
+            if(is != null)
+                is.close();
+            is=null;
+        }
     }
 
     /**
