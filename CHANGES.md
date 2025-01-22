@@ -2,8 +2,29 @@ NOTE: as of JNA 4.0, JNA is now dual-licensed under LGPL and AL 2.0 (see LICENSE
 
 NOTE: JNI native support is typically incompatible between minor versions, and almost always incompatible between major versions.
 
-Next Release (5.15.0)
+Next Release (5.17.0)
 =====================
+
+Features
+--------
+
+Bug Fixes
+---------
+
+
+Release 5.16.0
+==============
+
+Features
+--------
+* [#1626](https://github.com/java-native-access/jna/pull/1626): Add caching of field list and field validation in `Structure` along with more efficient reentrant read-write locking instead of synchronized() blocks - [@BrettWooldridge](https://github.com/brettwooldridge)
+
+Bug Fixes
+---------
+* [#1618](https://github.com/java-native-access/jna/issues/1618): Fix calls to jnidispatch on Android with 16KB page size - [@Thomyrock](https://github.com/Thomyrock)
+
+Release 5.15.0
+==============
 
 Features
 --------
@@ -12,12 +33,14 @@ Features
 * [#1595](https://github.com/java-native-access/jna/pull/1595): Add `IsProcessorFeaturePresent` to `c.s.j.p.win32.Kernel32` - [@dbwiddis](https://github.com/dbwiddis).
 * [#1602](https://github.com/java-native-access/jna/pull/1602): Add `XMoveWindow`, `XResizeWindow`, `XMoveResizeWindow`, `XRaiseWindow`, `XLowerWindow` X11 calls to `c.s.j.p.unix.X11` - [@vinceh121](https://github.com/vinceh121).
 * [#1613](https://github.com/java-native-access/jna/issues/1613): Added static helper method `Native#getNativeLibrary' for getting the underlying NativeLibrary instance from a Library interface instance or from a "registered" class - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1624](https://github.com/java-native-access/jna/pull/1624): Enable linker build-id for android builds - [@mstyura](https://github.com/mstyura).
 
 Bug Fixes
 ---------
 * [#1579](https://github.com/java-native-access/jna/issues/1579): Fix analysis of ELF binary on arm systems running with a java ELF binary without section table headers (java8 on armv7 NAS) - [@matthiasblaesing](https://github.com/matthiasblaesing).
 * [#1586](https://github.com/java-native-access/jna/issues/1586): Fix free_callback JNI weak reference leak - [@xiezhaokun](https://github.com/xiezhaokun).
 * [6486c90d913a413f247eef84742ce3c474738933](https://github.com/java-native-access/jna/commit/6486c90d913a413f247eef84742ce3c474738933): Check CallbackReference#cbstruct for null when checking existing Reference - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1622](https://github.com/java-native-access/jna/issues/1622): Add "linux-riscv64" entry to OSGI Bundle-NativeCode header in MANIFEST.MF  - [@matthiasblaesing](https://github.com/matthiasblaesing).
 
 Release 5.14.0
 ==============
