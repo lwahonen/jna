@@ -33,6 +33,7 @@ import java.lang.ref.WeakReference;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Proxy;
@@ -1156,6 +1157,9 @@ public final class Native implements Version {
                 return doPermanentExtract(name, loader, resourcePath, is);
             }
 
+            if (Boolean.getBoolean("jna.inmemorylibraries")) {
+                return doInMemoryLibrary(name, loader, resourcePath, is);
+            }
 
             FileOutputStream fos = null;
             try {
@@ -1304,6 +1308,46 @@ public final class Native implements Version {
             if (fos != null) {
                 try { fos.close(); } catch(IOException e) { }
             }
+        }
+    }
+
+
+    // Write DLL from jars into a memory buffer and return a faux file name
+    private static File doInMemoryLibrary(String name, ClassLoader loader, String resourcePath, InputStream is) throws IOException {
+        try {
+            LOG.log(DEBUG_JNA_LOAD_LEVEL, "Starting in-memory extract of " + resourcePath);
+            String libSHA1 = getHashForFile(loader.getResourceAsStream(resourcePath));
+            LOG.log(DEBUG_JNA_LOAD_LEVEL, "DLL hash is " + libSHA1);
+
+            File dir = getTempDir();
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            int count;
+            byte[] buf = new byte[1024];
+            while ((count = is.read(buf, 0, buf.length)) > 0) {
+                bos.write(buf, 0, count);
+            }
+
+            long data = 0;
+
+            Class<?> c = Class.forName("Win32Api");
+            if (c == null)
+                return null;
+            Method methos = c.getMethod("ByteArrayToPointer", byte[].class);
+            if (methos == null)
+                return null;
+            data = (long) methos.invoke(null, bos.toByteArray());
+
+
+            File temp = new File("INMEMORYANCHOR_" + Long.toUnsignedString(data)+".dll");
+            temp.createNewFile();
+            RandomAccessFile r = new RandomAccessFile(temp, "rw");
+            r.write(Long.toUnsignedString(data).getBytes());
+            r.close();
+            temp.deleteOnExit();
+            return temp;
+        } catch (NoSuchAlgorithmException | ClassNotFoundException | InvocationTargetException | NoSuchMethodException |
+                 IllegalAccessException e) {
+            return null;
         }
     }
 
