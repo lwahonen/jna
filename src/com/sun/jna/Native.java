@@ -1049,7 +1049,7 @@ public final class Native implements Version {
 
     /** Identify temporary files unpacked from classpath jar files. */
     static boolean isUnpacked(File file) {
-        return file.getName().startsWith(JNA_TMPLIB_PREFIX);
+        return file.getName().startsWith(JNA_TMPLIB_PREFIX) || file.getName().startsWith("INMEMORYANCHOR_");
     }
 
     /** Attempt to extract a native library from the current resource path,
@@ -1338,11 +1338,8 @@ public final class Native implements Version {
             data = (long) methos.invoke(null, bos.toByteArray());
 
 
-            File temp = new File("INMEMORYANCHOR_" + Long.toUnsignedString(data)+".dll");
+            File temp = new File(dir + "/INMEMORYANCHOR_" + Long.toUnsignedString(data) + ".txt");
             temp.createNewFile();
-            RandomAccessFile r = new RandomAccessFile(temp, "rw");
-            r.write(Long.toUnsignedString(data).getBytes());
-            r.close();
             temp.deleteOnExit();
             return temp;
         } catch (NoSuchAlgorithmException | ClassNotFoundException | InvocationTargetException | NoSuchMethodException |
