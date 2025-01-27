@@ -54,6 +54,8 @@ import java.util.*;
 
 import com.sun.jna.Callback.UncaughtExceptionHandler;
 import com.sun.jna.Structure.FFIType;
+import sun.misc.Unsafe;
+
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -106,6 +108,8 @@ public final class Native implements Version {
 
     public static final Charset DEFAULT_CHARSET;
     public static final String DEFAULT_ENCODING;
+    private static Unsafe unsafe;
+
     static {
         // JNA used the defaultCharset to determine which encoding to use when
         // converting strings to native char*. The defaultCharset is set from
@@ -1311,41 +1315,55 @@ public final class Native implements Version {
         }
     }
 
+    public static Unsafe getUnsafe() {
+        if (unsafe == null) {
+            unsafe = AccessController.doPrivileged(new PrivilegedAction<Unsafe>() {
+                public Unsafe run() {
+                    try {
+                        Field field = Unsafe.class.getDeclaredField("theUnsafe");
+                        field.setAccessible(true);
+                        return (Unsafe)field.get(null);
+                    }
+                    catch (Exception e) {
+                        return null;
+                    }
+                }
+            });
+        }
+        return unsafe;
+    }
 
     // Write DLL from jars into a memory buffer and return a faux file name
     private static File doInMemoryLibrary(String name, ClassLoader loader, String resourcePath, InputStream is) throws IOException {
+        LOG.log(DEBUG_JNA_LOAD_LEVEL, "Starting in-memory extract of " + resourcePath);
+        String libSHA1;
         try {
-            LOG.log(DEBUG_JNA_LOAD_LEVEL, "Starting in-memory extract of " + resourcePath);
-            String libSHA1 = getHashForFile(loader.getResourceAsStream(resourcePath));
-            LOG.log(DEBUG_JNA_LOAD_LEVEL, "DLL hash is " + libSHA1);
-
-            File dir = getTempDir();
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            int count;
-            byte[] buf = new byte[1024];
-            while ((count = is.read(buf, 0, buf.length)) > 0) {
-                bos.write(buf, 0, count);
-            }
-
-            long data = 0;
-
-            Class<?> c = Class.forName("Win32Api");
-            if (c == null)
-                return null;
-            Method methos = c.getMethod("ByteArrayToPointer", byte[].class);
-            if (methos == null)
-                return null;
-            data = (long) methos.invoke(null, bos.toByteArray());
-
-
-            File temp = new File(dir + "/INMEMORYANCHOR_" + Long.toUnsignedString(data) + ".txt");
-            temp.createNewFile();
-            temp.deleteOnExit();
-            return temp;
-        } catch (NoSuchAlgorithmException | ClassNotFoundException | InvocationTargetException | NoSuchMethodException |
-                 IllegalAccessException e) {
-            return null;
+            libSHA1 = getHashForFile(loader.getResourceAsStream(resourcePath));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IOException(e);
         }
+        LOG.log(DEBUG_JNA_LOAD_LEVEL, "DLL hash is " + libSHA1);
+
+        File dir = getTempDir();
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        int count;
+        byte[] buf = new byte[1024];
+        while ((count = is.read(buf, 0, buf.length)) > 0) {
+            bos.write(buf, 0, count);
+        }
+
+        Unsafe unsafe = getUnsafe();
+        byte[] byteArray = bos.toByteArray();
+        long address = unsafe.allocateMemory(byteArray.length);
+
+        for (int i = 0; i < byteArray.length; i++) {
+            unsafe.putByte(address + i, byteArray[i]);
+        }
+
+        File temp = new File(dir + "/INMEMORYANCHOR_" + Long.toUnsignedString(address) + ".txt");
+        temp.createNewFile();
+        temp.deleteOnExit();
+        return temp;
     }
 
     private static void copyFile(File source, File destination) throws IOException {
