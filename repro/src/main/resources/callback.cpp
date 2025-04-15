@@ -10,7 +10,7 @@ extern "C" __declspec(dllexport) void testGuid(void * callback) {
         return;
     }
     OutputDebugStringA("Created GUID successfully, calling callback");
-    auto ret = ((HRESULT(__stdcall*)(GUID, int))callback)(guid,0);
+    auto ret = ((HRESULT(__stdcall*)(GUID))callback)(guid);
     if (FAILED(ret)) {
         OutputDebugStringA("Callback failed");
     } else {
