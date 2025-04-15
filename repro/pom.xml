@@ -1,0 +1,71 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" 
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.example</groupId>
+  <artifactId>jna-repro-crash</artifactId>
+  <version>1.0-SNAPSHOT</version>
+
+  <dependencies>
+    <!-- JNA dependency -->
+    <dependency>
+      <groupId>net.java.dev.jna</groupId>
+      <artifactId>jna</artifactId>
+      <version>5.17.0</version>
+    </dependency>
+    <!-- JNA Platform dependency -->
+    <dependency>
+      <groupId>net.java.dev.jna</groupId>
+      <artifactId>jna-platform</artifactId>
+      <version>5.17.0</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <!-- Resource configuration:
+     In addition to the default src/main/resources, we add an extra folder 'custom-resources'.
+     Files in this folder will be included in the final build on the classpath. -->
+    <resources>
+      <!-- Default resource directory -->
+      <resource>
+        <directory>src/main/resources</directory>
+      </resource>
+      <!-- Custom resource directory -->
+      <resource>
+        <directory>custom-resources</directory>
+        <filtering>false</filtering>
+      </resource>
+    </resources>
+    <plugins>
+      <!-- Maven Compiler Plugin configuration -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.8.1</version>
+        <configuration>
+          <source>8</source>
+          <target>8</target>
+        </configuration>
+      </plugin>
+      <!-- Optional: Maven Exec Plugin for easy application execution -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.0.0</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>java</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <!-- Change the mainClass to your fully qualified class name if needed -->
+          <mainClass>Crashes</mainClass>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>
