@@ -12,6 +12,13 @@ Bug Fixes
 ---------
 
 
+Release 5.18.1
+==============
+
+Bug Fixes
+---------
+* [#1686](https://github.com/java-native-access/jna/issues/1686): Fix `sortFields` race condition while getting fields - [@bendk](https://github.com/bendk).
+
 Release 5.18.0
 ==============
 
