@@ -8,6 +8,7 @@ Next Release (5.19.0)
 Features
 --------
 * [#1696](https://github.com/java-native-access/jna/pull/1696): Add `LARGE_INTEGER.ByValue` to `LARGE_INTEGER` in `WinNT.java` - [@baier233](https://github.com/baier233).
+* [#1697](https://github.com/java-native-access/jna/pull/1697): Add WlanApi module - [@eranl](https://github.com/eranl).
 
 Bug Fixes
 ---------
