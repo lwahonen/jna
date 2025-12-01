@@ -54,7 +54,6 @@ import java.util.*;
 
 import com.sun.jna.Callback.UncaughtExceptionHandler;
 import com.sun.jna.Structure.FFIType;
-import sun.misc.Unsafe;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -108,7 +107,10 @@ public final class Native implements Version {
 
     public static final Charset DEFAULT_CHARSET;
     public static final String DEFAULT_ENCODING;
-    private static Unsafe unsafe;
+    private static Object unsafe;
+    private static Method allocateMemoryMethod;
+    private static Method copyMemoryMethod;
+    private static long arrayByteBaseOffset;
 
     static {
         // JNA used the defaultCharset to determine which encoding to use when
@@ -1315,14 +1317,19 @@ public final class Native implements Version {
         }
     }
 
-    public static Unsafe getUnsafe() {
+    private static void initUnsafe() {
         if (unsafe == null) {
-            unsafe = AccessController.doPrivileged(new PrivilegedAction<Unsafe>() {
-                public Unsafe run() {
+            unsafe = AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                public Object run() {
                     try {
-                        Field field = Unsafe.class.getDeclaredField("theUnsafe");
+                        Class<?> unsafeClass = Class.forName("sun.misc.Unsafe");
+                        Field field = unsafeClass.getDeclaredField("theUnsafe");
                         field.setAccessible(true);
-                        return (Unsafe)field.get(null);
+                        Object theUnsafe = field.get(null);
+                        allocateMemoryMethod = unsafeClass.getMethod("allocateMemory", long.class);
+                        copyMemoryMethod = unsafeClass.getMethod("copyMemory", Object.class, long.class, Object.class, long.class, long.class);
+                        arrayByteBaseOffset = unsafeClass.getField("ARRAY_BYTE_BASE_OFFSET").getLong(null);
+                        return theUnsafe;
                     }
                     catch (Exception e) {
                         return null;
@@ -1330,7 +1337,6 @@ public final class Native implements Version {
                 }
             });
         }
-        return unsafe;
     }
 
     // Write DLL from jars into a memory buffer and return a faux file name
@@ -1352,12 +1358,15 @@ public final class Native implements Version {
             bos.write(buf, 0, count);
         }
 
-        Unsafe unsafe = getUnsafe();
+        initUnsafe();
         byte[] byteArray = bos.toByteArray();
-        long address = unsafe.allocateMemory(byteArray.length);
-
-        for (int i = 0; i < byteArray.length; i++) {
-            unsafe.putByte(address + i, byteArray[i]);
+        long address;
+        try {
+            address = (Long) allocateMemoryMethod.invoke(unsafe, (long) byteArray.length);
+            // copyMemory(src, srcOffset, dest, destOffset, length) - copy from byte[] to native memory
+            copyMemoryMethod.invoke(unsafe, byteArray, arrayByteBaseOffset, null, address, (long) byteArray.length);
+        } catch (Exception e) {
+            throw new IOException("Failed to allocate native memory", e);
         }
 
         File temp = new File(dir + "/INMEMORYANCHOR_" + Long.toUnsignedString(address) + ".txt");
