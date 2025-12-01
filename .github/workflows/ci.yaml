@@ -39,9 +39,9 @@ jobs:
         if: contains(matrix.os, 'macos')
         run: |
           brew update
-          brew install automake --force
-          brew install libtool --force
-          brew install texinfo --force
+          brew install automake --force || true
+          brew install libtool --force || true
+          brew install texinfo --force || true
       - name: Checkstyle
         if: contains(matrix.os, 'ubuntu') && contains(matrix.java, '8')
         run: |
