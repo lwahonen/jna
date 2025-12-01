@@ -1335,8 +1335,9 @@ public interface OaIdl {
             int paramCount = this.cParams.shortValue();
 
             // Read most fields except lprgelemdescParam
-            for (String field : new String[]{"memid", "lprgscode", "funckind", "invkind",
-                    "callconv", "cParamsOpt", "oVft", "cScodes", "elemdescFunc", "wFuncFlags"}) {
+            for (String field : new String[]{
+                "memid", "lprgscode", "funckind", "invkind",
+                "callconv", "cParamsOpt", "oVft", "cScodes", "elemdescFunc", "wFuncFlags"}) {
                 readField(field);
             }
 
@@ -1354,8 +1355,9 @@ public interface OaIdl {
         @Override
         public void write() {
             // Write most fields except lprgelemdescParam
-            for (String field : new String[]{"memid", "lprgscode", "funckind", "invkind",
-                    "callconv", "cParams", "cParamsOpt", "oVft", "cScodes", "elemdescFunc", "wFuncFlags"}) {
+            for (String field : new String[]{
+                "memid", "lprgscode", "funckind", "invkind",
+                "callconv", "cParams", "cParamsOpt", "oVft", "cScodes", "elemdescFunc", "wFuncFlags"}) {
                 writeField(field);
             }
 
