@@ -1408,14 +1408,10 @@ public interface OaIdl {
             public VARIANT.ByReference lpvarValue;
 
             public _VARDESC() {
-                setType("lpvarValue");
-                this.read();
             }
 
             public _VARDESC(Pointer pointer) {
                 super(pointer);
-                setType("lpvarValue");
-                this.read();
             }
 
             /**
@@ -1441,8 +1437,16 @@ public interface OaIdl {
 
         public VARDESC(Pointer pointer) {
             super(pointer);
-            this._vardesc.setType("lpvarValue");
             this.read();
+        }
+
+        @Override
+        public void read() {
+            readField("varkind");
+            if (_vardesc != null) {
+                _vardesc.setType(varkind.value == VARKIND.VAR_CONST ? "lpvarValue" : "oInst");
+            }
+            super.read();
         }
     }
 
