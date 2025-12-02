@@ -560,7 +560,6 @@ public interface OaIdl {
 
             public ByReference(Pointer pointer) {
                 super(pointer);
-                this.read();
             }
 
         }
