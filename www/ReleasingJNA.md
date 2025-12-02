@@ -12,13 +12,17 @@ JNA Release Process
 
 * Update versioned links in `README.md` (search for old version and replace with new version)
 
-* Update `CHANGES.md`: remove the `Next release` label and replace it with the final version number. While doing this also check if the version number matches the release: major version should incremented when API incompatible changes are made, minor version should be incremented when features are added, revision should be updated when bugfixes are done.
+* Update `CHANGES.md`: remove the `Next release` label and replace it with the final version number.
+  While doing this also check if the version number matches the release: major version should be
+  incremented when API incompatible changes are made, minor version should be incremented when
+  features are added, revision should be updated when bugfixes are done.
 
 * Run `ant -Drelease=true -Dmaven-release=true clean dist stage`
 
 * Commit and push generated files in `dist`, `CHANGES.md` and `README.md`.
 
-* Login to https://oss.sonatype.org and release the maven artifacts
+* Login to https://central.sonatype.com/ and create a new deployment using the
+  file `build/maven-artifacts.zip`.
 
 * Tag
   * Tag using the new version number (e.g. `git tag 4.2.1`)

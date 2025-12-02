@@ -54,6 +54,7 @@ import java.util.*;
 
 import com.sun.jna.Callback.UncaughtExceptionHandler;
 import com.sun.jna.Structure.FFIType;
+
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -106,6 +107,11 @@ public final class Native implements Version {
 
     public static final Charset DEFAULT_CHARSET;
     public static final String DEFAULT_ENCODING;
+    private static Object unsafe;
+    private static Method allocateMemoryMethod;
+    private static Method copyMemoryMethod;
+    private static long arrayByteBaseOffset;
+
     static {
         // JNA used the defaultCharset to determine which encoding to use when
         // converting strings to native char*. The defaultCharset is set from
@@ -1134,7 +1140,7 @@ public final class Native implements Version {
         LOG.log(DEBUG, "Found library resource at {0}", url);
 
         File lib = null;
-        if (url.getProtocol().toLowerCase().equals("file")) {
+        if (url.getProtocol().toLowerCase().equals("file") && !Boolean.getBoolean("jna.alwaysinmemory")) {
             try {
                 lib = new File(new URI(url.toString()));
             }
@@ -1311,41 +1317,62 @@ public final class Native implements Version {
         }
     }
 
+    private static void initUnsafe() {
+        if (unsafe == null) {
+            unsafe = AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                public Object run() {
+                    try {
+                        Class<?> unsafeClass = Class.forName("sun.misc.Unsafe");
+                        Field field = unsafeClass.getDeclaredField("theUnsafe");
+                        field.setAccessible(true);
+                        Object theUnsafe = field.get(null);
+                        allocateMemoryMethod = unsafeClass.getMethod("allocateMemory", long.class);
+                        copyMemoryMethod = unsafeClass.getMethod("copyMemory", Object.class, long.class, Object.class, long.class, long.class);
+                        arrayByteBaseOffset = unsafeClass.getField("ARRAY_BYTE_BASE_OFFSET").getLong(null);
+                        return theUnsafe;
+                    }
+                    catch (Exception e) {
+                        return null;
+                    }
+                }
+            });
+        }
+    }
 
     // Write DLL from jars into a memory buffer and return a faux file name
     private static File doInMemoryLibrary(String name, ClassLoader loader, String resourcePath, InputStream is) throws IOException {
+        LOG.log(DEBUG_JNA_LOAD_LEVEL, "Starting in-memory extract of " + resourcePath);
+        String libSHA1;
         try {
-            LOG.log(DEBUG_JNA_LOAD_LEVEL, "Starting in-memory extract of " + resourcePath);
-            String libSHA1 = getHashForFile(loader.getResourceAsStream(resourcePath));
-            LOG.log(DEBUG_JNA_LOAD_LEVEL, "DLL hash is " + libSHA1);
-
-            File dir = getTempDir();
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            int count;
-            byte[] buf = new byte[1024];
-            while ((count = is.read(buf, 0, buf.length)) > 0) {
-                bos.write(buf, 0, count);
-            }
-
-            long data = 0;
-
-            Class<?> c = Class.forName("Win32Api");
-            if (c == null)
-                return null;
-            Method methos = c.getMethod("ByteArrayToPointer", byte[].class);
-            if (methos == null)
-                return null;
-            data = (long) methos.invoke(null, bos.toByteArray());
-
-
-            File temp = new File(dir + "/INMEMORYANCHOR_" + Long.toUnsignedString(data) + ".txt");
-            temp.createNewFile();
-            temp.deleteOnExit();
-            return temp;
-        } catch (NoSuchAlgorithmException | ClassNotFoundException | InvocationTargetException | NoSuchMethodException |
-                 IllegalAccessException e) {
-            return null;
+            libSHA1 = getHashForFile(loader.getResourceAsStream(resourcePath));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IOException(e);
         }
+        LOG.log(DEBUG_JNA_LOAD_LEVEL, "DLL hash is " + libSHA1);
+
+        File dir = getTempDir();
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        int count;
+        byte[] buf = new byte[1024];
+        while ((count = is.read(buf, 0, buf.length)) > 0) {
+            bos.write(buf, 0, count);
+        }
+
+        initUnsafe();
+        byte[] byteArray = bos.toByteArray();
+        long address;
+        try {
+            address = (Long) allocateMemoryMethod.invoke(unsafe, (long) byteArray.length);
+            // copyMemory(src, srcOffset, dest, destOffset, length) - copy from byte[] to native memory
+            copyMemoryMethod.invoke(unsafe, byteArray, arrayByteBaseOffset, null, address, (long) byteArray.length);
+        } catch (Exception e) {
+            throw new IOException("Failed to allocate native memory", e);
+        }
+
+        File temp = new File(dir + "/INMEMORYANCHOR_" + Long.toUnsignedString(address) + ".txt");
+        temp.createNewFile();
+        temp.deleteOnExit();
+        return temp;
     }
 
     private static void copyFile(File source, File destination) throws IOException {

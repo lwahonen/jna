@@ -1181,8 +1181,31 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
      */
     @FieldOrder({"u"})
     public static class LARGE_INTEGER extends Structure implements Comparable<LARGE_INTEGER> {
+
         public static class ByReference extends LARGE_INTEGER implements
                 Structure.ByReference {
+
+            public ByReference() {
+                super();
+            }
+
+            public ByReference(long value) {
+                super(value);
+            }
+
+        }
+
+        public static class ByValue extends LARGE_INTEGER implements
+                Structure.ByValue {
+
+            public ByValue() {
+                super();
+            }
+
+            public ByValue(long value) {
+                super(value);
+            }
+
         }
 
         @FieldOrder({"LowPart", "HighPart"})
@@ -4420,4 +4443,6 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
     class TOKEN_ELEVATION extends Structure {
         public int TokenIsElevated;
     }
+
+    Guid.GUID GUID_CONSOLE_DISPLAY_STATE = new Guid.GUID("6FE69556-704A-47A0-8F24-C28D936FDA47");
 }

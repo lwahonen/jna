@@ -75,10 +75,8 @@
   <property name="platform-jpms-jar" value="${dist}/jna-platform-jpms.jar" />
 
   <!-- defined maven snapshots and staging repository id and url -->
-  <property name="maven-snapshots-repository-id" value="oss.sonatype.org" />
-  <property name="maven-snapshots-repository-url" value="https://oss.sonatype.org/content/repositories/snapshots/" />
-  <property name="maven-staging-repository-id" value="oss.sonatype.org" />
-  <property name="maven-staging-repository-url" value="https://oss.sonatype.org/service/local/staging/deploy/maven2/" />
+  <property name="maven-snapshots-repository-id" value="sonatype-central-portal-snapshots" />
+  <property name="maven-snapshots-repository-url" value="https://central.sonatype.com/repository/maven-snapshots/" />
 
   <!-- Miscellaneous -->
   <property name="build" value="build"/>
@@ -424,6 +422,7 @@ osname=macosx;processor=aarch64
               <attribute name="Multi-Release" value="true"/>
           </manifest>
           <manifest file="@{target}" mode="update" unless:true="@{module-info}">
+              <attribute name="ModuleMainClass" value="com.sun.jna.Native"/>
               <attribute name="Automatic-Module-Name" value="com.sun.jna"/>
           </manifest>
       </sequential>
@@ -433,6 +432,7 @@ osname=macosx;processor=aarch64
     <build-manifest target="${build}/manifest/module.mf" module-info="true"/>
     <build-manifest target="${build}/manifest/automatic.mf" module-info="false"/>
     <ModuleGenerator
+        mainClass="com.sun.jna.Native"
         targetFile="${build}/manifest/module-info.class"
         name="com.sun.jna"
         version="${jna.major}.${jna.minor}.${jna.revision}"
@@ -1235,6 +1235,10 @@ cd ..
       <propertyref prefix="java.awt.headless"/>
     </propertyset>
     <junit fork="${test.fork}" forkmode="${test.forkmode}" failureproperty="testfailure" tempdir="${build}">
+      <!-- let JVM ignore unknown flags -->
+      <jvmarg value="-XX:+IgnoreUnrecognizedVMOptions" />
+      <!-- enable JNI on JDK 24+ -->
+      <jvmarg value="--enable-native-access=ALL-UNNAMED" />
       <jvmarg if:set="test.jdwp" value="${test.jdwp}" />
       <!-- optionally run headless -->
       <syspropertyset refid="headless"/>
@@ -1315,6 +1319,7 @@ cd ..
     <javadoc package="true"
              windowtitle="JNA API"
              encoding="UTF-8"
+             locale="en_US"
              sourcepathref="javadoc.src.path"
              classpathref="javadoc.compile.path"
              maxmemory="256m"
@@ -1343,6 +1348,8 @@ cd ..
       <group title="Platform Specific" packages="com.sun.jna.platform.*"/>
 
       <arg value="-notimestamp"/>
+      <!-- force locale to be "en_US", as Javadoc tool ignores locale parameter for some texts -->
+      <arg line="-J-Duser.language=en -J-Duser.country=US"/>
     </javadoc>
     <!--
     Create an empty resources/fonts/dejavu.css - the file is reference by default
@@ -1507,11 +1514,14 @@ cd ..
   <property name="version-maven-gpg-plugin" value="1.4"/>
 
   <target name="stage" depends="dist" description="deploy release version to Maven staging repository">
+    <delete dir="build/maven-artifacts" />
+    <delete file="build/maven-artifacts.zip" />
+    <mkdir dir="build/maven-artifacts" />
+    <makeurl property="maven-artifacts" file="build/maven-artifacts" />
     <!-- sign and deploy the jna,  artifact -->
     <exec executable="mvn" searchpath="true" failonerror="true" failifexecutionfails="true" logError="true">
       <arg value="org.apache.maven.plugins:maven-gpg-plugin:${version-maven-gpg-plugin}:sign-and-deploy-file"/>
-      <arg value="-Durl=${maven-staging-repository-url}"/>
-      <arg value="-DrepositoryId=${maven-staging-repository-id}"/>
+      <arg value="-Durl=${maven-artifacts}"/>
       <arg value="-DpomFile=${pom}"/>
       <arg value="-Dfile=${dist-jar}"/>
       <arg value="-Dfiles=${maven-sources-jar},${maven-javadoc-jar},${dist-aar}"/>
@@ -1523,8 +1533,7 @@ cd ..
     <!-- sign and deploy the platform artifact -->
     <exec executable="mvn" searchpath="true" failonerror="true" failifexecutionfails="true" logError="true">
       <arg value="org.apache.maven.plugins:maven-gpg-plugin:${version-maven-gpg-plugin}:sign-and-deploy-file"/>
-      <arg value="-Durl=${maven-staging-repository-url}"/>
-      <arg value="-DrepositoryId=${maven-staging-repository-id}"/>
+      <arg value="-Durl=${maven-artifacts}"/>
       <arg value="-DpomFile=${pom-platform}"/>
       <arg value="-Dfile=${platform-jar}"/>
       <arg value="-Dfiles=${platform-sources-jar},${platform-javadoc-jar}"/>
@@ -1536,8 +1545,7 @@ cd ..
     <!-- sign and deploy the jna,  artifact -->
     <exec executable="mvn" searchpath="true" failonerror="true" failifexecutionfails="true" logError="true">
       <arg value="org.apache.maven.plugins:maven-gpg-plugin:${version-maven-gpg-plugin}:sign-and-deploy-file"/>
-      <arg value="-Durl=${maven-staging-repository-url}"/>
-      <arg value="-DrepositoryId=${maven-staging-repository-id}"/>
+      <arg value="-Durl=${maven-artifacts}"/>
       <arg value="-DpomFile=${pom-jpms}"/>
       <arg value="-Dfile=${dist-jar-jpms}"/>
       <arg value="-Dfiles=${maven-sources-jar},${maven-javadoc-jar}"/>
@@ -1549,8 +1557,7 @@ cd ..
     <!-- sign and deploy the platform artifact -->
     <exec executable="mvn" searchpath="true" failonerror="true" failifexecutionfails="true" logError="true">
       <arg value="org.apache.maven.plugins:maven-gpg-plugin:${version-maven-gpg-plugin}:sign-and-deploy-file"/>
-      <arg value="-Durl=${maven-staging-repository-url}"/>
-      <arg value="-DrepositoryId=${maven-staging-repository-id}"/>
+      <arg value="-Durl=${maven-artifacts}"/>
       <arg value="-DpomFile=${pom-platform-jpms}"/>
       <arg value="-Dfile=${platform-jpms-jar}"/>
       <arg value="-Dfiles=${platform-sources-jar},${platform-javadoc-jar}"/>
@@ -1558,6 +1565,9 @@ cd ..
       <arg value="-Dclassifiers=sources,javadoc"/>
       <arg value="-Dgpg.useagent=true"/>
     </exec>
+
+    <zip destfile="build/maven-artifacts.zip"
+         basedir="build/maven-artifacts"/>
   </target>
 
   <target name="checkstyle">

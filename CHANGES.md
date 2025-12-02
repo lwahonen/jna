@@ -2,14 +2,50 @@ NOTE: as of JNA 4.0, JNA is now dual-licensed under LGPL and AL 2.0 (see LICENSE
 
 NOTE: JNI native support is typically incompatible between minor versions, and almost always incompatible between major versions.
 
-Next Release (5.17.0)
+Next Release (5.19.0)
 =====================
 
 Features
 --------
+* [#1696](https://github.com/java-native-access/jna/pull/1696): Add `LARGE_INTEGER.ByValue` to `LARGE_INTEGER` in `WinNT.java` - [@baier233](https://github.com/baier233).
+* [#1697](https://github.com/java-native-access/jna/pull/1697): Add WlanApi module - [@eranl](https://github.com/eranl).
 
 Bug Fixes
 ---------
+
+
+Release 5.18.1
+==============
+
+Bug Fixes
+---------
+* [#1686](https://github.com/java-native-access/jna/issues/1686): Fix `sortFields` race condition while getting fields - [@bendk](https://github.com/bendk).
+
+Release 5.18.0
+==============
+
+Features
+--------
+* [#1671](https://github.com/java-native-access/jna/pull/1671): Add `isRISCV` to `c.s.j.Platform` - [@Glavo](https://github.com/Glavo).
+* [#1672](https://github.com/java-native-access/jna/pull/1672): Add `CFLocale`, `CFLocaleCopyCurrent`, `CFCFDateFormatter`, `CFDateFormatterStyle`, `CFDateFormatterCreate` and `CFDateFormatterGetFormat` to `c.s.j.p.mac.CoreFoundation` - [@dbwiddis](https://github.com/dbwiddis).
+* [#1669](https://github.com/java-native-access/jna/pull/1669): Document requirement for running on JDK 24+ - [@matthiasblaesing](https://github.com/matthiasblaesing).
+
+Bug Fixes
+---------
+* [#1681](https://github.com/java-native-access/jna/issues/1681): Fix deadlock in Structure constructor introduced in 5.16.0 - [@brettwooldridge](https://github.com/brettwooldridge).
+* [#1683](https://github.com/java-native-access/jna/pull/1683): Fix native build error on Xcode 16.3 / Apple Clang 17 - [@brettwooldridge](https://github.com/brettwooldridge).
+
+
+Release 5.17.0
+==============
+
+Features
+--------
+* [#1658](https://github.com/java-native-access/jna/pull/1658):  Add win32 power event constants, types, and functions - [@eranl](https://github.com/eranl).
+
+Bug Fixes
+---------
+* [#1647](https://github.com/java-native-access/jna/issues/1647): Fix calls to jnidispatch on Android with 16KB page size (part 2) - [@BugsBeGone](https://github.com/BugsBeGone).
 
 
 Release 5.16.0

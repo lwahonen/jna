@@ -16,30 +16,32 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        java: [8, 11, 17, 21, 23]
+        java: [8, 21, 24]
         # macos-13 is x86, macos-latest is aarch64
-        os: [ubuntu-latest, macos-13, macos-latest]
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, macos-13]
       # Run all tests even if one fails
       fail-fast: false
     name: Test JDK ${{ matrix.java }}, ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set up JDK
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ matrix.java }}
           distribution: 'zulu'
       - name: Linux requirements
         if: contains(matrix.os, 'ubuntu')
-        run: sudo apt-get install -yq --force-yes zip unzip libtool automake libltdl-dev texinfo ant ant-optional debhelper-compat default-jdk javahelper libasm-java libffi-dev libx11-dev libxt-dev maven-repo-helper pkg-config
+        run: |
+          sudo apt-get update
+          sudo apt-get install -yq --allow-downgrades zip unzip libtool automake libltdl-dev texinfo ant ant-optional debhelper-compat default-jdk javahelper libasm-java libffi-dev libx11-dev libxt-dev maven-repo-helper pkg-config
       - name: macOS requirements
         if: contains(matrix.os, 'macos')
         run: |
           brew update
-          brew install automake --force
-          brew install libtool --force
-          brew install texinfo --force
+          brew install automake --force || true
+          brew install libtool --force || true
+          brew install texinfo --force || true
       - name: Checkstyle
         if: contains(matrix.os, 'ubuntu') && contains(matrix.java, '8')
         run: |
