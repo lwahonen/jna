@@ -13,6 +13,7 @@ Features
 Bug Fixes
 ---------
 
+* [#1644](https://github.com/java-native-access/jna/issues/1644): Fix bug in VARDESC and TYPEDESC causing an illegal memory access - [@lwahonen](https://githuv.com/lwahonen)
 
 Release 5.18.1
 ==============
