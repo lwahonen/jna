@@ -88,8 +88,6 @@
         <SOURCES />
       </library>
     </orderEntry>
-<<<<<<< HEAD
-=======
     <orderEntry type="module-library">
       <library>
         <CLASSES>
@@ -153,6 +151,5 @@
         <SOURCES />
       </library>
     </orderEntry>
->>>>>>> 3c70b8c4d4403adcee4ed0afbfd363d15c2ff73f
   </component>
 </module>
