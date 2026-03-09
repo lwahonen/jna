@@ -1369,7 +1369,8 @@ public final class Native implements Version {
             throw new IOException("Failed to allocate native memory", e);
         }
 
-        File temp = new File(dir + "/INMEMORYANCHOR_" + Long.toUnsignedString(address) + ".txt");
+        String baseName = name.substring(name.lastIndexOf('/') + 1);
+        File temp = new File(dir + "/INMEMORYANCHOR_" + Long.toUnsignedString(address) + "." + baseName + ".txt");
         temp.createNewFile();
         temp.deleteOnExit();
         return temp;
