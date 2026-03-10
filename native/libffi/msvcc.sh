@@ -43,7 +43,7 @@
 #
 
 args_orig=$@
-args="-nologo -W3"
+args="-nologo -W3 -Zi"
 linkargs=
 static_crt=
 debug_crt=
@@ -53,7 +53,7 @@ safeseh="-safeseh"
 output=
 libpaths=
 libversion=8
-verbose=
+verbose=1
 
 while [ $# -gt 0 ]
 do

@@ -6,7 +6,7 @@
 #
 
 nowarn="/wd4127 /wd4820 /wd4706 /wd4100 /wd4255 /wd4668"
-args="/nologo /EHac /W3 $nowarn" # /WX
+args="/nologo /EHac /W3 $nowarn /Zi" # /WX
 #md="/MD"
 
 cl="cl"
