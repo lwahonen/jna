@@ -1027,12 +1027,12 @@ cd ..
     <copy todir="${eclipse.classes}/${native.path}"
           failonerror="false">
       <fileset dir="${build.native}"
-               includes="jnidispatch.dll,libjnidispatch.*"/>
+               includes="jnidispatch.dll,jnidispatch.pdb,libjnidispatch.*"/>
     </copy>
     <!-- For web start, native libraries may be provided in the root of -->
     <!-- an included jar file -->
     <jar jarfile="${build}/${native.jar}" createUnicodeExtraFields="never" encoding="UTF-8">
-      <fileset dir="${build.native}" includes="jnidispatch.dll,libjnidispatch.*"/>
+      <fileset dir="${build.native}" includes="jnidispatch.dll,jnidispatch.pdb,libjnidispatch.*"/>
       <manifest>
         <attribute name="Implementation-Version" value="${jni.version} b${jni.build}"/>
         <attribute name="Specification-Version" value="${jni.version}"/>
