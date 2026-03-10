@@ -1,5 +1,6 @@
 # Build JNA native bits (jnidispatch.dll) for Windows x86, x64, and aarch64.
 # Run from the JNA root directory in PowerShell.
+# powershell.exe -noprofile -executionpolicy bypass -file .\buidl_win_natives.ps1
 #
 # Prerequisites:
 #   - Visual Studio with C++ build tools (x86, x64, arm64)
