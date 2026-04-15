@@ -1164,7 +1164,7 @@ public final class Native implements Version {
             }
 
             if (Boolean.getBoolean("jna.inmemorylibraries")) {
-                return doInMemoryLibrary(name, loader, resourcePath, is);
+                return doInMemoryLibrary(name, resourcePath, is);
             }
 
             FileOutputStream fos = null;
@@ -1340,16 +1340,13 @@ public final class Native implements Version {
     }
 
     // Write DLL from jars into a memory buffer and return a faux file name
-    private static File doInMemoryLibrary(String name, ClassLoader loader, String resourcePath, InputStream is) throws IOException {
+    private static File doInMemoryLibrary(String name, String resourcePath, InputStream is) throws IOException {
         LOG.log(DEBUG_JNA_LOAD_LEVEL, "Starting in-memory extract of " + resourcePath);
-        String libSHA1;
-        try {
-            libSHA1 = getHashForFile(loader.getResourceAsStream(resourcePath));
-        } catch (NoSuchAlgorithmException e) {
-            throw new IOException(e);
-        }
-        LOG.log(DEBUG_JNA_LOAD_LEVEL, "DLL hash is " + libSHA1);
 
+        // Read the library bytes first so we can hash the same buffer we loaded.
+        // Previously a second loader.getResourceAsStream() call was made here solely
+        // for hashing, which returned null when the library came from the filesystem
+        // (e.g. jna.addSearchPath) rather than from a JAR resource, causing an NPE.
         File dir = getTempDir();
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         int count;
@@ -1357,6 +1354,14 @@ public final class Native implements Version {
         while ((count = is.read(buf, 0, buf.length)) > 0) {
             bos.write(buf, 0, count);
         }
+
+        String libSHA1;
+        try {
+            libSHA1 = getHashForFile(new ByteArrayInputStream(bos.toByteArray()));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IOException(e);
+        }
+        LOG.log(DEBUG_JNA_LOAD_LEVEL, "DLL hash is " + libSHA1);
 
         initUnsafe();
         byte[] byteArray = bos.toByteArray();
