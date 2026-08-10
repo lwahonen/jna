@@ -38,8 +38,10 @@ import com.sun.jna.platform.mac.SystemB.HostLoadInfo;
 import com.sun.jna.platform.mac.SystemB.IFmsgHdr;
 import com.sun.jna.platform.mac.SystemB.IFmsgHdr2;
 import com.sun.jna.platform.mac.SystemB.Passwd;
+import com.sun.jna.platform.mac.SystemB.ProcFdInfo;
 import com.sun.jna.platform.mac.SystemB.ProcTaskAllInfo;
 import com.sun.jna.platform.mac.SystemB.RUsageInfoV2;
+import com.sun.jna.platform.mac.SystemB.SocketFdInfo;
 import com.sun.jna.platform.mac.SystemB.Statfs;
 import com.sun.jna.platform.mac.SystemB.Timeval;
 import com.sun.jna.platform.mac.SystemB.Timezone;
@@ -171,6 +173,12 @@ public class SystemBTest extends TestCase {
         assertTrue(procCount.getValue() > 0);
         assertEquals(procCpuLoadInfo.getValue().getIntArray(0, procInfoCount.getValue()).length,
                 procInfoCount.getValue());
+
+        // Deallocate the memory allocated by host_processor_info
+        int taskSelf = SystemB.INSTANCE.mach_task_self();
+        ret = SystemB.INSTANCE.vm_deallocate(taskSelf, Pointer.nativeValue(procCpuLoadInfo.getValue()),
+                (long) procInfoCount.getValue() * SystemB.INT_SIZE);
+        assertEquals(0, ret);
     }
 
     // From Unix LibCAPI
@@ -364,6 +372,89 @@ public class SystemBTest extends TestCase {
             assertTrue(if2m.ifm_data.ifi_ibytes >= 0);
             assertTrue(if2m.ifm_data.ifi_lastchange.tv_usec >= 0);
         }
+    }
+
+    public void testProcPidFdInfo() {
+        int pid = SystemB.INSTANCE.getpid();
+
+        // Get the list of open file descriptors for this process
+        int bufferSize = SystemB.INSTANCE.proc_pidinfo(pid, SystemB.PROC_PIDLISTFDS, 0, null, 0);
+        assertTrue(bufferSize > 0);
+
+        int numFds = bufferSize / new ProcFdInfo().size();
+        assertTrue(numFds > 0);
+
+        ProcFdInfo[] fdInfoArray = (ProcFdInfo[]) new ProcFdInfo().toArray(numFds);
+        int ret = SystemB.INSTANCE.proc_pidinfo(pid, SystemB.PROC_PIDLISTFDS, 0, fdInfoArray[0],
+                bufferSize);
+        assertTrue(ret > 0);
+
+        // Verify we got valid fd entries
+        assertTrue(fdInfoArray[0].proc_fd >= 0);
+        assertTrue(fdInfoArray[0].proc_fdtype >= 0);
+    }
+
+    public void testProcPidFdSocketInfo() throws Exception {
+        int pid = SystemB.INSTANCE.getpid();
+
+        // Verify VinfoStat struct size matches expected 136 bytes
+        assertEquals(136, new SystemB.VinfoStat().size());
+
+        // Open a socket so we are guaranteed to have one
+        java.net.ServerSocket serverSocket = new java.net.ServerSocket(0);
+
+        try {
+            // Get the list of open file descriptors
+            int bufferSize = SystemB.INSTANCE.proc_pidinfo(pid, SystemB.PROC_PIDLISTFDS, 0, null, 0);
+            assertTrue(bufferSize > 0);
+
+            int numFds = bufferSize / new ProcFdInfo().size();
+            ProcFdInfo[] fdInfoArray = (ProcFdInfo[]) new ProcFdInfo().toArray(numFds);
+            int ret = SystemB.INSTANCE.proc_pidinfo(pid, SystemB.PROC_PIDLISTFDS, 0, fdInfoArray[0],
+                    bufferSize);
+            assertTrue(ret > 0);
+
+            // Find a socket fd and query its info with proc_pidfdinfo
+            boolean foundSocket = false;
+            SystemB.SocketFdInfo socketFdInfo = new SystemB.SocketFdInfo();
+            for (int i = 0; i < numFds; i++) {
+                if (fdInfoArray[i].proc_fdtype == SystemB.PROX_FDTYPE_SOCKET) {
+                    ret = SystemB.INSTANCE.proc_pidfdinfo(pid, fdInfoArray[i].proc_fd,
+                            SystemB.PROC_PIDFDSOCKETINFO, socketFdInfo, socketFdInfo.size());
+                    if (ret == socketFdInfo.size()) {
+                        foundSocket = true;
+                        assertTrue(socketFdInfo.psi.soi_family == SystemB.AF_INET
+                                || socketFdInfo.psi.soi_family == SystemB.AF_INET6
+                                || socketFdInfo.psi.soi_family > 0);
+                        assertTrue(socketFdInfo.psi.soi_kind >= 0);
+
+                        // Verify VinfoStat fields are populated
+                        assertTrue(socketFdInfo.psi.soi_stat.vst_ino >= 0);
+                        assertTrue(socketFdInfo.psi.soi_stat.vst_dev >= 0);
+
+                        // Unions are read automatically by SocketInfo.read() and InSockInfo.read()
+                        if (socketFdInfo.psi.soi_kind == SystemB.SOCKINFO_TCP) {
+                            SystemB.InSockInfo ini = socketFdInfo.psi.soi_proto.pri_tcp.tcpsi_ini;
+                            assertTrue(ini.insi_lport >= 0);
+                        } else if (socketFdInfo.psi.soi_kind == SystemB.SOCKINFO_IN) {
+                            SystemB.InSockInfo ini = socketFdInfo.psi.soi_proto.pri_in;
+                            assertTrue(ini.insi_lport >= 0);
+                        }
+                        break;
+                    }
+                }
+            }
+            assertTrue("Expected to find at least one socket fd", foundSocket);
+        } finally {
+            serverSocket.close();
+        }
+    }
+
+    public void testStatfs64() {
+        Statfs buf = new Statfs();
+        assertEquals(0, SystemB.INSTANCE.statfs64("/", buf));
+        assertTrue(buf.f_blocks > 0);
+        assertTrue(buf.f_bsize > 0);
     }
 
     public static void main(java.lang.String[] argList) {

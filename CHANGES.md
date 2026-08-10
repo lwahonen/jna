@@ -2,18 +2,46 @@ NOTE: as of JNA 4.0, JNA is now dual-licensed under LGPL and AL 2.0 (see LICENSE
 
 NOTE: JNI native support is typically incompatible between minor versions, and almost always incompatible between major versions.
 
-Next Release (5.19.0)
+Next Release (5.20.0)
 =====================
+
+Features
+--------
+
+Bug Fixes
+---------
+
+
+Release 5.19.1
+==============
+
+Bug Fixes
+---------
+* [#1730](https://github.com/java-native-access/jna/issues/1730): Replace usage of `MethodHandle` with reflection to restore support for older Android releases - [@matthiasblaesing](https://github.com/matthiasblaesing).
+
+Release 5.19.0
+==============
 
 Features
 --------
 * [#1696](https://github.com/java-native-access/jna/pull/1696): Add `LARGE_INTEGER.ByValue` to `LARGE_INTEGER` in `WinNT.java` - [@baier233](https://github.com/baier233).
 * [#1697](https://github.com/java-native-access/jna/pull/1697): Add WlanApi module - [@eranl](https://github.com/eranl).
+* [#1718](https://github.com/java-native-access/jna/pull/1718): Add `Cups` to `c.s.j.p.unix` providing CUPS printing system bindings for destinations, jobs, options, and server configuration - [@dbwiddis](https://github.com/dbwiddis).
+* [#1720](https://github.com/java-native-access/jna/pull/1720): Add `groupCount` and `groupMasks` fields to `CACHE_RELATIONSHIP` in `c.s.j.p.win32.WinNT`, matching the updated Windows struct layout - [@dbwiddis](https://github.com/dbwiddis).
+* [#1719](https://github.com/java-native-access/jna/pull/1719): Add `CoreGraphics` to `c.s.j.p.mac` with Quartz Window Services and Display Services bindings; implement `getAllWindows()` in `MacWindowUtils` - [@dbwiddis](https://github.com/dbwiddis).
+* [#1723](https://github.com/java-native-access/jna/pull/1723): Add `ProcFdInfo`, `InSockInfo`, `TcpSockInfo`, `proc_pidfdinfo`, `statfs64`, and `vm_deallocate` to `c.s.j.p.mac.SystemB` - [@dbwiddis](https://github.com/dbwiddis).
+* [#1725](https://github.com/java-native-access/jna/pull/1725): Add `BluetoothApis` to `c.s.j.p.win32` providing Bluetooth device and radio enumeration via `BluetoothFindFirstRadio`, `BluetoothFindFirstDevice`, and related functions - [@dbwiddis](https://github.com/dbwiddis).
 
 Bug Fixes
 ---------
 * [#1644](https://github.com/java-native-access/jna/issues/1644): Fix bug in VARDESC and TYPEDESC causing an illegal memory access - [@lwahonen](https://github.com/lwahonen)
 * [#1715](https://github.com/java-native-access/jna/pull/1715): Fix `UdevDevice.getSysname()` calling `udev_device_get_syspath` instead of `udev_device_get_sysname` - [@dbwiddis](https://github.com/dbwiddis).
+* [#1721](https://github.com/java-native-access/jna/pull/1721): Fix switched `serverName`/`domainName` arguments in `Netapi32Util#getDCName` - [@dbwiddis](https://github.com/dbwiddis).
+* [#1722](https://github.com/java-native-access/jna/pull/1722): Fix `Advapi32#RegisterServiceCtrlHandler` using wrong `Handler` type - [@dbwiddis](https://github.com/dbwiddis).
+* [#1636](https://github.com/java-native-access/jna/issues/1636): Drop hard dependency on java.lang.SecurityManager/java.security.AccessController - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#1724](https://github.com/java-native-access/jna/pull/1724): Fix `host_page_size` in `c.s.j.p.mac.SystemB` and `getxattr`/`setxattr`/`listxattr` in `c.s.j.p.mac.XAttr` using `long` instead of pointer-sized types for `size_t`/`ssize_t` parameters - [@dbwiddis](https://github.com/dbwiddis).
+* [#1727](https://github.com/java-native-access/jna/pull/1727): Include DragonFlyBSD in `NativeLibrary` versioned library resolution, libc special-case loading, and 64-bit search paths - [@dbwiddis](https://github.com/dbwiddis).
+* [#1709](https://github.com/java-native-access/jna/issues/1709): Rebuild native library for OpenBSD 7.9 x86-64, drop OpenBSD x86 - [@matthiasblaesing](https://github.com/matthiasblaesing).
 
 Release 5.18.1
 ==============
@@ -54,7 +82,7 @@ Release 5.16.0
 
 Features
 --------
-* [#1626](https://github.com/java-native-access/jna/pull/1626): Add caching of field list and field validation in `Structure` along with more efficient reentrant read-write locking instead of synchronized() blocks - [@BrettWooldridge](https://github.com/brettwooldridge)
+* [#1626](https://github.com/java-native-access/jna/pull/1626): Add caching of field list and field validation in `Structure` along with more efficient reentrant read-write locking instead of synchronized() blocks - [@BrettWooldridge](https://github.com/brettwooldridge).
 
 Bug Fixes
 ---------

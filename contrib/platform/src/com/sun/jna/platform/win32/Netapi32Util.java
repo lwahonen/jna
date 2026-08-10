@@ -118,7 +118,7 @@ public abstract class Netapi32Util {
     public static String getDCName(String serverName, String domainName) {
         PointerByReference bufptr = new PointerByReference();
         try {
-            int rc = Netapi32.INSTANCE.NetGetDCName(domainName, serverName, bufptr);
+            int rc = Netapi32.INSTANCE.NetGetDCName(serverName, domainName, bufptr);
             if (LMErr.NERR_Success != rc) {
                 throw new Win32Exception(rc);
             }

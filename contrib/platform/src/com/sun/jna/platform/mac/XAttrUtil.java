@@ -30,12 +30,13 @@ import java.util.List;
 
 import com.sun.jna.Memory;
 import com.sun.jna.Native;
+import com.sun.jna.platform.unix.LibCAPI.size_t;
 
 public class XAttrUtil {
 
     public static List<String> listXAttr(String path) {
         // get required buffer size
-        long bufferLength = XAttr.INSTANCE.listxattr(path, null, 0, 0);
+        long bufferLength = XAttr.INSTANCE.listxattr(path, null, size_t.ZERO, 0).longValue();
 
         if (bufferLength < 0)
             return null;
@@ -44,7 +45,7 @@ public class XAttrUtil {
             return new ArrayList<>(0);
 
         Memory valueBuffer = new Memory(bufferLength);
-        long valueLength = XAttr.INSTANCE.listxattr(path, valueBuffer, bufferLength, 0);
+        long valueLength = XAttr.INSTANCE.listxattr(path, valueBuffer, new size_t(bufferLength), 0).longValue();
 
         if (valueLength < 0)
             return null;
@@ -54,7 +55,7 @@ public class XAttrUtil {
 
     public static String getXAttr(String path, String name) {
         // get required buffer size
-        long bufferLength = XAttr.INSTANCE.getxattr(path, name, null, 0, 0, 0);
+        long bufferLength = XAttr.INSTANCE.getxattr(path, name, null, size_t.ZERO, 0, 0).longValue();
 
         if (bufferLength < 0) {
             return null;
@@ -66,7 +67,8 @@ public class XAttrUtil {
 
         Memory valueBuffer = new Memory(bufferLength);
         valueBuffer.clear();
-        long valueLength = XAttr.INSTANCE.getxattr(path, name, valueBuffer, bufferLength, 0, 0);
+        long valueLength = XAttr.INSTANCE.getxattr(path, name, valueBuffer, new size_t(bufferLength), 0, 0)
+                .longValue();
 
         if (valueLength < 0) {
             return null;
@@ -77,7 +79,7 @@ public class XAttrUtil {
 
     public static int setXAttr(String path, String name, String value) {
         Memory valueBuffer = encodeString(value);
-        return XAttr.INSTANCE.setxattr(path, name, valueBuffer, valueBuffer.size(), 0, 0);
+        return XAttr.INSTANCE.setxattr(path, name, valueBuffer, new size_t(valueBuffer.size()), 0, 0);
     }
 
     public static int removeXAttr(String path, String name) {

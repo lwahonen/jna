@@ -30,9 +30,11 @@ import com.sun.jna.Native;
 import com.sun.jna.NativeLong;
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
+import com.sun.jna.Union;
 import com.sun.jna.platform.unix.LibCAPI;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
+import com.sun.jna.ptr.NativeLongByReference;
 import com.sun.jna.ptr.PointerByReference;
 
 public interface SystemB extends LibCAPI, Library {
@@ -296,6 +298,276 @@ public interface SystemB extends LibCAPI, Library {
         public long ri_child_elapsed_abstime;
         public long ri_diskio_bytesread;
         public long ri_diskio_byteswritten;
+    }
+
+    // proc_info.h: Flavors for proc_pidinfo and proc_pidfdinfo
+    int PROC_PIDLISTFDS = 1;
+    int PROC_PIDFDSOCKETINFO = 3;
+
+    // proc_info.h: File descriptor types
+    int PROX_FDTYPE_SOCKET = 2;
+
+    // proc_info.h: Socket info kinds
+    int SOCKINFO_IN = 1;
+    int SOCKINFO_TCP = 2;
+
+    // proc_info.h: TCP timer count
+    int TSI_T_NTIMERS = 4;
+
+    // socket.h: Address families
+    int AF_INET = 2;
+    int AF_INET6 = 30;
+
+    /**
+     * File descriptor information as returned by {@code proc_pidinfo} with
+     * {@link #PROC_PIDLISTFDS}.
+     * <p>
+     * Corresponds to {@code struct proc_fdinfo} in {@code <sys/proc_info.h>}.
+     */
+    @Structure.FieldOrder({ "proc_fd", "proc_fdtype" })
+    class ProcFdInfo extends Structure {
+        public int proc_fd;
+        public int proc_fdtype;
+    }
+
+    /**
+     * IPv4 address mapped into IPv6 address space.
+     * <p>
+     * Corresponds to {@code struct in4in6_addr} in {@code <sys/proc_info.h>}.
+     */
+    @Structure.FieldOrder({ "i46a_pad32", "i46a_addr4" })
+    class In4In6Addr extends Structure {
+        /** Padding to align IPv4 address at offset 12. */
+        public int[] i46a_pad32 = new int[3];
+        /** IPv4 address (network byte order). */
+        public int i46a_addr4;
+    }
+
+    /**
+     * IPv6 address (128 bits).
+     * <p>
+     * Corresponds to {@code struct in6_addr} in {@code <netinet/in.h>}.
+     */
+    @Structure.FieldOrder({ "__u6_addr" })
+    class In6Addr extends Structure {
+        /** 16-byte IPv6 address. */
+        public byte[] __u6_addr = new byte[16];
+    }
+
+    /**
+     * Union of IPv4-mapped-in-IPv6 and IPv6 addresses, used in
+     * {@link InSockInfo}.
+     * <p>
+     * Corresponds to the anonymous union containing {@code ina_46} and
+     * {@code ina_6} in {@code struct in_sockinfo}.
+     */
+    class InsiAddr extends Union {
+        public In4In6Addr ina_46;
+        public In6Addr ina_6;
+    }
+
+    /**
+     * Internet socket information.
+     * <p>
+     * Corresponds to {@code struct in_sockinfo} in {@code <sys/proc_info.h>}.
+     */
+    @Structure.FieldOrder({ "insi_fport", "insi_lport", "insi_gencnt", "insi_flags", "insi_flow", "insi_vflag",
+            "insi_ip_ttl", "rfu_1", "insi_faddr", "insi_laddr", "insi_v4", "insi_v6" })
+    class InSockInfo extends Structure {
+        /** Foreign port. */
+        public int insi_fport;
+        /** Local port. */
+        public int insi_lport;
+        /** Generation count of this instance. */
+        public long insi_gencnt;
+        /** Generic IP/datagram flags. */
+        public int insi_flags;
+        public int insi_flow;
+        /** INI_IPV4 or INI_IPV6. */
+        public byte insi_vflag;
+        /** Time to live proto. */
+        public byte insi_ip_ttl;
+        /** Reserved. */
+        public int rfu_1;
+        /** Foreign host table entry. */
+        public InsiAddr insi_faddr;
+        /** Local host table entry. */
+        public InsiAddr insi_laddr;
+        /** IPv4 type of service. */
+        public byte insi_v4;
+        /** IPv6 info (in6_hlim, in6_cksum, in6_ifindex, in6_hops). */
+        public byte[] insi_v6 = new byte[9];
+
+        @Override
+        public void read() {
+            super.read();
+            if (insi_vflag == 2) {
+                insi_faddr.setType("ina_6");
+                insi_laddr.setType("ina_6");
+            } else {
+                insi_faddr.setType("ina_46");
+                insi_laddr.setType("ina_46");
+            }
+            insi_faddr.read();
+            insi_laddr.read();
+        }
+    }
+
+    /**
+     * TCP socket information.
+     * <p>
+     * Corresponds to {@code struct tcp_sockinfo} in {@code <sys/proc_info.h>}.
+     */
+    @Structure.FieldOrder({ "tcpsi_ini", "tcpsi_state", "tcpsi_timer", "tcpsi_mss", "tcpsi_flags", "rfu_1",
+            "tcpsi_tp" })
+    class TcpSockInfo extends Structure {
+        public InSockInfo tcpsi_ini;
+        public int tcpsi_state;
+        public int[] tcpsi_timer = new int[TSI_T_NTIMERS];
+        public int tcpsi_mss;
+        public int tcpsi_flags;
+        /** Reserved. */
+        public int rfu_1;
+        /** Opaque handle of TCP protocol control block. */
+        public long tcpsi_tp;
+    }
+
+    /**
+     * Per-file descriptor information.
+     * <p>
+     * Corresponds to {@code struct proc_fileinfo} in {@code <sys/proc_info.h>}.
+     */
+    @Structure.FieldOrder({ "fi_openflags", "fi_status", "fi_offset", "fi_type", "fi_guardflags" })
+    class ProcFileInfo extends Structure {
+        public int fi_openflags;
+        public int fi_status;
+        public long fi_offset;
+        public int fi_type;
+        public int fi_guardflags;
+    }
+
+    /**
+     * Socket buffer information.
+     * <p>
+     * Corresponds to {@code struct sockbuf_info} in {@code <sys/proc_info.h>}.
+     */
+    @Structure.FieldOrder({ "sbi_cc", "sbi_hiwat", "sbi_mbcnt", "sbi_mbmax", "sbi_lowat", "sbi_flags",
+            "sbi_timeo" })
+    class SockbufInfo extends Structure {
+        public int sbi_cc;
+        public int sbi_hiwat;
+        public int sbi_mbcnt;
+        public int sbi_mbmax;
+        public int sbi_lowat;
+        public short sbi_flags;
+        public short sbi_timeo;
+    }
+
+    /**
+     * Union of protocol-specific socket information in {@link SocketInfo}.
+     * <p>
+     * Corresponds to the {@code soi_proto} union in
+     * {@code struct socket_info}.
+     */
+    class Pri extends Union {
+        public InSockInfo pri_in;
+        public TcpSockInfo pri_tcp;
+        /** Ensures the union is large enough for all protocol variants. */
+        public byte[] max_size = new byte[524];
+    }
+
+    /**
+     * File status information.
+     * <p>
+     * Corresponds to {@code struct vinfo_stat} in {@code <sys/proc_info.h>}. A copy of {@code stat64} with
+     * statically-sized fields.
+     */
+    @Structure.FieldOrder({ "vst_dev", "vst_mode", "vst_nlink", "vst_ino", "vst_uid", "vst_gid", "vst_atime",
+            "vst_atimensec", "vst_mtime", "vst_mtimensec", "vst_ctime", "vst_ctimensec", "vst_birthtime",
+            "vst_birthtimensec", "vst_size", "vst_blocks", "vst_blksize", "vst_flags", "vst_gen", "vst_rdev",
+            "vst_qspare" })
+    class VinfoStat extends Structure {
+        public int vst_dev;
+        public short vst_mode;
+        public short vst_nlink;
+        public long vst_ino;
+        public int vst_uid;
+        public int vst_gid;
+        public long vst_atime;
+        public long vst_atimensec;
+        public long vst_mtime;
+        public long vst_mtimensec;
+        public long vst_ctime;
+        public long vst_ctimensec;
+        public long vst_birthtime;
+        public long vst_birthtimensec;
+        public long vst_size;
+        public long vst_blocks;
+        public int vst_blksize;
+        public int vst_flags;
+        public int vst_gen;
+        public int vst_rdev;
+        public long[] vst_qspare = new long[2];
+    }
+
+    /**
+     * Socket information.
+     * <p>
+     * Corresponds to {@code struct socket_info} in {@code <sys/proc_info.h>}.
+     */
+    @Structure.FieldOrder({ "soi_stat", "soi_so", "soi_pcb", "soi_type", "soi_protocol", "soi_family",
+            "soi_options", "soi_linger", "soi_state", "soi_qlen", "soi_incqlen", "soi_qlimit", "soi_timeo",
+            "soi_error", "soi_oobmark", "soi_rcv", "soi_snd", "soi_kind", "rfu_1", "soi_proto" })
+    class SocketInfo extends Structure {
+        public VinfoStat soi_stat;
+        /** Opaque handle of socket. */
+        public long soi_so;
+        /** Opaque handle of protocol control block. */
+        public long soi_pcb;
+        public int soi_type;
+        public int soi_protocol;
+        public int soi_family;
+        public short soi_options;
+        public short soi_linger;
+        public short soi_state;
+        public short soi_qlen;
+        public short soi_incqlen;
+        public short soi_qlimit;
+        public short soi_timeo;
+        public short soi_error;
+        public int soi_oobmark;
+        public SockbufInfo soi_rcv;
+        public SockbufInfo soi_snd;
+        public int soi_kind;
+        /** Reserved. */
+        public int rfu_1;
+        public Pri soi_proto;
+
+        @Override
+        public void read() {
+            super.read();
+            if (soi_kind == SOCKINFO_TCP) {
+                soi_proto.setType("pri_tcp");
+            } else if (soi_kind == SOCKINFO_IN) {
+                soi_proto.setType("pri_in");
+            } else {
+                soi_proto.setType("max_size");
+            }
+            soi_proto.read();
+        }
+    }
+
+    /**
+     * Socket file descriptor information as returned by
+     * {@code proc_pidfdinfo} with {@link #PROC_PIDFDSOCKETINFO}.
+     * <p>
+     * Corresponds to {@code struct socket_fdinfo} in
+     * {@code <sys/proc_info.h>}.
+     */
+    @Structure.FieldOrder({ "pfi", "psi" })
+    class SocketFdInfo extends Structure {
+        public ProcFileInfo pfi;
+        public SocketInfo psi;
     }
 
     @Structure.FieldOrder({ "vip_vi", "vip_path" })
@@ -580,6 +852,13 @@ public interface SystemB extends LibCAPI, Library {
      *            The host's page size (in bytes), set on success.
      * @return 0 on success; sets errno on failure
      */
+    int host_page_size(int hostPort, NativeLongByReference pPageSize);
+
+    /**
+     * @deprecated Use
+     *             {@link #host_page_size(int, NativeLongByReference)}
+     */
+    @Deprecated
     int host_page_size(int hostPort, LongByReference pPageSize);
 
     /**
@@ -877,4 +1156,51 @@ public interface SystemB extends LibCAPI, Library {
      * @return the process ID of the calling process.
      */
     int getpid();
+
+    /**
+     * Returns information about a file descriptor of a process.
+     *
+     * @param pid
+     *            the process identifier
+     * @param fd
+     *            the file descriptor
+     * @param flavor
+     *            the type of information requested (e.g.,
+     *            {@link #PROC_PIDFDSOCKETINFO})
+     * @param buffer
+     *            holds results
+     * @param buffersize
+     *            size of results
+     * @return the number of bytes of data returned in the provided buffer; -1 if an
+     *         error was encountered
+     */
+    int proc_pidfdinfo(int pid, int fd, int flavor, Structure buffer, int buffersize);
+
+    /**
+     * The statfs64() routine returns information about a mounted file system.
+     * The {@code path} argument is the path name of any file or directory within
+     * the mounted file system. The {@code buf} argument is a pointer to a
+     * {@code statfs} structure.
+     *
+     * @param path
+     *            the path to any file within the mounted filesystem
+     * @param buf
+     *            a {@link Statfs} structure
+     * @return 0 on success; -1 on failure (sets errno)
+     */
+    int statfs64(String path, Statfs buf);
+
+    /**
+     * Deallocates a region of virtual memory in the specified task.
+     *
+     * @param targetTask
+     *            the target task (typically from {@link #mach_task_self()})
+     * @param address
+     *            the starting address of the region to deallocate
+     * @param size
+     *            the number of bytes to deallocate
+     * @return 0 ({@code KERN_SUCCESS}) on success; a {@code kern_return_t} error
+     *         code otherwise
+     */
+    int vm_deallocate(int targetTask, long address, long size);
 }

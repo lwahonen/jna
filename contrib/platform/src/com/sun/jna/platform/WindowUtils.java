@@ -97,6 +97,11 @@ import com.sun.jna.platform.win32.WinDef.HDC;
 import com.sun.jna.platform.win32.WinDef.HICON;
 import com.sun.jna.platform.win32.WinDef.HRGN;
 import com.sun.jna.platform.win32.WinDef.HWND;
+import com.sun.jna.platform.mac.CoreFoundation;
+import com.sun.jna.platform.mac.CoreFoundation.CFArrayRef;
+import com.sun.jna.platform.mac.CoreFoundation.CFDictionaryRef;
+import com.sun.jna.platform.mac.CoreFoundation.CFStringRef;
+import com.sun.jna.platform.mac.CoreGraphics;
 import com.sun.jna.platform.win32.WinDef.LPARAM;
 import com.sun.jna.platform.win32.WinDef.LRESULT;
 import com.sun.jna.platform.win32.WinDef.POINT;
@@ -1559,6 +1564,91 @@ public class WindowUtils {
                 }
             }
             fixWindowDragging(w, context);
+        }
+
+        @Override
+        protected List<DesktopWindow> getAllWindows(final boolean onlyVisibleWindows) {
+            final List<DesktopWindow> result = new LinkedList<>();
+            int options = onlyVisibleWindows
+                    ? CoreGraphics.kCGWindowListOptionOnScreenOnly | CoreGraphics.kCGWindowListExcludeDesktopElements
+                    : CoreGraphics.kCGWindowListOptionAll;
+            CFArrayRef windowList = CoreGraphics.INSTANCE.CGWindowListCopyWindowInfo(
+                    options, CoreGraphics.kCGNullWindowID);
+            if (windowList == null) {
+                return result;
+            }
+            try {
+                CFStringRef kName = CFStringRef.createCFString(CoreGraphics.kCGWindowName);
+                CFStringRef kOwnerName = CFStringRef.createCFString(CoreGraphics.kCGWindowOwnerName);
+                CFStringRef kBounds = CFStringRef.createCFString(CoreGraphics.kCGWindowBounds);
+                CFStringRef kNumber = CFStringRef.createCFString(CoreGraphics.kCGWindowNumber);
+                CFStringRef kLayer = CFStringRef.createCFString(CoreGraphics.kCGWindowLayer);
+                try {
+                    int count = windowList.getCount();
+                    for (int i = 0; i < count; i++) {
+                        Pointer p = windowList.getValueAtIndex(i);
+                        if (p == null) {
+                            continue;
+                        }
+                        CFDictionaryRef dict = new CFDictionaryRef(p);
+
+                        // Skip non-normal windows (layer != 0)
+                        Pointer layerPtr = CoreFoundation.INSTANCE.CFDictionaryGetValue(dict, kLayer);
+                        if (layerPtr != null) {
+                            CoreFoundation.CFNumberRef layerNum = new CoreFoundation.CFNumberRef(layerPtr);
+                            if (layerNum.intValue() != 0) {
+                                continue;
+                            }
+                        }
+
+                        // Window title (may be null)
+                        String title = "";
+                        Pointer namePtr = CoreFoundation.INSTANCE.CFDictionaryGetValue(dict, kName);
+                        if (namePtr != null) {
+                            title = new CFStringRef(namePtr).stringValue();
+                        }
+
+                        // Owner name as filePath equivalent
+                        String ownerName = "";
+                        Pointer ownerPtr = CoreFoundation.INSTANCE.CFDictionaryGetValue(dict, kOwnerName);
+                        if (ownerPtr != null) {
+                            ownerName = new CFStringRef(ownerPtr).stringValue();
+                        }
+
+                        // Window ID as HWND
+                        HWND hwnd = null;
+                        Pointer numPtr = CoreFoundation.INSTANCE.CFDictionaryGetValue(dict, kNumber);
+                        if (numPtr != null) {
+                            int windowId = new CoreFoundation.CFNumberRef(numPtr).intValue();
+                            hwnd = new HWND(Pointer.createConstant(windowId));
+                        }
+
+                        // Bounds
+                        Rectangle locAndSize = new Rectangle();
+                        Pointer boundsPtr = CoreFoundation.INSTANCE.CFDictionaryGetValue(dict, kBounds);
+                        if (boundsPtr != null) {
+                            CoreGraphics.CGRect rect = new CoreGraphics.CGRect();
+                            if (0 != CoreGraphics.INSTANCE.CGRectMakeWithDictionaryRepresentation(
+                                    new CFDictionaryRef(boundsPtr), rect)) {
+                                locAndSize = new Rectangle(
+                                        (int) rect.origin.x, (int) rect.origin.y,
+                                        (int) rect.size.width, (int) rect.size.height);
+                            }
+                        }
+
+                        result.add(new DesktopWindow(hwnd, title, ownerName, locAndSize));
+                    }
+                } finally {
+                    kName.release();
+                    kOwnerName.release();
+                    kBounds.release();
+                    kNumber.release();
+                    kLayer.release();
+                }
+            } finally {
+                windowList.release();
+            }
+            return result;
         }
     }
     private static class X11WindowUtils extends NativeWindowUtils {

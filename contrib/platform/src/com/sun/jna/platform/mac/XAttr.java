@@ -26,6 +26,8 @@ package com.sun.jna.platform.mac;
 import com.sun.jna.Library;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
+import com.sun.jna.platform.unix.LibCAPI.size_t;
+import com.sun.jna.platform.unix.LibCAPI.ssize_t;
 
 /**
  * JNA wrapper for &lt;sys/xattr.h&gt;
@@ -48,15 +50,33 @@ public interface XAttr extends Library {
     String XATTR_RESOURCEFORK_NAME = "com.apple.ResourceFork";
 
     // see https://developer.apple.com/library/mac/documentation/Darwin/Reference/ManPages/man2/getxattr.2.html
+    ssize_t getxattr(String path, String name, Pointer value, size_t size, int position, int options);
+
+    /**
+     * @deprecated Use {@link #getxattr(String, String, Pointer, size_t, int, int)}
+     */
+    @Deprecated
     long getxattr(String path, String name, Pointer value, long size, int position, int options);
 
     // see https://developer.apple.com/library/mac/documentation/Darwin/Reference/ManPages/man2/setxattr.2.html
+    int setxattr(String path, String name, Pointer value, size_t size, int position, int options);
+
+    /**
+     * @deprecated Use {@link #setxattr(String, String, Pointer, size_t, int, int)}
+     */
+    @Deprecated
     int setxattr(String path, String name, Pointer value, long size, int position, int options);
 
     // see https://developer.apple.com/library/mac/documentation/Darwin/Reference/ManPages/man2/removexattr.2.html
     int removexattr(String path, String name, int options);
 
     // see https://developer.apple.com/library/mac/documentation/Darwin/Reference/ManPages/man2/listxattr.2.html
+    ssize_t listxattr(String path, Pointer namebuff, size_t size, int options);
+
+    /**
+     * @deprecated Use {@link #listxattr(String, Pointer, size_t, int)}
+     */
+    @Deprecated
     long listxattr(String path, Pointer namebuff, long size, int options);
 
 }

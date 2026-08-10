@@ -509,7 +509,7 @@ TESTDEP=$(TESTLIB:.dll=.lib)
 else
 TESTDEP=$(TESTLIB)
 endif
-$(TESTLIB2): $(BUILD)/testlib2.o
+$(TESTLIB2): $(BUILD)/testlib2.o $(TESTDEP)
 	$(LD) $(LDFLAGS) $< $(TESTDEP) $(LIBS)
 
 ifneq ($(DYNAMIC_LIBFFI),true)

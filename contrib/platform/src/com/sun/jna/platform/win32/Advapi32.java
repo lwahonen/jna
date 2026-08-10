@@ -3325,7 +3325,7 @@ public interface Advapi32 extends StdCallLibrary {
      * </table>
      */
     public SERVICE_STATUS_HANDLE RegisterServiceCtrlHandler(String lpServiceName,
-            Handler lpHandlerProc);
+            Winsvc.Handler lpHandlerProc);
 
     /**
      * Registers a function to handle extended service control requests.

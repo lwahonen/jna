@@ -245,7 +245,7 @@ public class NativeLibrary implements Closeable {
                     exceptions.add(e2);
                 }
             }
-            else if (Platform.isLinux() || Platform.isFreeBSD()) {
+            else if (Platform.isLinux() || Platform.isFreeBSD() || Platform.isDragonFlyBSD()) {
                 //
                 // Failed to load the library normally - try to match libfoo.so.*
                 //
@@ -465,7 +465,7 @@ public class NativeLibrary implements Closeable {
 
         // Use current process to load libraries we know are already
         // loaded by the VM to ensure we get the correct version
-        if ((Platform.isLinux() || Platform.isFreeBSD() || Platform.isAIX())
+        if ((Platform.isLinux() || Platform.isFreeBSD() || Platform.isDragonFlyBSD() || Platform.isAIX())
             && Platform.C_LIBRARY_NAME.equals(libraryName)) {
             libraryName = null;
         }
@@ -788,7 +788,7 @@ public class NativeLibrary implements Closeable {
             }
             return name;
         }
-        else if (Platform.isLinux() || Platform.isFreeBSD()) {
+        else if (Platform.isLinux() || Platform.isFreeBSD() || Platform.isDragonFlyBSD()) {
             if (isVersionedName(libName) || libName.endsWith(".so")) {
                 // A specific version was requested - use as is for search
                 return libName;
@@ -926,8 +926,8 @@ public class NativeLibrary implements Closeable {
             // one when running a 64bit JVM.
             //
             if (Platform.isLinux() || Platform.isSolaris()
-                || Platform.isFreeBSD() || Platform.iskFreeBSD()) {
-                // Linux & FreeBSD use /usr/lib32, solaris uses /usr/lib/32
+                || Platform.isFreeBSD() || Platform.isDragonFlyBSD() || Platform.iskFreeBSD()) {
+                // Linux, FreeBSD & DragonFlyBSD use /usr/lib32, solaris uses /usr/lib/32
                 archPath = (Platform.isSolaris() ? "/" : "") + Native.POINTER_SIZE * 8;
             }
             String[] paths = {

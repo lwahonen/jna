@@ -3246,7 +3246,7 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
     /**
      * Describes cache attributes.
      */
-    @FieldOrder({ "level", "associativity", "lineSize", "cacheSize", "type", "reserved", "groupMask" })
+    @FieldOrder({ "level", "associativity", "lineSize", "cacheSize", "type", "reserved", "groupCount", "groupMasks" })
     public static class CACHE_RELATIONSHIP extends SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX {
 
         /**
@@ -3279,19 +3279,67 @@ public interface WinNT extends WinError, WinDef, WinBase, BaseTSD {
         /**
          * This member is reserved.
          */
-        public byte[] reserved = new byte[20];
+        public byte[] reserved = new byte[18];
+
+        /**
+         * The number of groups included in the GroupMasks array. This field was
+         * introduced in Windows Server 2022 (21H2). On earlier versions, this
+         * value is always 0.
+         */
+        public short groupCount;
 
         /**
          * A {@link GROUP_AFFINITY} structure that specifies a group number and
-         * processor affinity within the group.
+         * processor affinity within the group. This member is only relevant if
+         * {@code groupCount} is 0.
          */
         public GROUP_AFFINITY groupMask;
+
+        /**
+         * An array of {@link GROUP_AFFINITY} structures that specifies a group
+         * number and processor affinity within the group. This member is only
+         * relevant if {@code groupCount} is 1 or greater.
+         */
+        public GROUP_AFFINITY[] groupMasks = new GROUP_AFFINITY[1];
 
         public CACHE_RELATIONSHIP() {
         }
 
         public CACHE_RELATIONSHIP(Pointer memory) {
             super(memory);
+        }
+
+        @Override
+        public void read() {
+            readField("groupCount");
+            // In older version of structure this is part of reserved array and has 0 value.
+            // Force a minimum array size of 1.
+            int actualGroupCount = Math.max(1, groupCount);
+            // Resize if needed
+            if (actualGroupCount != groupMasks.length) {
+                groupMasks = new GROUP_AFFINITY[actualGroupCount];
+            }
+            super.read();
+            // Copy first value from array to older version of structure for compatibility
+            groupMask = groupMasks[0];
+        }
+
+        /*
+         * The groupMask field is provided as a public instance variable for
+         * compatibility. getFieldList is overridden to remove it before comparing
+         * against the structure field order.
+         */
+        @Override
+        protected List<Field> getFieldList() {
+            List<Field> fields = new ArrayList<>(super.getFieldList());
+            Iterator<Field> fieldIterator = fields.iterator();
+            while (fieldIterator.hasNext()) {
+                Field field = fieldIterator.next();
+                if ("groupMask".equals(field.getName())) {
+                    fieldIterator.remove();
+                }
+            }
+            return fields;
         }
     }
 
