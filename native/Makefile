@@ -245,7 +245,7 @@ endif
 COPT=
 CPP=cl -nologo -EP
 LD=link
-LDFLAGS=/DLL /OUT:$@
+LDFLAGS=/DLL /DEBUG /OPT:REF,ICF,LBR /OUT:$@
 LIBS=psapi.lib
 ARSFX=.lib
 ifeq ($(ARCH),amd64)

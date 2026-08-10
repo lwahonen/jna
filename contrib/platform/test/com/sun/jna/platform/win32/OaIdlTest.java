@@ -1,4 +1,4 @@
-/* Copyright (c) 2024 Lauri Ahonen, All Rights Reserved
+/* Copyright (c) 2025 Lauri Ahonen, All Rights Reserved
  *
  * The contents of this file is dual-licensed under 2
  * alternative Open Source/Free licenses: LGPL 2.1 or later and
@@ -21,23 +21,73 @@
  * A copy is also included in the downloadable source code package
  * containing JNA, in file "AL2.0".
  */
-package com.sun.jna.platform.win32.COM;
+package com.sun.jna.platform.win32;
 
-import com.sun.jna.platform.win32.OaIdl.FUNCDESC;
-import com.sun.jna.platform.win32.OaIdl.TLIBATTR;
-import com.sun.jna.platform.win32.OaIdl.TYPEATTR;
-import com.sun.jna.platform.win32.OaIdl.VARDESC;
-
+import com.sun.jna.platform.win32.COM.ITypeInfo;
+import com.sun.jna.platform.win32.COM.TypeInfoUtil;
+import com.sun.jna.platform.win32.COM.TypeLibUtil;
 import java.io.File;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
+import org.junit.Test;
 
-public class OaIdlRandomErrors {
-    static Set<String> includedFilenames = new HashSet<>();
+import static org.junit.Assert.*;
 
-    public static void main(String[] args) {
-        String[] filenames = new String[] {
+
+public class OaIdlTest {
+
+    public OaIdlTest() {
+    }
+
+    /**
+     * Test for TYPEDESC and FUNCDESC union handling.
+     * This test iterates through functions in a Shell32 type library interface
+     * and verifies that JNA correctly reads the discriminated unions in
+     * TYPEDESC
+     * and handles the lprgelemdescParam array correctly when cParams=0.
+     */
+    @Test
+    public void testReadFuncDesc() {
+        TypeLibUtil libUtil = new TypeLibUtil("{50A7E9B0-70EF-11D1-B75A-00A0C90564FE}", 1, 0); // C:\Windows\SysWOW64\shell32.dll
+
+        // At time of test writing index 21 as IShellFolderViewDual3
+        int typeIndex = 21;
+
+        ITypeInfo typeInfo = libUtil.getTypeInfo(typeIndex);
+        TypeInfoUtil util = new TypeInfoUtil(typeInfo);
+        OaIdl.TYPEATTR attr = util.getTypeAttr();
+
+        System.out.println(util.getDocumentation(new OaIdl.MEMBERID(-1)).getName());
+
+        assertTrue("Expecting at least 1 function in the target type", attr.cFuncs.intValue() > 0);
+
+        for (int i = 0; i < attr.cFuncs.intValue(); i++) {
+            OaIdl.FUNCDESC func = util.getFuncDesc(i);
+            TypeInfoUtil.TypeInfoDoc funcDoc = util.getDocumentation(func.memid);
+            System.out.println("Function " + i + ": " + funcDoc.getName() + " (cParams=" + func.cParams.shortValue() + ")");
+            util.ReleaseFuncDesc(func);
+        }
+
+        // Reaching the end of the function is an implicit test that reading
+        // succeeded and not exception was raised
+    }
+
+    @Test
+    public void testReadVarDesc() {
+        TypeLibUtil libUtil = new TypeLibUtil("C:\\Windows\\System32\\stdole2.tlb");
+        int count = libUtil.getTypeInfoCount();
+        for (int i = 0; i < count; i++) {
+            TypeInfoUtil infoUtil = new TypeInfoUtil(libUtil.getTypeInfo(i));
+            OaIdl.TYPEATTR attr = infoUtil.getTypeAttr();
+            for (int j = 0; j < attr.cVars.intValue(); j++) {
+                infoUtil.getVarDesc(j);
+            }
+        }
+        // Reaching the end of the function is an implicit test that reading
+        // succeeded and not exception was raised
+    }
+
+    @Test
+    public void testOaidlRandomErrors() {
+        String[] filenames = new String[]{
             "accessibilitycpl.dll",
             "activeds.tlb",
             "adprovider.dll",
@@ -266,64 +316,46 @@ public class OaIdlRandomErrors {
             "xwtpdui.dll",
             "xwtpw32.dll"
         };
-        includedFilenames.addAll(Arrays.asList(filenames));
-        processDir(new File("C:\\Windows\\System32"));
-        processDir(new File("C:\\Windows\\SysWOW64"));
-        System.out.println("Finished.");
-    }
 
-    protected static void processDir(File dir) {
-        if (dir == null || !dir.exists()) {
-            return;
-        }
-        File[] files = dir.listFiles();
-        if (files == null) {
-            // Could not list files (not a directory or I/O error)
-            return;
-        }
-        for (File file : files) {
-            if (includedFilenames.contains(file.getName())) {
-                processFile(file);
-            }
-        }
-    }
-
-    protected static void processFile(File file) {
-        try {
-            System.out.println(file);
-            TypeLibUtil libUtil = new TypeLibUtil(file.toString());
-
-            // Lib attributes
-            TLIBATTR libAttr = libUtil.getLibAttr();
-            libUtil.ReleaseTLibAttr(libAttr);
-
-            // Types
-            int count = libUtil.getTypeInfoCount();
-            System.out.println("Type count: " + count);
-            for (int i = 0; i < count; i++) {
-                TypeInfoUtil typeUtil = libUtil.getTypeInfoUtil(i);
-
-                // Type attributes
-                TYPEATTR typeAttr = typeUtil.getTypeAttr();
-                typeUtil.ReleaseTypeAttr(typeAttr);
-
-                // Functions
-                for (int j = 0; j < typeAttr.cFuncs.intValue(); j++) {
-                    FUNCDESC funcDesc = typeUtil.getFuncDesc(j);
-                    typeUtil.ReleaseFuncDesc(funcDesc);
-                }
-
-                // Variables
-                for (int j = 0; j < typeAttr.cVars.intValue(); j++) {
-                    VARDESC varDesc = typeUtil.getVarDesc(j);
-                    typeUtil.ReleaseVarDesc(varDesc);
+        boolean atLeastOneTypeLibraryWithTypes = false;
+        for (String directory : new String[]{"C:\\Windows\\System32", "C:\\Windows\\SysWOW64"}) {
+            for (String filename : filenames) {
+                File file = new File(directory, filename);
+                if (file.exists()) {
+                    TypeLibUtil libUtil = new TypeLibUtil(file.toString());
+                    // Lib attributes
+                    OaIdl.TLIBATTR libAttr = libUtil.getLibAttr();
+                    libUtil.ReleaseTLibAttr(libAttr);
+                    // Types
+                    int count = libUtil.getTypeInfoCount();
+                    if(count > 0) {
+                        atLeastOneTypeLibraryWithTypes = true;
+                    }
+                    System.out.printf("%s => %d types%n", file, count);
+                    for (int i = 0; i < count; i++) {
+                        TypeInfoUtil typeUtil = libUtil.getTypeInfoUtil(i);
+                        // Type attributes
+                        OaIdl.TYPEATTR typeAttr = typeUtil.getTypeAttr();
+                        typeUtil.ReleaseTypeAttr(typeAttr);
+                        // Functions
+                        for (int j = 0; j < typeAttr.cFuncs.intValue(); j++) {
+                            OaIdl.FUNCDESC funcDesc = typeUtil.getFuncDesc(j);
+                            typeUtil.ReleaseFuncDesc(funcDesc);
+                        }       // Variables
+                        for (int j1 = 0; j1 < typeAttr.cVars.intValue(); j1++) {
+                            OaIdl.VARDESC varDesc = typeUtil.getVarDesc(j1);
+                            typeUtil.ReleaseVarDesc(varDesc);
+                        }
+                    }
+                    libUtil.getTypelib().Release();
                 }
             }
-
-            libUtil.getTypelib().Release();
-
-        } catch (Throwable e) {
-            e.printStackTrace(System.out);
         }
+
+        assertTrue("No typelibrary with types read", atLeastOneTypeLibraryWithTypes);
+
+        // Reaching the end of the function is an implicit test that reading
+        // succeeded and not exception was raised
     }
+
 }

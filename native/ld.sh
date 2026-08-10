@@ -3,7 +3,7 @@
 # ld-compatible wrapper for link.exe
 #
 #args="/pdbtype:sept"
-args="/nologo /opt:REF /incremental:no /subsystem:console /nodefaultlib:msvcrtd"
+args="/nologo /debug /opt:REF,ICF,LBR /incremental:no /subsystem:console /nodefaultlib:msvcrtd"
 
 if [ -z "$LIB" -a "$Lib" ]; then
     exit "LIB must be set for LINK.EXE to function properly"

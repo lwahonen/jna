@@ -233,7 +233,7 @@ public interface Udev extends Library {
          * @return a string that describes the sysname. On failure, may return NULL.
          */
         public String getSysname() {
-            return INSTANCE.udev_device_get_syspath(this);
+            return INSTANCE.udev_device_get_sysname(this);
         }
 
         /**

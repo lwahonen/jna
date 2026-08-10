@@ -111,7 +111,9 @@ public class UdevTest extends TestCase {
                                 assertEquals(String.format("DevType mismatch (%s)", devnode), devType, device.getDevtype());
                                 assertEquals(String.format("Subsystem mismatch (%s)", devnode), "block", device.getSubsystem());
                                 assertEquals(String.format("Syspath mismatch (%s)", devnode), syspath, device.getSyspath());
-                                assertTrue(String.format("Syspath should end with name (%s)", devnode), syspath.endsWith(device.getSysname()));
+                                String sysname = device.getSysname();
+                                assertTrue(String.format("Syspath should end with name (%s)", devnode), syspath.endsWith(sysname));
+                                assertTrue(String.format("Sysname should be shorter than syspath (%s)", devnode), sysname.length() < syspath.length());
                             }
                         } finally {
                             // Release the reference and iterate to the next device
