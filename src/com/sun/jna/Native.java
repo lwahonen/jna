@@ -1213,13 +1213,14 @@ public final class Native implements Version {
         LOG.log(DEBUG, "Found library resource at {0}", url);
 
         File lib = null;
-        if (url.getProtocol().toLowerCase().equals("file") && !Boolean.getBoolean("jna.alwaysinmemory")) {
-            try {
-                lib = new File(new URI(url.toString()));
-            }
-            catch(URISyntaxException e) {
-                lib = new File(url.getPath());
-            }
+        // In-memory loading needs the library bytes regardless of where the resource
+        // lives, so a forced in-memory load must not short-circuit on a file: URL.
+        // Without this an exploded classpath directory (IDEA run, dev.debug.connect)
+        // never reached the jna.inmemorylibraries check below.
+        if (url.getProtocol().toLowerCase().equals("file")
+                && !Boolean.getBoolean("jna.alwaysinmemory")
+                && !Boolean.getBoolean("jna.inmemorylibraries")) {
+            lib = fileFromUrl(url);
             LOG.log(DEBUG, "Looking in {0}", lib.getAbsolutePath());
             if (!lib.exists()) {
                 throw new IOException("File URL " + url + " could not be properly decoded");
@@ -1412,6 +1413,32 @@ public final class Native implements Version {
         }
     }
 
+    /**
+     * Converts a file: URL into a File, tolerating UNC hosts. JDK 25 canonicalises
+     * classpath directories on mapped network drives to their UNC form and hands out
+     * URLs like file://server/share/path; new File(URI) rejects those with
+     * "URI has an authority component", so build the \\server\share path by hand.
+     */
+    private static File fileFromUrl(URL url) {
+        String host = url.getHost();
+        if (host != null && !host.isEmpty()) {
+            String path = url.getPath();
+            try {
+                path = new URI(url.toString()).getPath();
+            }
+            catch(URISyntaxException e) {
+                // keep the raw path
+            }
+            return new File("\\\\" + host + path.replace('/', '\\'));
+        }
+        try {
+            return new File(new URI(url.toString()));
+        }
+        catch(URISyntaxException | IllegalArgumentException e) {
+            return new File(url.getPath());
+        }
+    }
+
     // Write DLL from jars into a memory buffer and return a faux file name
     private static File doInMemoryLibrary(String name, String resourcePath, InputStream is) throws IOException {
         LOG.log(DEBUG_JNA_LOAD_LEVEL, "Starting in-memory extract of " + resourcePath);
@@ -1512,12 +1539,7 @@ public final class Native implements Version {
 
         File lib = null;
         if (url.getProtocol().toLowerCase().equals("file")) {
-            try {
-                lib = new File(new URI(url.toString()));
-            }
-            catch(URISyntaxException e) {
-                lib = new File(url.getPath());
-            }
+            lib = fileFromUrl(url);
             LOG.log(DEBUG, "Looking in {0}", lib.getAbsolutePath());
             if (!lib.exists()) {
                 throw new IOException("File URL " + url + " could not be properly decoded");
